@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/ZaViBiS/isitdead/internal/database/model"
+	"github.com/ZaViBiS/isitdead/internal/model"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )

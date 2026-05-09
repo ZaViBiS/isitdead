@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/api/model"
+	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
