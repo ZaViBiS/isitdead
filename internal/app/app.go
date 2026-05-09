@@ -21,14 +21,14 @@ func New(staticFiles embed.FS) (*App, error) {
 		return nil, err
 	}
 
+	// Планувальник перевірок
+	sched := checker.NewScheduler(db)
+
 	// Backend + Frontend (embed)
-	server, err := api.New(db, staticFiles)
+	server, err := api.New(db, sched, staticFiles)
 	if err != nil {
 		return nil, err
 	}
-
-	// Планувальник перевірок
-	sched := checker.NewScheduler(db)
 
 	return &App{
 		server:    server,

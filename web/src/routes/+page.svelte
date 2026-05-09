@@ -1,5 +1,12 @@
 <script lang="ts">
 	import { Activity, Clock, Bell, LineChart, Globe, Zap } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+
+	let isLoggedIn = $state(false);
+
+	onMount(() => {
+		isLoggedIn = !!localStorage.getItem('token');
+	});
 
 	const features = [
 		{
@@ -52,10 +59,10 @@
 			</p>
 			<div class="mt-10 flex flex-wrap justify-center gap-4">
 				<a
-					href="/register"
+					href={isLoggedIn ? '/dashboard' : '/register'}
 					class="rounded-full bg-brand-primary px-8 py-4 text-lg font-semibold text-brand-dark shadow-lg transition-all hover:bg-brand-primary/90 hover:shadow-brand-primary/20"
 				>
-					Start Monitoring Free
+					{isLoggedIn ? 'Go to Dashboard' : 'Start Monitoring Free'}
 				</a>
 				<a
 					href="#demo"
