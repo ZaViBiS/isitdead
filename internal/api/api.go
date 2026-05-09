@@ -1,3 +1,4 @@
+// Package api надає ендпоінти API для керування серверами.
 package api
 
 import (
@@ -89,7 +90,6 @@ func New(db *database.Storage, staticFiles embed.FS) (*Server, error) {
 	return s, nil
 }
 
-// setupRoutes визначає всі маршрути в одному місці
 func (s *Server) setupRoutes() {
 	api := s.App.Group("/api")
 

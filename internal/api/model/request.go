@@ -1,3 +1,4 @@
+// Package model визначає структури даних для запитів API.
 package model
 
 type RegisterRequest struct {

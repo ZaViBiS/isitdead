@@ -5,15 +5,19 @@ import (
 )
 
 // AddServer додає новий сервер для моніторингу
-func (s *Storage) AddServer(userID uint, name, url string) (*model.Server, error) {
+func (s *Storage) AddServer(userID uint, name, url string, checkInterval int) (*model.Server, error) {
 	server := &model.Server{
-		UserID: userID,
-		Name:   name,
-		URL:    url,
-		Status: "unknown",
+		UserID:        userID,
+		Name:          name,
+		URL:           url,
+		Status:        "unknown",
+		CheckInterval: checkInterval,
 	}
 
-	if err := s.DB.Create(server).Error; err != nil {
+	err := s.executeWrite(func(db *gorm.DB) error {
+		return db.Create(server).Error
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -40,7 +44,10 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url string) (*model.
 	server.Name = name
 	server.URL = url
 
-	if err := s.DB.Save(&server).Error; err != nil {
+	err := s.executeWrite(func(db *gorm.DB) error {
+		return db.Save(&server).Error
+	})
+	if err != nil {
 		return nil, err
 	}
 
@@ -49,15 +56,19 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url string) (*model.
 
 // UpdateServerStatus оновлює тільки статус та затримку
 func (s *Storage) UpdateServerStatus(serverID uint, status string, latency int64) error {
-	return s.DB.Model(&model.Server{}).Where("id = ?", serverID).Updates(map[string]any{
-		"status":  status,
-		"latency": latency,
-	}).Error
+	return s.executeWrite(func(db *gorm.DB) error {
+		return db.Model(&model.Server{}).Where("id = ?", serverID).Updates(map[string]any{
+			"status":  status,
+			"latency": latency,
+		}).Error
+	})
 }
 
 // DeleteServer видаляє сервер з бази даних
 func (s *Storage) DeleteServer(userID, serverID uint) error {
-	return s.DB.Where("id = ? AND user_id = ?", serverID, userID).Delete(&model.Server{}).Error
+	return s.executeWrite(func(db *gorm.DB) error {
+		return db.Where("id = ? AND user_id = ?", serverID, userID).Delete(&model.Server{}).Error
+	})
 }
 
 // GetAllServers повертає абсолютно всі сервери з бази (для планувальника/checker)

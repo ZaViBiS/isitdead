@@ -2,8 +2,9 @@
 
 ## Етап 1 — MVP
 
-- [ ] [mvp] Реалізувати GORM модель `Server`: Name, URL, Status, Latency, CheckInterval, LastCheck (редагувати `internal/database/model/server.go`)
-- [ ] [mvp] Реалізувати GORM модель `CheckResult`: ServerID, Status, Latency, CreatedAt (створити `internal/database/model/check_result.go`)
+- [x] [mvp] Реалізувати GORM модель `Server`: Name, URL, Status, Latency, CheckInterval, LastCheck (редагувати `internal/database/model/server.go`)
+- [x] [mvp] Реалізувати GORM модель `CheckResult`: ServerID, Status, Latency, CreatedAt (створити `internal/database/model/check_result.go`)
+- [x] [mvp] Реалізувати механізм запису в БД через канал та воркер (реалізовано в `internal/database/database.go`)
 - [ ] [mvp] Реалізувати логіку автоочищення результатів перевірки, старіших за 30 днів (редагувати `internal/database/database.go`)
 - [ ] [mvp] Реалізувати CRUD API ендпоінти: POST/GET/DELETE для серверів (редагувати `internal/api/api.go`)
 - [ ] [mvp] Реалізувати HTTP/TCP чекер: ping URL, замірювання затримки, визначення статусу (створити `internal/checker/checker.go`)
