@@ -11,8 +11,7 @@ linters:
 
 linters-settings:
   goimports:
-    local-prefixes: github.com/твій-нікнейм/твій-проєкт
-
+    local-prefixes: github.com/ZaViBiS/isitdead
 issues:
   exclude-rules:
     - path: _test\.go
