@@ -40,7 +40,7 @@ func (s *Scheduler) Start() error {
 func (s *Scheduler) RunServerMonitor(srv model.Server) {
 	go func() {
 		log.Info().Str("server", srv.Name).Str("url", srv.URL).Int("interval", srv.CheckInterval).Msg("Monitoring started")
-		
+
 		// Перша перевірка при запуску
 		s.performCheck(srv)
 
@@ -55,7 +55,7 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 
 func (s *Scheduler) performCheck(srv model.Server) {
 	status, latency := Check(srv.URL)
-	
+
 	log.Debug().
 		Str("server", srv.Name).
 		Str("status", status).
