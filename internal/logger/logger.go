@@ -1,3 +1,4 @@
+// Package logger надає функціонал для логування подій.
 package logger
 
 import (

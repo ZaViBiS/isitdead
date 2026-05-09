@@ -1,3 +1,4 @@
+// Package checker відповідає за виконання перевірок серверів.
 package checker
 
 import (
@@ -23,5 +24,3 @@ func Check(url string) (status string, latency int64) {
 
 	return resp.Status, elapsed
 }
-
-// TODO: зробити перевірку на сторінки сайту 40x/50x

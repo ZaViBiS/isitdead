@@ -3,6 +3,7 @@ package database
 import (
 	"github.com/ZaViBiS/isitdead/internal/database/model"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // GetUserByEmail знаходить користувача за email
@@ -28,7 +29,9 @@ func (s *Storage) AddUser(username, email, password string) (*model.User, error)
 		PasswordHash: string(hashedPassword),
 	}
 
-	if err := s.DB.Create(user).Error; err != nil {
+	if err = s.executeWrite(func(db *gorm.DB) error {
+		return db.Create(user).Error
+	}); err != nil {
 		return nil, err
 	}
 

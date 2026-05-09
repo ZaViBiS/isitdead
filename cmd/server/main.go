@@ -1,3 +1,4 @@
+// Package main є точкою входу сервера.
 package main
 
 import (

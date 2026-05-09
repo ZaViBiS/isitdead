@@ -20,11 +20,12 @@ func TestServerCRUD(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 2. Тест: AddServer
-	server, err := storage.AddServer(user.ID, "Google", "https://google.com")
+	server, err := storage.AddServer(user.ID, "Google", "https://google.com", 60)
 	assert.NoError(t, err)
 	assert.NotNil(t, server)
 	assert.Equal(t, "Google", server.Name)
 	assert.Equal(t, user.ID, server.UserID)
+	assert.Equal(t, 60, server.CheckInterval)
 
 	// 3. Тест: GetUserServers
 	servers, err := storage.GetUserServers(user.ID)
@@ -67,7 +68,7 @@ func TestServerSecurity(t *testing.T) {
 	user2, _ := storage.AddUser("u2", "u2@ex.com", "p")
 
 	// User 1 додає сервер
-	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com")
+	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", 60)
 
 	// Тест: User 2 намагається оновити сервер User 1
 	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com")
