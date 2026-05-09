@@ -10,7 +10,7 @@
 - [ ] [mvp] Реалізувати HTTP/TCP чекер: ping URL, замірювання затримки, визначення статусу (створити `internal/checker/checker.go`)
 - [ ] [mvp] Реалізувати планувальник (scheduler) для запуску перевірок згідно з `CheckInterval` (створити `internal/checker/scheduler.go`)
 - [ ] [mvp] Створити дашборд на Svelte з таблицею відображення статусу (зелений/червоний) (редагувати `web/src/routes/+page.svelte`)
-- [ ] [mvp] Застосувати колірну схему (#182825, #73E2A7, #DEF4C6, #D62246, #E3C0D3) (редагувати `web/src/routes/layout.css`)
+- [x] [mvp] Застосувати колірну схему (#182825, #73E2A7, #DEF4C6, #D62246, #E3C0D3) (редагувати `web/src/routes/layout.css`)
 - [ ] [mvp] Реалізувати збереження історії перевірок (редагувати `internal/database/database.go`)
 - [ ] [mvp] Реалізувати автоматичне резервне копіювання SQLite бази даних (через Go routine) (редагувати `internal/database/database.go`)
 - [ ] [mvp] Налаштувати розгортання на VPS: створити unit-файл для systemd та конфігурацію nginx reverse proxy (створити `deploy/`)
