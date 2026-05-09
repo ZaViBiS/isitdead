@@ -1,37 +1,42 @@
 <script lang="ts">
-	import { Activity, Mail, Lock, User, ArrowRight } from 'lucide-svelte';
+	import { Activity, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 
-	let username = $state('');
 	let email = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
 	let message = $state('');
+	let isError = $state(false);
 
-	async function handleRegister(e: SubmitEvent) {
+	async function handleLogin(e: Event) {
 		e.preventDefault();
+		if (isLoading) return;
+		
 		isLoading = true;
 		message = '';
+		isError = false;
 
 		try {
-			const res = await fetch('/api/register', {
+			const res = await fetch('/api/login', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ username, email, password })
+				body: JSON.stringify({ email, password })
 			});
 
+			const data = await res.json();
+
 			if (res.ok) {
-				const data = await res.json();
 				localStorage.setItem('token', data.token);
 				localStorage.setItem('user', JSON.stringify(data.user));
-				message = 'Registration successful! Redirecting...';
-				setTimeout(() => goto('/dashboard'), 1500);
+				// Використовуємо window.location для надійності, якщо goto глючить
+				window.location.href = '/dashboard';
 			} else {
-				const data = await res.json();
-				message = data.error || 'Registration failed. Please try again.';
+				isError = true;
+				message = data.error || 'Invalid email or password';
 			}
 		} catch (err) {
-			message = 'Connection error. Is the backend running?';
+			isError = true;
+			message = 'Connection error. Please check if the server is running.';
 		} finally {
 			isLoading = false;
 		}
@@ -44,32 +49,14 @@
 			<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-primary text-brand-dark">
 				<Activity class="h-6 w-6" />
 			</div>
-			<h2 class="mt-6 text-3xl font-extrabold tracking-tight">Create your account</h2>
+			<h2 class="mt-6 text-3xl font-extrabold tracking-tight">Welcome back</h2>
 			<p class="mt-2 text-sm text-brand-light/60">
-				Start monitoring your services in less than a minute.
+				Sign in to manage your monitored services.
 			</p>
 		</div>
 
-		<form class="mt-8 space-y-6" onsubmit={handleRegister}>
+		<form class="mt-8 space-y-6" onsubmit={handleLogin}>
 			<div class="space-y-4">
-				<div>
-					<label for="username" class="block text-sm font-medium text-brand-light/80">Username</label>
-					<div class="relative mt-1">
-						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-brand-light/40">
-							<User class="h-5 w-5" />
-						</div>
-						<input
-							id="username"
-							name="username"
-							type="text"
-							required
-							bind:value={username}
-							class="block w-full rounded-xl border border-brand-light/10 bg-brand-light/5 py-3 pl-10 pr-3 leading-5 placeholder-brand-light/30 focus:border-brand-primary focus:bg-brand-light/10 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-							placeholder="johndoe"
-						/>
-					</div>
-				</div>
-
 				<div>
 					<label for="email" class="block text-sm font-medium text-brand-light/80">Email address</label>
 					<div class="relative mt-1">
@@ -80,7 +67,6 @@
 							id="email"
 							name="email"
 							type="email"
-							autocomplete="email"
 							required
 							bind:value={email}
 							class="block w-full rounded-xl border border-brand-light/10 bg-brand-light/5 py-3 pl-10 pr-3 leading-5 placeholder-brand-light/30 focus:border-brand-primary focus:bg-brand-light/10 focus:outline-none focus:ring-1 focus:ring-brand-primary"
@@ -99,7 +85,6 @@
 							id="password"
 							name="password"
 							type="password"
-							autocomplete="new-password"
 							required
 							bind:value={password}
 							class="block w-full rounded-xl border border-brand-light/10 bg-brand-light/5 py-3 pl-10 pr-3 leading-5 placeholder-brand-light/30 focus:border-brand-primary focus:bg-brand-light/10 focus:outline-none focus:ring-1 focus:ring-brand-primary"
@@ -110,7 +95,8 @@
 			</div>
 
 			{#if message}
-				<div class="rounded-lg bg-brand-primary/10 p-4 text-sm text-brand-primary">
+				<div class="flex items-center gap-2 rounded-lg {isError ? 'bg-brand-accent/10 text-brand-accent' : 'bg-brand-primary/10 text-brand-primary'} p-4 text-sm">
+					{#if isError}<AlertCircle class="h-4 w-4" />{/if}
 					{message}
 				</div>
 			{/if}
@@ -127,7 +113,7 @@
 							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 						</svg>
 					{:else}
-						Sign up
+						Sign in
 						<ArrowRight class="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
 					{/if}
 				</button>
@@ -135,8 +121,8 @@
 		</form>
 
 		<div class="mt-6 text-center text-sm">
-			<span class="text-brand-light/60">Already have an account?</span>
-			<a href="/login" class="ml-1 font-semibold text-brand-primary hover:text-brand-primary/80">Log in</a>
+			<span class="text-brand-light/60">Don't have an account?</span>
+			<a href="/register" class="ml-1 font-semibold text-brand-primary hover:text-brand-primary/80">Sign up</a>
 		</div>
 	</div>
 </div>

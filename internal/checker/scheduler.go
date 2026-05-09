@@ -57,7 +57,7 @@ func (s *Scheduler) performCheck(srv model.Server) {
 	status, latency := Check(srv.URL)
 
 	log.Debug().
-		Str("server", srv.Name).
+		Str("server", srv.URL).
 		Str("status", status).
 		Int64("latency", latency).
 		Msg("Check completed")
