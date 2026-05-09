@@ -2,6 +2,7 @@ package database
 
 import (
 	"github.com/ZaViBiS/isitdead/internal/database/model"
+	"gorm.io/gorm"
 )
 
 // AddServer додає новий сервер для моніторингу

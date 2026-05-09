@@ -5,29 +5,29 @@
 	let { children } = $props();
 </script>
 
-<div class="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-50">
+<div class="flex min-h-screen flex-col bg-brand-dark text-brand-light transition-colors">
 	<!-- Navbar -->
-	<header class="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
+	<header class="sticky top-0 z-50 border-b border-brand-light/10 bg-brand-dark/80 backdrop-blur-md">
 		<nav class="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
 			<a href="/" class="flex items-center gap-2 text-xl font-bold tracking-tight">
-				<Activity class="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+				<Activity class="h-6 w-6 text-brand-primary" />
 				<span>isitdead</span>
 			</a>
 
 			<div class="flex items-center gap-4 sm:gap-6">
-				<a href="/" class="hidden text-sm font-medium hover:text-indigo-600 dark:hover:text-indigo-400 md:block">
+				<a href="/" class="hidden text-sm font-medium hover:text-brand-primary md:block">
 					Features
 				</a>
-				<a href="/" class="hidden text-sm font-medium hover:text-indigo-600 dark:hover:text-indigo-400 md:block">
+				<a href="/" class="hidden text-sm font-medium hover:text-brand-primary md:block">
 					Pricing
 				</a>
-				<div class="h-4 w-px bg-slate-200 dark:bg-slate-800 md:block"></div>
-				<a href="/" class="text-sm font-medium hover:text-indigo-600 dark:hover:text-indigo-400">
+				<div class="h-4 w-px bg-brand-light/10 md:block"></div>
+				<a href="/" class="text-sm font-medium hover:text-brand-primary">
 					Log in
 				</a>
 				<a
 					href="/register"
-					class="inline-flex h-9 items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+					class="inline-flex h-9 items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-medium text-brand-dark shadow-sm transition-colors hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2"
 				>
 					Sign up
 				</a>
@@ -41,18 +41,18 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="border-t border-slate-200 py-12 dark:border-slate-800">
+	<footer class="border-t border-brand-light/10 py-12">
 		<div class="container mx-auto px-4 sm:px-6">
 			<div class="flex flex-col items-center justify-between gap-6 md:flex-row">
 				<div class="flex items-center gap-2">
-					<Activity class="h-5 w-5 text-indigo-600" />
+					<Activity class="h-5 w-5 text-brand-primary" />
 					<span class="font-bold">isitdead</span>
 				</div>
-				<p class="text-center text-sm text-slate-500 dark:text-slate-400">
+				<p class="text-center text-sm text-brand-light/60">
 					&copy; 2026 isitdead. All rights reserved. Built with SvelteKit & Go.
 				</p>
 				<div class="flex items-center gap-4">
-					<a href="/" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+					<a href="/" class="text-brand-light/40 hover:text-brand-light">
 						<Globe class="h-5 w-5" />
 					</a>
 				</div>
