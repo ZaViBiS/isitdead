@@ -12,12 +12,11 @@ func (s *Storage) AddCheckResult(result model.CheckResult) error {
 	})
 }
 
-// GetLatestResults повертає останні n результатів для сервера
-func (s *Storage) GetLatestResults(serverID uint, limit int) ([]model.CheckResult, error) {
+// GetHistory повертає всю історію результатів перевірки для сервера
+func (s *Storage) GetHistory(serverID uint) ([]model.CheckResult, error) {
 	var results []model.CheckResult
 	err := s.DB.Where("server_id = ?", serverID).
-		Order("created_at desc").
-		Limit(limit).
+		Order("created_at asc").
 		Find(&results).Error
 	return results, err
 }
