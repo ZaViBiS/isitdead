@@ -12,6 +12,9 @@ const config = {
 		}),
 		prerender: {
 			handleHttpError: ({ path, referrer, message }) => {
+				if (path.startsWith('/api/')) {
+					return;
+				}
 				if (path === '/login' || path === '/features' || path === '/pricing') {
 					return;
 				}

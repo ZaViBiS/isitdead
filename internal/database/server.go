@@ -6,11 +6,12 @@ import (
 )
 
 // AddServer додає новий сервер для моніторингу
-func (s *Storage) AddServer(userID uint, name, url string, checkInterval int) (*model.Server, error) {
+func (s *Storage) AddServer(userID uint, name, url, checkType string, checkInterval int) (*model.Server, error) {
 	server := &model.Server{
 		UserID:        userID,
 		Name:          name,
 		URL:           url,
+		CheckType:     checkType,
 		Status:        "unknown",
 		CheckInterval: checkInterval,
 	}
@@ -34,8 +35,8 @@ func (s *Storage) GetUserServers(userID uint) ([]model.Server, error) {
 	return servers, nil
 }
 
-// UpdateServer оновлює дані сервера (ім'я або URL)
-func (s *Storage) UpdateServer(userID, serverID uint, name, url string) (*model.Server, error) {
+// UpdateServer оновлює дані сервера
+func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType string) (*model.Server, error) {
 	var server model.Server
 	// Перевіряємо, що сервер належить саме цьому користувачу
 	if err := s.DB.Where("id = ? AND user_id = ?", serverID, userID).First(&server).Error; err != nil {
@@ -44,6 +45,7 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url string) (*model.
 
 	server.Name = name
 	server.URL = url
+	server.CheckType = checkType
 
 	err := s.executeWrite(func(db *gorm.DB) error {
 		return db.Save(&server).Error
