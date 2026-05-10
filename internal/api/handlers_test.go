@@ -26,6 +26,7 @@ func TestAPI(t *testing.T) {
 	}()
 
 	sched := checker.NewScheduler(storage)
+	defer sched.Stop()
 	server, _ := New(storage, sched, embed.FS{})
 
 	t.Run("Ping", func(t *testing.T) {
