@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io"
 	"io/fs"
+	"strings"
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/checker"
@@ -68,7 +69,8 @@ func New(db *database.Storage, sched *checker.Scheduler, staticFiles embed.FS) (
 	// Fallback для SPA (SvelteKit)
 	app.Use(func(c fiber.Ctx) error {
 		// Використовуємо іншу перевірку, бо маршрути API вже зареєстровані
-		if c.Path() == "/api" || c.Path()[:4] == "/api" {
+		path := c.Path()
+		if path == "/api" || strings.HasPrefix(path, "/api/") {
 			return c.Next()
 		}
 
