@@ -64,6 +64,7 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	var req struct {
 		Name          string `json:"name"`
 		URL           string `json:"url"`
+		CheckType     string `json:"check_type"`
 		CheckInterval int    `json:"check_interval"`
 	}
 
@@ -71,11 +72,15 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
+	if req.CheckType == "" {
+		req.CheckType = "http"
+	}
+
 	if req.CheckInterval < 10 {
 		req.CheckInterval = 60 // default
 	}
 
-	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckInterval)
+	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckType, req.CheckInterval)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not add server"})
 	}

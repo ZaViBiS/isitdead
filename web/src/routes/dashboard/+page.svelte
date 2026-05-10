@@ -14,6 +14,7 @@
 		id: number;
 		name: string;
 		url: string;
+		check_type: string;
 		status: string;
 		latency: number;
 		check_interval: number;
@@ -30,6 +31,7 @@
 
 	let newName = $state('');
 	let newUrl = $state('');
+	let newType = $state('http');
 	let newInterval = $state(60);
 
 	async function fetchServers() {
@@ -96,7 +98,7 @@
 			const res = await fetch('/api/servers', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-				body: JSON.stringify({ name: newName, url: newUrl, check_interval: Number(newInterval) })
+				body: JSON.stringify({ name: newName, url: newUrl, check_type: newType, check_interval: Number(newInterval) })
 			});
 
 			if (res.ok) {
@@ -106,6 +108,7 @@
 				isAdding = false;
 				newName = '';
 				newUrl = '';
+				newType = 'http';
 				fetchHistory(server, 20);
 			}
 		} catch (err) {
@@ -131,10 +134,10 @@
 	}
 
 	function getStatusColor(result: CheckResult | { status: string, latency: number }) {
-		if (!result.status || !result.status.startsWith('2')) return '#D62246';
-		if (result.latency > 1000) return '#f97316';
-		if (result.latency > 300) return '#eab308';
-		return '#73E2A7';
+		if (!result.status) return '#D62246';
+		if (!(result.status.startsWith('2') || result.status === 'Connected')) return '#D62246';
+		if (result.latency > 300) return '#E5B181'; // Using requested brand color
+		return '#73E2A7'; // Green
 	}
 
 	// Отримуємо координати для точок графіка
@@ -154,6 +157,19 @@
 	function getPathD(points: {x: number, y: number}[]) {
 		if (points.length < 2) return '';
 		return points.map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`)).join(' ');
+	}
+
+	function formatDate(dateStr: string) {
+		const date = new Date(dateStr);
+		return new Intl.DateTimeFormat('uk-UA', {
+			day: '2-digit',
+			month: '2-digit',
+			year: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hour12: false
+		}).format(date);
 	}
 
 	function handleMouseMove(e: MouseEvent, s: Server) {
@@ -197,8 +213,15 @@
 					<input id="name" type="text" bind:value={newName} required class="w-full rounded-xl border border-brand-light/10 bg-brand-dark px-4 py-2 focus:border-brand-primary outline-none" />
 				</div>
 				<div class="space-y-1">
-					<label for="url" class="text-[10px] font-bold text-brand-light/40 uppercase tracking-widest">URL</label>
-					<input id="url" type="url" bind:value={newUrl} required class="w-full rounded-xl border border-brand-light/10 bg-brand-dark px-4 py-2 focus:border-brand-primary outline-none" />
+					<label for="url" class="text-[10px] font-bold text-brand-light/40 uppercase tracking-widest">URL / Host</label>
+					<input id="url" type="text" bind:value={newUrl} required class="w-full rounded-xl border border-brand-light/10 bg-brand-dark px-4 py-2 focus:border-brand-primary outline-none" placeholder={newType === 'http' ? 'https://example.com' : 'example.com:80'} />
+				</div>
+				<div class="space-y-1">
+					<label for="type" class="text-[10px] font-bold text-brand-light/40 uppercase tracking-widest">Type</label>
+					<select id="type" bind:value={newType} class="w-full rounded-xl border border-brand-light/10 bg-brand-dark px-4 py-2 focus:border-brand-primary outline-none">
+						<option value="http">HTTP (GET)</option>
+						<option value="ping">TCP Ping</option>
+					</select>
 				</div>
 				<div class="space-y-1">
 					<label for="interval" class="text-[10px] font-bold text-brand-light/40 uppercase tracking-widest">Interval</label>
@@ -230,6 +253,7 @@
 						<button onclick={() => toggleExpand(s)} class="text-left flex-1 min-w-0">
 							<h3 class="font-bold flex items-center gap-1.5 truncate text-lg">
 								{s.name}
+								<span class="text-[8px] px-1.5 py-0.5 rounded border border-brand-light/10 text-brand-light/40 uppercase font-black tracking-tighter">{s.check_type}</span>
 								{#if s.isExpanded}<ChevronUp class="h-4 w-4 opacity-40" />{:else}<ChevronDown class="h-4 w-4 opacity-40" />{/if}
 							</h3>
 							<p class="truncate text-xs text-brand-light/30">{s.url}</p>
@@ -287,7 +311,8 @@
 								<h4 class="text-[10px] font-black uppercase tracking-widest text-brand-light/40">30-Day History</h4>
 								<div class="flex items-center gap-3 text-[9px] font-bold">
 									<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-brand-primary"></span> OK</span>
-									<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-brand-accent"></span> Error</span>
+									<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> WARNING</span>
+									<span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-brand-accent"></span> ERROR</span>
 								</div>
 							</div>
 
@@ -323,7 +348,7 @@
 											{@const hIndex = s.history.indexOf(s.hoveredResult)}
 											{@const hX = (hIndex / (s.history.length - 1)) * 400}
 											
-											<line x1={hX} y1="0" x2={hX} y2="100" stroke="white" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.3" />
+											<line x1={hX} y1="0" x2={hX} y2="100" stroke="#DEF4C6" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.3" />
 										{/if}
 									</svg>
 
@@ -335,12 +360,12 @@
 										
 										<!-- Hover Dot (HTML for perfect circle) -->
 										<div 
-											class="absolute w-2.5 h-2.5 rounded-full bg-white/40 border border-white/30 backdrop-blur-[1px] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 transition-all duration-75"
+											class="absolute w-2.5 h-2.5 rounded-full bg-brand-light/40 border border-brand-light/30 backdrop-blur-[1px] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 transition-all duration-75"
 											style="left: {hX_p}%; top: {hY_p}%"
 										></div>
 
 										<div class="absolute top-4 right-4 bg-brand-dark/95 border border-brand-light/20 p-3 rounded-xl shadow-2xl backdrop-blur-md pointer-events-none z-10 border-l-4" style="border-l-color: {getStatusColor(s.hoveredResult)}">
-											<div class="text-[10px] font-bold text-brand-light/40 mb-1">{new Date(s.hoveredResult.created_at).toLocaleString()}</div>
+											<div class="text-[10px] font-bold text-brand-light/40 mb-1">{formatDate(s.hoveredResult.created_at)}</div>
 											<div class="flex items-center gap-4">
 												<span class="text-sm font-black" style="color: {getStatusColor(s.hoveredResult)}">{s.hoveredResult.latency}ms</span>
 												<span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-brand-light/10 text-brand-light/60">{s.hoveredResult.status}</span>
