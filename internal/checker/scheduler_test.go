@@ -37,6 +37,7 @@ func TestScheduler(t *testing.T) {
 	assert.NoError(t, err)
 
 	scheduler := NewScheduler(storage)
+	defer scheduler.Stop()
 
 	t.Run("Start Scheduler", func(t *testing.T) {
 		err := scheduler.Start()

@@ -1,6 +1,8 @@
 package checker
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/database"
@@ -11,12 +13,18 @@ import (
 // Scheduler керує циклічними перевірками серверів
 type Scheduler struct {
 	storage *database.Storage
+	ctx     context.Context
+	cancel  context.CancelFunc
+	wg      sync.WaitGroup
 }
 
 // NewScheduler створює новий екземпляр планувальника
 func NewScheduler(db *database.Storage) *Scheduler {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Scheduler{
 		storage: db,
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 }
 
@@ -36,9 +44,17 @@ func (s *Scheduler) Start() error {
 	return nil
 }
 
+// Stop зупиняє всі процеси моніторингу
+func (s *Scheduler) Stop() {
+	s.cancel()
+	s.wg.Wait()
+}
+
 // RunServerMonitor запускає окрему горутину для моніторингу конкретного сервера
 func (s *Scheduler) RunServerMonitor(srv model.Server) {
+	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		log.Info().Str("server", srv.Name).Str("url", srv.URL).Int("interval", srv.CheckInterval).Msg("Monitoring started")
 
 		// Перша перевірка при запуску
@@ -47,8 +63,14 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 		ticker := time.NewTicker(time.Duration(srv.CheckInterval) * time.Second)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			s.performCheck(srv)
+		for {
+			select {
+			case <-s.ctx.Done():
+				log.Info().Str("server", srv.Name).Msg("Monitoring stopped")
+				return
+			case <-ticker.C:
+				s.performCheck(srv)
+			}
 		}
 	}()
 }
