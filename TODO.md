@@ -5,7 +5,7 @@
 - [x] [mvp] Реалізувати GORM модель `Server`: Name, URL, Status, Latency, CheckInterval, LastCheck (редагувати `internal/database/model/server.go`)
 - [x] [mvp] Реалізувати GORM модель `CheckResult`: ServerID, Status, Latency, CreatedAt (створити `internal/database/model/check_result.go`)
 - [x] [mvp] Реалізувати механізм запису в БД через канал та воркер (реалізовано в `internal/database/database.go`)
-- [ ] [mvp] Реалізувати логіку автоочищення результатів перевірки, старіших за 30 днів (редагувати `internal/database/database.go`)
+- [-] [mvp] Реалізувати логіку автоочищення результатів перевірки, старіших за 30 днів (редагувати `internal/database/database.go`)
 - [ ] [mvp] Реалізувати CRUD API ендпоінти: POST/GET/DELETE для серверів (редагувати `internal/api/api.go`)
 - [x] [mvp] Реалізувати HTTP/TCP чекер: ping URL, замірювання затримки, визначення статусу (створити `internal/checker/checker.go`)
 - [x] [mvp] Реалізувати планувальник (scheduler) для запуску перевірок згідно з `CheckInterval` (створити `internal/checker/scheduler.go`)
@@ -13,7 +13,7 @@
 - [x] [mvp] Застосувати колірну схему (#182825, #73E2A7, #DEF4C6, #D62246, #E3C0D3) (редагувати `web/src/routes/layout.css`)
 - [x] [mvp] Реалізувати збереження історії перевірок (редагувати `internal/database/database.go`)
 - [ ] [mvp] Реалізувати автоматичне резервне копіювання SQLite бази даних (через Go routine) (редагувати `internal/database/database.go`)
-- [ ] [mvp] Налаштувати розгортання на VPS: створити unit-файл для systemd та конфігурацію nginx reverse proxy (створити `deploy/`)
+- [x] [mvp] Налаштувати розгортання на VPS: створити unit-файл для systemd та конфігурацію nginx reverse proxy (створити `deploy/`)
 
 ## Етап 2 — MVP+
 

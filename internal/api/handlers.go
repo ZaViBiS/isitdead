@@ -110,6 +110,39 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(server)
 }
 
+func (s *Server) handleUpdateServer(c fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	serverIDStr := c.Params("id")
+
+	serverID, err := strconv.ParseUint(serverIDStr, 10, 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid server ID"})
+	}
+
+	var req struct {
+		Name          string `json:"name"`
+		URL           string `json:"url"`
+		CheckType     string `json:"check_type"`
+		CheckInterval int    `json:"check_interval"`
+	}
+
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	server, err := s.DB.UpdateServer(userID, uint(serverID), req.Name, req.URL, req.CheckType, req.CheckInterval)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update server"})
+	}
+
+	// Оновлюємо планувальник, якщо він активний
+	if s.scheduler != nil {
+		s.scheduler.RunServerMonitor(*server)
+	}
+
+	return c.JSON(server)
+}
+
 func (s *Server) handleDeleteServer(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	serverIDStr := c.Params("id")

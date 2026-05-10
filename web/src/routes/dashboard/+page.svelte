@@ -1,18 +1,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Activity, Plus, Trash2, ExternalLink, RefreshCw, AlertCircle, Clock, BarChart3, Globe, ShieldCheck } from 'lucide-svelte';
+	import { Activity, Plus, Trash2, ExternalLink, RefreshCw, AlertCircle, Clock, BarChart3, Globe, ShieldCheck, Settings, X } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { getStatusColor, getHourlyBuckets, getFaviconUrl, type Server, type CheckResult } from '$lib/utils';
 
 	let servers = $state<Server[]>([]);
 	let isLoading = $state(true);
 	let isAdding = $state(false);
+	let isEditing = $state(false);
 	let error = $state('');
 
 	let newName = $state('');
 	let newUrl = $state('');
 	let newType = $state('http');
 	let newInterval = $state(60);
+
+	let editingServer = $state<Server | null>(null);
+	let editName = $state('');
+	let editUrl = $state('');
+	let editType = $state('http');
+	let editInterval = $state(60);
 
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
@@ -77,7 +84,7 @@
 
 			if (res.ok) {
 				const newSrv = await res.json();
-				const server: Server = { ...newSrv, history: [] };
+				const server: Server = { ...newSrv, history: [], history30d: [] };
 				servers.push(server);
 				isAdding = false;
 				newName = '';
@@ -87,6 +94,46 @@
 			}
 		} catch (err) {
 			error = 'Failed to add server';
+		}
+	}
+
+	function openEdit(server: Server) {
+		editingServer = server;
+		editName = server.name;
+		editUrl = server.url;
+		editType = server.check_type;
+		editInterval = server.check_interval;
+		isEditing = true;
+	}
+
+	async function updateServer(e: SubmitEvent) {
+		e.preventDefault();
+		if (!editingServer) return;
+		const token = localStorage.getItem('token');
+		try {
+			const res = await fetch(`/api/servers/${editingServer.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+				body: JSON.stringify({ name: editName, url: editUrl, check_type: editType, check_interval: Number(editInterval) })
+			});
+
+			if (res.ok) {
+				const updated = await res.json();
+				const idx = servers.findIndex(s => s.id === updated.id);
+				if (idx !== -1) {
+					// Зберігаємо історію, яку ми вже завантажили
+					servers[idx] = { 
+						...servers[idx], 
+						...updated,
+						history: servers[idx].history,
+						history30d: servers[idx].history30d
+					};
+				}
+				isEditing = false;
+				editingServer = null;
+			}
+		} catch (err) {
+			error = 'Failed to update server';
 		}
 	}
 
@@ -187,6 +234,63 @@
 		</div>
 	{/if}
 
+	{#if isEditing && editingServer}
+		<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/80 backdrop-blur-sm animate-in fade-in duration-200">
+			<div class="w-full max-w-2xl rounded-[2.5rem] border border-brand-light/10 bg-brand-dark p-8 lg:p-12 shadow-2xl shadow-brand-primary/5 animate-in zoom-in-95 duration-200">
+				<div class="flex items-center justify-between mb-8">
+					<div class="flex items-center gap-4">
+						<div class="p-3 rounded-2xl bg-brand-primary/10 text-brand-primary">
+							<Settings class="h-7 w-7" />
+						</div>
+						<div>
+							<h2 class="text-2xl font-bold">Edit Monitor</h2>
+							<p class="text-sm text-brand-light/40">Adjust your monitoring parameters.</p>
+						</div>
+					</div>
+					<button onclick={() => (isEditing = false)} class="p-2 hover:bg-brand-light/5 rounded-xl transition-colors">
+						<X class="h-6 w-6 text-brand-light/20 hover:text-brand-light" />
+					</button>
+				</div>
+
+				<form onsubmit={updateServer} class="grid gap-6">
+					<div class="grid md:grid-cols-2 gap-6">
+						<div class="space-y-2">
+							<label for="edit-name" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest ml-1">Friendly Name</label>
+							<input id="edit-name" type="text" bind:value={editName} required class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all" />
+						</div>
+						<div class="space-y-2">
+							<label for="edit-url" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest ml-1">Endpoint URL / Host</label>
+							<input id="edit-url" type="text" bind:value={editUrl} required class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all" />
+						</div>
+						<div class="space-y-2">
+							<label for="edit-type" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest ml-1">Check Type</label>
+							<div class="relative">
+								<select id="edit-type" bind:value={editType} class="w-full appearance-none rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all cursor-pointer">
+									<option value="http">HTTP (GET)</option>
+									<option value="ping">TCP Ping</option>
+								</select>
+							</div>
+						</div>
+						<div class="space-y-2">
+							<label for="edit-interval" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest ml-1">Interval</label>
+							<div class="relative">
+								<select id="edit-interval" bind:value={editInterval} class="w-full appearance-none rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all cursor-pointer">
+									<option value={30}>30 seconds</option>
+									<option value={60}>1 minute</option>
+									<option value={300}>5 minutes</option>
+								</select>
+							</div>
+						</div>
+					</div>
+					<div class="flex justify-end gap-3 mt-4">
+						<button type="button" onclick={() => (isEditing = false)} class="px-8 py-3 rounded-2xl border border-brand-light/10 font-bold hover:bg-brand-light/5 transition-colors">Discard</button>
+						<button type="submit" class="px-10 py-3 rounded-2xl bg-brand-primary font-bold text-brand-dark hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/10">Save Changes</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	{/if}
+
 	{#if isLoading}
 		<div class="flex h-96 flex-col items-center justify-center gap-4">
 			<RefreshCw class="h-10 w-10 animate-spin text-brand-primary" />
@@ -203,8 +307,8 @@
 	{:else}
 		<div class="grid gap-6">
 			{#each servers as s (s.id)}
-				{@const uptime = calculateUptime(s.history)}
-				{@const avgLatency = calculateAvgLatency(s.history)}
+				{@const uptime = calculateUptime(s.history30d || [])}
+				{@const avgLatency = calculateAvgLatency(s.history30d || [])}
 				{@const isOnline = (s.status.startsWith('2') || s.status === 'Connected')}
 				
 				<div class="group relative rounded-[2rem] border border-brand-light/10 bg-gradient-to-br from-brand-dark to-brand-dark/50 p-1 transition-all hover:border-brand-primary/30 hover:shadow-2xl hover:shadow-brand-primary/5">
@@ -266,7 +370,7 @@
 
 							<div class="hidden sm:block text-right">
 								<div class="flex items-center justify-end gap-1.5 text-brand-light/40 text-[10px] font-bold uppercase tracking-widest mb-1">
-									<BarChart3 class="h-3 w-3" /> Avg Latency
+									<BarChart3 class="h-3 w-3" /> Avg Latency 30d
 								</div>
 								<div class="text-2xl font-black text-brand-light/80">
 									{avgLatency}<span class="text-xs font-bold text-brand-light/20 ml-0.5">ms</span>
@@ -306,20 +410,29 @@
 						</div>
 
 						<!-- Actions -->
-						<div class="flex lg:flex-col gap-2 border-t lg:border-t-0 lg:border-l border-brand-light/5 pt-6 lg:pt-0 lg:pl-6">
+						<div class="flex flex-col gap-2 border-t lg:border-t-0 lg:border-l border-brand-light/5 pt-6 lg:pt-0 lg:pl-6 min-w-[120px]">
 							<a 
 								href="/dashboard/{s.id}" 
-								class="flex-1 lg:flex-none text-center px-5 py-2.5 rounded-xl bg-brand-light/5 hover:bg-brand-light/10 text-xs font-bold transition-all"
+								class="w-full text-center px-5 py-2.5 rounded-xl bg-brand-light/5 hover:bg-brand-light/10 text-xs font-bold transition-all"
 							>
 								Details
 							</a>
-							<button 
-								onclick={() => deleteServer(s.id)} 
-								class="p-2.5 rounded-xl bg-brand-accent/5 hover:bg-brand-accent/20 text-brand-accent/40 hover:text-brand-accent transition-all"
-								title="Delete Monitor"
-							>
-								<Trash2 class="h-4 w-4" />
-							</button>
+							<div class="flex gap-2">
+								<button 
+									onclick={() => openEdit(s)} 
+									class="flex-1 flex items-center justify-center p-1.5 rounded-lg bg-brand-light/5 hover:bg-brand-light/10 text-brand-light/40 hover:text-brand-light transition-all"
+									title="Edit Monitor"
+								>
+									<Settings class="h-3.5 w-3.5" />
+								</button>
+								<button 
+									onclick={() => deleteServer(s.id)} 
+									class="flex-1 flex items-center justify-center p-1.5 rounded-lg bg-brand-accent/5 hover:bg-brand-accent/20 text-brand-accent/40 hover:text-brand-accent transition-all"
+									title="Delete Monitor"
+								>
+									<Trash2 class="h-3.5 w-3.5" />
+								</button>
+							</div>
 						</div>
 
 					</div>
