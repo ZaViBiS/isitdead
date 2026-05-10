@@ -1,0 +1,28 @@
+[Unit]
+Description=Isitdead Uptime Monitor Service
+After=network.target
+
+[Service]
+# Replace 'ubuntu' with your actual VPS username
+User=ubuntu
+Group=ubuntu
+
+# Replace with the actual path to your project on the VPS
+WorkingDirectory=/home/ubuntu/isitdead
+
+# Path to the compiled Go binary
+ExecStart=/home/ubuntu/isitdead/bin/server
+
+# Automatic restart on crash
+Restart=always
+RestartSec=5
+
+# Optional resource limits
+MemoryMax=512M
+
+# Environment variables from .env file
+# Ensure you create a .env file in the WorkingDirectory
+EnvironmentFile=/home/ubuntu/isitdead/.env
+
+[Install]
+WantedBy=multi-user.target
