@@ -9,7 +9,7 @@
 - [ ] [mvp] Реалізувати CRUD API ендпоінти: POST/GET/DELETE для серверів (редагувати `internal/api/api.go`)
 - [x] [mvp] Реалізувати HTTP/TCP чекер: ping URL, замірювання затримки, визначення статусу (створити `internal/checker/checker.go`)
 - [x] [mvp] Реалізувати планувальник (scheduler) для запуску перевірок згідно з `CheckInterval` (створити `internal/checker/scheduler.go`)
-- [ ] [mvp] Створити дашборд на Svelte з таблицею відображення статусу (зелений/червоний) (редагувати `web/src/routes/+page.svelte`)
+- [x] [mvp] Створити дашборд на Svelte з таблицею відображення статусу (зелений/червоний) (редагувати `web/src/routes/+page.svelte`)
 - [x] [mvp] Застосувати колірну схему (#182825, #73E2A7, #DEF4C6, #D62246, #E3C0D3) (редагувати `web/src/routes/layout.css`)
 - [x] [mvp] Реалізувати збереження історії перевірок (редагувати `internal/database/database.go`)
 - [ ] [mvp] Реалізувати автоматичне резервне копіювання SQLite бази даних (через Go routine) (редагувати `internal/database/database.go`)
