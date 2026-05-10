@@ -2,7 +2,9 @@ package api
 
 import (
 	"strconv"
+	"time"
 
+	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -38,11 +40,26 @@ func (s *Server) handleGetServerResults(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch results"})
 	}
 
+	// Фільтрація за часом (наприклад, за останні N годин)
+	hoursStr := c.Query("hours")
+	if hoursStr != "" {
+		hours, err := strconv.Atoi(hoursStr)
+		if err == nil && hours > 0 {
+			since := time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+			filtered := []model.CheckResult{}
+			for _, r := range results {
+				if r.CreatedAt.UTC().After(since) {
+					filtered = append(filtered, r)
+				}
+			}
+			results = filtered
+		}
+	}
+
 	limitStr := c.Query("limit")
-	if limitStr != "" {
+	if limitStr != "" && hoursStr == "" { // limit працює тільки якщо не вказано години
 		limit, err := strconv.Atoi(limitStr)
 		if err == nil && limit > 0 && limit < len(results) {
-			// Отримуємо останні 'limit' результатів (кінець масиву)
 			results = results[len(results)-limit:]
 		}
 	}
@@ -82,7 +99,7 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 
 	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckType, req.CheckInterval)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not add server"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create server"})
 	}
 
 	// Запускаємо моніторинг для нового сервера негайно
@@ -104,7 +121,7 @@ func (s *Server) handleDeleteServer(c fiber.Ctx) error {
 
 	err = s.DB.DeleteServer(userID, uint(serverID))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not delete server"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete server"})
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
