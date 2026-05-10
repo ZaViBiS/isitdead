@@ -90,6 +90,7 @@
 				newName = '';
 				newUrl = '';
 				newType = 'http';
+				newInterval = 60;
 				fetchHistory(server);
 			}
 		} catch (err) {
@@ -103,6 +104,7 @@
 		editUrl = server.url;
 		editType = server.check_type;
 		editInterval = server.check_interval;
+		editSliderVal = secondsToSlider(server.check_interval);
 		isEditing = true;
 	}
 
@@ -166,6 +168,47 @@
 		return Math.round(sum / history.length);
 	}
 
+	function formatInterval(seconds: number) {
+		if (seconds < 60) return `${seconds}s`;
+		const m = Math.floor(seconds / 60);
+		const s = seconds % 60;
+		if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+		const h = Math.floor(m / 60);
+		const mm = m % 60;
+		return mm > 0 ? `${h}h ${mm}m` : `${h}h`;
+	}
+
+	// Non-linear mapping: 0-100 slider value to 10-86400 seconds
+	function sliderToSeconds(val: number): number {
+		if (val <= 25) {
+			// 0-25%: 10s to 5m (300s), 1s precision
+			return Math.round(10 + (val / 25) * 290);
+		}
+		if (val <= 50) {
+			// 25-50%: 5m to 30m (1800s), 1m (60s) steps
+			const raw = 300 + ((val - 25) / 25) * 1500;
+			return Math.round(raw / 60) * 60;
+		}
+		if (val <= 75) {
+			// 50-75%: 30m to 1h (3600s), 5m (300s) steps
+			const raw = 1800 + ((val - 50) / 25) * 1800;
+			return Math.round(raw / 300) * 300;
+		}
+		// 75-100%: 1h to 24h (86400s), 15m (900s) steps
+		const raw = 3600 + ((val - 75) / 25) * 82800;
+		return Math.round(raw / 900) * 900;
+	}
+
+	function secondsToSlider(secs: number): number {
+		if (secs <= 300) return ((secs - 10) / 290) * 25;
+		if (secs <= 1800) return 25 + ((secs - 300) / 1500) * 25;
+		if (secs <= 3600) return 50 + ((secs - 1800) / 1800) * 25;
+		return 75 + ((secs - 3600) / 82800) * 25;
+	}
+
+	let newSliderVal = $state(secondsToSlider(newInterval));
+	let editSliderVal = $state(secondsToSlider(editInterval));
+
 	onMount(fetchServers);
 </script>
 
@@ -219,15 +262,25 @@
 					</div>
 				</div>
 				<div class="space-y-2">
-					<label for="interval" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest ml-1">Interval</label>
-					<select id="interval" bind:value={newInterval} class="w-full appearance-none rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all cursor-pointer">
-						<option value={30}>30 seconds</option>
-						<option value={60}>1 minute</option>
-						<option value={300}>5 minutes</option>
-					</select>
+					<div class="flex justify-between items-center ml-1">
+						<label for="interval" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest">Interval</label>
+						<span class="text-xs font-black text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">{formatInterval(newInterval)}</span>
+					</div>
+					<div class="flex items-center h-12">
+						<input 
+							id="interval" 
+							type="range" 
+							min="0" 
+							max="100" 
+							step="0.1"
+							bind:value={newSliderVal} 
+							oninput={() => (newInterval = sliderToSeconds(newSliderVal))}
+							class="w-full h-1.5 bg-brand-light/10 rounded-lg appearance-none cursor-pointer accent-brand-primary" 
+						/>
+					</div>
 				</div>
 				<div class="md:col-span-4 flex justify-end gap-3 mt-2">
-					<button type="button" onclick={() => isAdding = false} class="px-6 py-3 rounded-2xl border border-brand-light/10 font-bold hover:bg-brand-light/5 transition-colors">Cancel</button>
+					<button type="button" onclick={() => (isAdding = false)} class="px-6 py-3 rounded-2xl border border-brand-light/10 font-bold hover:bg-brand-light/5 transition-colors">Cancel</button>
 					<button type="submit" class="px-8 py-3 rounded-2xl bg-brand-primary font-bold text-brand-dark hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/10">Start Monitoring</button>
 				</div>
 			</form>
@@ -272,13 +325,21 @@
 							</div>
 						</div>
 						<div class="space-y-2">
-							<label for="edit-interval" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest ml-1">Interval</label>
-							<div class="relative">
-								<select id="edit-interval" bind:value={editInterval} class="w-full appearance-none rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none transition-all cursor-pointer">
-									<option value={30}>30 seconds</option>
-									<option value={60}>1 minute</option>
-									<option value={300}>5 minutes</option>
-								</select>
+							<div class="flex justify-between items-center ml-1">
+								<label for="edit-interval" class="text-xs font-bold text-brand-light/40 uppercase tracking-widest">Interval</label>
+								<span class="text-xs font-black text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded-full whitespace-nowrap">{formatInterval(editInterval)}</span>
+							</div>
+							<div class="flex items-center h-12">
+								<input 
+									id="edit-interval" 
+									type="range" 
+									min="0" 
+									max="100" 
+									step="0.1"
+									bind:value={editSliderVal} 
+									oninput={() => (editInterval = sliderToSeconds(editSliderVal))}
+									class="w-full h-1.5 bg-brand-light/10 rounded-lg appearance-none cursor-pointer accent-brand-primary" 
+								/>
 							</div>
 						</div>
 					</div>
