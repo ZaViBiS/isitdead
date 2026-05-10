@@ -15,6 +15,7 @@ func (s *Server) setupRoutes() {
 	api.Use(s.authMiddleware)
 	api.Get("/servers", s.handleGetServers)
 	api.Post("/servers", s.handleAddServer)
+	api.Put("/servers/:id", s.handleUpdateServer)
 	api.Delete("/servers/:id", s.handleDeleteServer)
 	api.Get("/servers/:id/results", s.handleGetServerResults)
 }

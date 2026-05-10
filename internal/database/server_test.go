@@ -20,7 +20,7 @@ func TestServerCRUD(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 2. Тест: AddServer
-	server, err := storage.AddServer(user.ID, "Google", "https://google.com", 60)
+	server, err := storage.AddServer(user.ID, "Google", "https://google.com", "http", 60)
 	assert.NoError(t, err)
 	assert.NotNil(t, server)
 	assert.Equal(t, "Google", server.Name)
@@ -34,7 +34,7 @@ func TestServerCRUD(t *testing.T) {
 	assert.Equal(t, "https://google.com", servers[0].URL)
 
 	// 4. Тест: UpdateServer
-	updated, err := storage.UpdateServer(user.ID, server.ID, "Google Search", "https://google.com/search")
+	updated, err := storage.UpdateServer(user.ID, server.ID, "Google Search", "https://google.com/search", "http", 60)
 	assert.NoError(t, err)
 	assert.Equal(t, "Google Search", updated.Name)
 	assert.Equal(t, "https://google.com/search", updated.URL)
@@ -68,10 +68,10 @@ func TestServerSecurity(t *testing.T) {
 	user2, _ := storage.AddUser("u2", "u2@ex.com", "p")
 
 	// User 1 додає сервер
-	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", 60)
+	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", "http", 60)
 
 	// Тест: User 2 намагається оновити сервер User 1
-	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com")
+	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com", "http", 60)
 	assert.Error(t, err, "User 2 should not be able to update User 1's server")
 
 	// Тест: User 2 намагається видалити сервер User 1

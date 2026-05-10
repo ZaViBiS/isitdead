@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/ZaViBiS/isitdead/internal/checker"
@@ -81,7 +82,7 @@ func TestAPI(t *testing.T) {
 		assert.Equal(t, 0, len(servers))
 	})
 
-	t.Run("Add and Delete Server", func(t *testing.T) {
+	t.Run("Add, Update and Delete Server", func(t *testing.T) {
 		// Get Token
 		payload := map[string]string{
 			"email":    "test@example.com",
@@ -115,9 +116,25 @@ func TestAPI(t *testing.T) {
 			ID uint `json:"id"`
 		}
 		json.NewDecoder(resp.Body).Decode(&srv)
+		serverIDStr := strconv.Itoa(int(srv.ID))
+
+		// Update Server
+		updatePayload := map[string]interface{}{
+			"name":           "Updated Name",
+			"url":            "http://example.com/updated",
+			"check_interval": 120,
+			"check_type":     "http",
+		}
+		body, _ = json.Marshal(updatePayload)
+		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// Delete Server
-		req = httptest.NewRequest("DELETE", "/api/servers/1", nil)
+		req = httptest.NewRequest("DELETE", "/api/servers/"+serverIDStr, nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, _ = server.App.Test(req)
