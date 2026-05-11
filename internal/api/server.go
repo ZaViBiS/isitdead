@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io"
 	"io/fs"
+	"net"
 	"strings"
 	"time"
 
@@ -91,4 +92,9 @@ func New(db *database.Storage, sched *checker.Scheduler, staticFiles embed.FS) (
 // Listen запускає сервер
 func (s *Server) Listen(addr string) error {
 	return s.App.Listen(addr)
+}
+
+// ListenMutualTLS запускає сервер з кастомним listener (для SSL)
+func (s *Server) Listener(ln net.Listener) error {
+	return s.App.Listener(ln)
 }
