@@ -1,15 +1,31 @@
 package checker
 
 import (
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/stretchr/testify/assert"
 )
+
+func stubHTTP200Transport(t *testing.T) {
+	prev := http.DefaultTransport
+	http.DefaultTransport = roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader("")),
+			Header:     make(http.Header),
+		}, nil
+	})
+	t.Cleanup(func() {
+		http.DefaultTransport = prev
+	})
+}
 
 func TestScheduler(t *testing.T) {
 	dbPath := "test_scheduler.db"
@@ -23,17 +39,13 @@ func TestScheduler(t *testing.T) {
 	}()
 
 	// Create a user first
-	user, err := storage.AddUser("testuser", "test@example.com", "pass")
+	user, _, err := storage.AddUser("testuser", "test@example.com", "password")
 	assert.NoError(t, err)
 
-	// Create a test server to monitor
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
+	stubHTTP200Transport(t)
 
 	// Add server to DB
-	srv, err := storage.AddServer(user.ID, "Test Server", ts.URL, "http", 1) // 1 second interval
+	srv, err := storage.AddServer(user.ID, "Test Server", "http://example.test", "http", 1) // 1 second interval
 	assert.NoError(t, err)
 
 	scheduler := NewScheduler(storage)

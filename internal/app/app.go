@@ -10,6 +10,7 @@ import (
 	"github.com/ZaViBiS/isitdead/internal/checker"
 	"github.com/ZaViBiS/isitdead/internal/config"
 	"github.com/ZaViBiS/isitdead/internal/database"
+	"github.com/ZaViBiS/isitdead/internal/mail"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -17,6 +18,7 @@ type App struct {
 	server    *api.Server
 	scheduler *checker.Scheduler
 	config    *config.Config
+	mailer    *mail.Mailer
 }
 
 func New(staticFiles embed.FS) (*App, error) {
@@ -31,8 +33,11 @@ func New(staticFiles embed.FS) (*App, error) {
 	// Планувальник перевірок
 	sched := checker.NewScheduler(db)
 
+	// Поштовий сервіс
+	mailer := mail.New(cfg)
+
 	// Backend + Frontend (embed)
-	server, err := api.New(db, sched, staticFiles)
+	server, err := api.New(db, sched, mailer, staticFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +46,7 @@ func New(staticFiles embed.FS) (*App, error) {
 		server:    server,
 		scheduler: sched,
 		config:    cfg,
+		mailer:    mailer,
 	}, nil
 }
 

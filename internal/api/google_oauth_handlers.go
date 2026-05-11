@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -13,27 +12,29 @@ import (
 	"google.golang.org/api/option"
 )
 
-var googleOauthConfig = &oauth2.Config{
-	RedirectURL:  "http://localhost:8080/api/auth/google/callback",
-	ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-	ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-	Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
-	Endpoint:     google.Endpoint,
+func (s *Server) getGoogleOauthConfig() *oauth2.Config {
+	return &oauth2.Config{
+		RedirectURL:  "http://localhost:8080/api/auth/google/callback",
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+		ClientID:     s.Config.ClientID,
+		ClientSecret: s.Config.ClientSecret,
+		Endpoint:     google.Endpoint,
+	}
 }
 
 func (s *Server) handleGoogleLogin(c fiber.Ctx) error {
-	url := googleOauthConfig.AuthCodeURL("state-token")
+	url := s.getGoogleOauthConfig().AuthCodeURL("state-token")
 	return c.Redirect().To(url)
 }
 
 func (s *Server) handleGoogleCallback(c fiber.Ctx) error {
 	code := c.Query("code")
-	token, err := googleOauthConfig.Exchange(context.Background(), code)
+	token, err := s.getGoogleOauthConfig().Exchange(context.Background(), code)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to exchange token"})
 	}
 
-	oauth2Service, err := oauth2api.NewService(context.Background(), option.WithTokenSource(googleOauthConfig.TokenSource(context.Background(), token)))
+	oauth2Service, err := oauth2api.NewService(context.Background(), option.WithTokenSource(s.getGoogleOauthConfig().TokenSource(context.Background(), token)))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create oauth2 service"})
 	}

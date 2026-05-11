@@ -1,10 +1,46 @@
 package database
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// GenerateToken створює випадковий токен
+func GenerateToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// GetVerificationByToken знаходить запис верифікації за токеном
+func (s *Storage) GetVerificationByToken(token string) (*model.EmailVerification, error) {
+	var v model.EmailVerification
+	if err := s.DB.Where("token = ?", token).First(&v).Error; err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
+// VerifyUser позначає користувача як верифікованого
+func (s *Storage) VerifyUser(userID uint) error {
+	return s.executeWrite(func(db *gorm.DB) error {
+		return db.Transaction(func(tx *gorm.DB) error {
+			// Оновлюємо статус користувача
+			if err := tx.Model(&model.User{}).Where("id = ?", userID).Update("verified_email", true).Error; err != nil {
+				return err
+			}
+			// Видаляємо токен
+			if err := tx.Where("user_id = ?", userID).Delete(&model.EmailVerification{}).Error; err != nil {
+				return err
+			}
+			return nil
+		})
+	})
+}
 
 // GetUserByEmail знаходить користувача за email
 func (s *Storage) GetUserByEmail(email string) (*model.User, error) {
@@ -32,7 +68,10 @@ func (s *Storage) AddGoogleUser(username, email, googleID string) (*model.User, 
 		// Якщо користувач існує, але не має GoogleID - оновлюємо його
 		if existing.GoogleID == nil || *existing.GoogleID == "" {
 			err := s.executeWrite(func(db *gorm.DB) error {
-				return db.Model(existing).Update("google_id", &googleID).Error
+				return db.Model(existing).Updates(map[string]interface{}{
+					"google_id":      &googleID,
+					"verified_email": true,
+				}).Error
 			})
 			return existing, err
 		}
@@ -40,9 +79,10 @@ func (s *Storage) AddGoogleUser(username, email, googleID string) (*model.User, 
 	}
 
 	user := &model.User{
-		Username: username,
-		Email:    email,
-		GoogleID: &googleID,
+		Username:      username,
+		Email:         email,
+		GoogleID:      &googleID,
+		VerifiedEmail: true,
 	}
 
 	if err := s.executeWrite(func(db *gorm.DB) error {
@@ -54,25 +94,37 @@ func (s *Storage) AddGoogleUser(username, email, googleID string) (*model.User, 
 	return user, nil
 }
 
-// AddUser створює нового користувача з хешованим паролем
-func (s *Storage) AddUser(username, email, password string) (*model.User, error) {
+// AddUser створює нового користувача з хешованим паролем та токеном верифікації
+func (s *Storage) AddUser(username, email, password string) (*model.User, string, error) {
 	// Хешуємо пароль
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
+	token := GenerateToken()
 	user := &model.User{
 		Username:     username,
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 	}
 
-	if err = s.executeWrite(func(db *gorm.DB) error {
-		return db.Create(user).Error
-	}); err != nil {
-		return nil, err
+	err = s.executeWrite(func(db *gorm.DB) error {
+		return db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Create(user).Error; err != nil {
+				return err
+			}
+			verification := &model.EmailVerification{
+				UserID: user.ID,
+				Token:  token,
+			}
+			return tx.Create(verification).Error
+		})
+	})
+
+	if err != nil {
+		return nil, "", err
 	}
 
-	return user, nil
+	return user, token, nil
 }
