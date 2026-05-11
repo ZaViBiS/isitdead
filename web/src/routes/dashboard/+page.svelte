@@ -9,12 +9,12 @@
 		AlertCircle,
 		Clock,
 		BarChart3,
-		Globe,
 		ShieldCheck,
 		Settings,
 		X
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		getStatusColor,
 		getHourlyBuckets,
@@ -45,7 +45,7 @@
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
 		if (!token) {
-			goto('/login');
+			goto(resolve('/login'));
 			return;
 		}
 
@@ -55,8 +55,8 @@
 			});
 
 			if (res.ok) {
-				const data = await res.json();
-				servers = data.map((s: any) => ({
+				const data = (await res.json()) as Server[];
+				servers = data.map((s) => ({
 					...s,
 					history: [],
 					history30d: []
@@ -64,9 +64,9 @@
 				servers.forEach((s) => fetchHistory(s));
 			} else if (res.status === 401) {
 				localStorage.removeItem('token');
-				goto('/login');
+				goto(resolve('/login'));
 			}
-		} catch (err) {
+		} catch {
 			error = 'Connection error';
 		} finally {
 			isLoading = false;
@@ -88,9 +88,52 @@
 				const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).getTime();
 				s.history = data.filter((r: CheckResult) => new Date(r.created_at).getTime() > dayAgo);
 			}
-		} catch (err) {
+		} catch {
 			console.error('Failed to fetch history');
 		}
+	}
+
+	function normalizeMonitorUrl(url: string, checkType: string) {
+		const trimmed = url.trim();
+		if (checkType !== 'http' || trimmed === '') return trimmed;
+		if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+		return `https://${trimmed}`;
+	}
+
+	function willNormalizeMonitorUrl(url: string, checkType: string) {
+		const trimmed = url.trim();
+		return (
+			checkType === 'http' &&
+			trimmed !== '' &&
+			!trimmed.startsWith('http://') &&
+			!trimmed.startsWith('https://')
+		);
+	}
+
+	function isServerOnline(server: Server) {
+		return server.status.startsWith('2') || server.status === 'Connected';
+	}
+
+	function getOverallUptime() {
+		const histories = servers
+			.map((server) => server.history30d || [])
+			.filter((history) => history.length > 0);
+		if (histories.length === 0) return 0;
+		const total = histories.reduce((sum, history) => sum + calculateUptime(history), 0);
+		return total / histories.length;
+	}
+
+	function getOverallLatency() {
+		const histories = servers
+			.map((server) => server.history30d || [])
+			.filter((history) => history.length > 0);
+		if (histories.length === 0) return 0;
+		const total = histories.reduce((sum, history) => sum + calculateAvgLatency(history), 0);
+		return Math.round(total / histories.length);
+	}
+
+	function getHealthyCount() {
+		return servers.filter(isServerOnline).length;
 	}
 
 	async function addServer(e: SubmitEvent) {
@@ -102,7 +145,7 @@
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 				body: JSON.stringify({
 					name: newName,
-					url: newUrl,
+					url: normalizeMonitorUrl(newUrl, newType),
 					check_type: newType,
 					check_interval: Number(newInterval)
 				})
@@ -119,7 +162,7 @@
 				newInterval = 60;
 				fetchHistory(server);
 			}
-		} catch (err) {
+		} catch {
 			error = 'Failed to add server';
 		}
 	}
@@ -143,7 +186,7 @@
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 				body: JSON.stringify({
 					name: editName,
-					url: editUrl,
+					url: normalizeMonitorUrl(editUrl, editType),
 					check_type: editType,
 					check_interval: Number(editInterval)
 				})
@@ -164,7 +207,7 @@
 				isEditing = false;
 				editingServer = null;
 			}
-		} catch (err) {
+		} catch {
 			error = 'Failed to update server';
 		}
 	}
@@ -181,12 +224,14 @@
 				const idx = servers.findIndex((s) => s.id === id);
 				if (idx !== -1) servers.splice(idx, 1);
 			}
-		} catch (err) {
+		} catch {
 			error = 'Failed to delete server';
 		}
 	}
 
-	const intervalPresets = [30, 60, 180, 300, 600, 1800, 3600, 7200, 14400, 21600, 36000, 43200, 86400];
+	const intervalPresets = [
+		30, 60, 180, 300, 600, 1800, 3600, 7200, 14400, 21600, 36000, 43200, 86400
+	];
 
 	function formatInterval(seconds: number) {
 		if (seconds < 60) return `${seconds}s`;
@@ -202,21 +247,48 @@
 </script>
 
 <div class="container mx-auto max-w-6xl px-4 py-12">
-	<div class="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+	<div class="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-end">
 		<div>
-			<h1 class="mb-2 text-4xl font-black tracking-tight">Monitors</h1>
+			<h1 class="mb-2 text-4xl font-black tracking-tight">Your monitors</h1>
 			<p class="flex items-center gap-2 text-brand-light/40">
 				<ShieldCheck class="h-4 w-4 text-brand-primary" />
-				Professional infrastructure health monitoring.
+				Track uptime, response time, and recent failures in one place.
 			</p>
 		</div>
 		<button
 			onclick={() => (isAdding = !isAdding)}
 			class="flex items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3 font-bold text-brand-dark shadow-lg shadow-brand-primary/20 transition-all hover:scale-105 active:scale-95"
 		>
-			<Plus class="h-5 w-5" /> Add New Monitor
+			<Plus class="h-5 w-5" /> Add monitor
 		</button>
 	</div>
+
+	{#if !isLoading && servers.length > 0}
+		<div class="mb-10 grid gap-4 sm:grid-cols-3">
+			<div class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5">
+				<div class="mb-2 text-xs font-black tracking-widest text-brand-light/30 uppercase">
+					Healthy now
+				</div>
+				<div class="text-3xl font-black text-brand-primary">
+					{getHealthyCount()}<span class="text-sm text-brand-light/30">/{servers.length}</span>
+				</div>
+			</div>
+			<div class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5">
+				<div class="mb-2 text-xs font-black tracking-widest text-brand-light/30 uppercase">
+					Average uptime
+				</div>
+				<div class="text-3xl font-black text-brand-primary">{getOverallUptime().toFixed(1)}%</div>
+			</div>
+			<div class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5">
+				<div class="mb-2 text-xs font-black tracking-widest text-brand-light/30 uppercase">
+					Average response
+				</div>
+				<div class="text-3xl font-black text-brand-light/80">
+					{getOverallLatency()}<span class="ml-1 text-sm text-brand-light/30">ms</span>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	{#if error}
 		<div
@@ -235,14 +307,14 @@
 				<div class="rounded-xl bg-brand-primary/10 p-2 text-brand-primary">
 					<Activity class="h-6 w-6" />
 				</div>
-				<h2 class="text-2xl font-bold">New Monitor Configuration</h2>
+				<h2 class="text-2xl font-bold">Add monitor</h2>
 			</div>
 			<form onsubmit={addServer} class="grid gap-6 md:grid-cols-4">
 				<div class="space-y-2">
 					<label
 						for="name"
 						class="ml-1 text-xs font-bold tracking-widest text-brand-light/40 uppercase"
-						>Friendly Name</label
+						>Monitor name</label
 					>
 					<input
 						id="name"
@@ -257,7 +329,7 @@
 					<label
 						for="url"
 						class="ml-1 text-xs font-bold tracking-widest text-brand-light/40 uppercase"
-						>Endpoint URL / Host</label
+						>URL or host</label
 					>
 					<input
 						id="url"
@@ -265,8 +337,19 @@
 						bind:value={newUrl}
 						required
 						class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 transition-all outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-						placeholder={newType === 'http' ? 'https://api.example.com' : 'example.com:80'}
+						placeholder={newType === 'http'
+							? 'example.com or https://example.com'
+							: 'example.com:80'}
 					/>
+					{#if willNormalizeMonitorUrl(newUrl, newType)}
+						<p
+							class="rounded-2xl border border-brand-primary/20 bg-brand-primary/10 px-4 py-3 text-sm font-medium text-brand-primary"
+						>
+							We will save this as <span class="font-black"
+								>{normalizeMonitorUrl(newUrl, newType)}</span
+							>.
+						</p>
+					{/if}
 				</div>
 				<div class="space-y-2">
 					<label
@@ -281,7 +364,7 @@
 							class="w-full cursor-pointer appearance-none rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 transition-all outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
 						>
 							<option value="http">HTTP (GET)</option>
-							<option value="ping">TCP Ping</option>
+							<option value="ping">TCP port</option>
 						</select>
 					</div>
 				</div>
@@ -298,7 +381,7 @@
 						>
 					</div>
 					<div class="flex flex-wrap gap-1.5 pt-1">
-						{#each intervalPresets as preset}
+						{#each intervalPresets as preset (preset)}
 							<button
 								type="button"
 								onclick={() => (newInterval = preset)}
@@ -322,7 +405,7 @@
 					<button
 						type="submit"
 						class="rounded-2xl bg-brand-primary px-8 py-3 font-bold text-brand-dark shadow-lg shadow-brand-primary/10 transition-all hover:bg-brand-primary/90"
-						>Start Monitoring</button
+						>Start monitoring</button
 					>
 				</div>
 			</form>
@@ -343,7 +426,7 @@
 						</div>
 						<div>
 							<h2 class="text-2xl font-bold">Edit Monitor</h2>
-							<p class="text-sm text-brand-light/40">Adjust your monitoring parameters.</p>
+							<p class="text-sm text-brand-light/40">Update the target and check schedule.</p>
 						</div>
 					</div>
 					<button
@@ -360,7 +443,7 @@
 							<label
 								for="edit-name"
 								class="ml-1 text-xs font-bold tracking-widest text-brand-light/40 uppercase"
-								>Friendly Name</label
+								>Monitor name</label
 							>
 							<input
 								id="edit-name"
@@ -374,7 +457,7 @@
 							<label
 								for="edit-url"
 								class="ml-1 text-xs font-bold tracking-widest text-brand-light/40 uppercase"
-								>Endpoint URL / Host</label
+								>URL or host</label
 							>
 							<input
 								id="edit-url"
@@ -383,6 +466,15 @@
 								required
 								class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 transition-all outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
 							/>
+							{#if willNormalizeMonitorUrl(editUrl, editType)}
+								<p
+									class="rounded-2xl border border-brand-primary/20 bg-brand-primary/10 px-4 py-3 text-sm font-medium text-brand-primary"
+								>
+									We will save this as <span class="font-black"
+										>{normalizeMonitorUrl(editUrl, editType)}</span
+									>.
+								</p>
+							{/if}
 						</div>
 						<div class="space-y-2">
 							<label
@@ -397,7 +489,7 @@
 									class="w-full cursor-pointer appearance-none rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 transition-all outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
 								>
 									<option value="http">HTTP (GET)</option>
-									<option value="ping">TCP Ping</option>
+									<option value="ping">TCP port</option>
 								</select>
 							</div>
 						</div>
@@ -414,7 +506,7 @@
 								>
 							</div>
 							<div class="flex flex-wrap gap-2 pt-2">
-								{#each intervalPresets as preset}
+								{#each intervalPresets as preset (preset)}
 									<button
 										type="button"
 										onclick={() => (editInterval = preset)}
@@ -434,12 +526,12 @@
 							type="button"
 							onclick={() => (isEditing = false)}
 							class="rounded-2xl border border-brand-light/10 px-8 py-3 font-bold transition-colors hover:bg-brand-light/5"
-							>Discard</button
+							>Cancel</button
 						>
 						<button
 							type="submit"
 							class="rounded-2xl bg-brand-primary px-10 py-3 font-bold text-brand-dark shadow-lg shadow-brand-primary/10 transition-all hover:bg-brand-primary/90"
-							>Save Changes</button
+							>Save changes</button
 						>
 					</div>
 				</form>
@@ -450,7 +542,7 @@
 	{#if isLoading}
 		<div class="flex h-96 flex-col items-center justify-center gap-4">
 			<RefreshCw class="h-10 w-10 animate-spin text-brand-primary" />
-			<p class="animate-pulse font-medium text-brand-light/20">Initializing dashboard...</p>
+			<p class="animate-pulse font-medium text-brand-light/25">Loading monitors...</p>
 		</div>
 	{:else if servers.length === 0}
 		<div
@@ -459,10 +551,16 @@
 			<div class="mb-6 rounded-full bg-brand-light/5 p-6 text-brand-light/10">
 				<Activity class="h-16 w-16" />
 			</div>
-			<h3 class="mb-2 text-2xl font-bold">System Silence</h3>
+			<h3 class="mb-2 text-2xl font-bold">No monitors yet</h3>
 			<p class="mx-auto max-w-xs text-brand-light/30">
-				No monitors configured yet. Add your first server to start tracking availability.
+				Add your first website, API endpoint, or TCP service to start tracking uptime.
 			</p>
+			<button
+				onclick={() => (isAdding = true)}
+				class="mt-8 inline-flex items-center gap-2 rounded-2xl bg-brand-primary px-6 py-3 font-bold text-brand-dark shadow-lg shadow-brand-primary/20 transition-all hover:scale-105 active:scale-95"
+			>
+				<Plus class="h-5 w-5" /> Add monitor
+			</button>
 		</div>
 	{:else}
 		<div class="grid gap-6">
@@ -523,9 +621,11 @@
 								</div>
 								<div class="flex items-center gap-2 text-brand-light/30">
 									<p class="truncate text-sm font-medium">{s.url}</p>
+									<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 									<a
 										href={s.url}
 										target="_blank"
+										rel="external noreferrer"
 										class="p-1 transition-colors hover:text-brand-primary"
 										><ExternalLink class="h-3.5 w-3.5" /></a
 									>
@@ -566,7 +666,7 @@
 							<!-- History Strip -->
 							<div class="flex flex-col gap-2">
 								<div class="flex h-10 w-48 flex-shrink-0 items-end gap-1">
-									{#each getHourlyBuckets(s.history || []) as color, i}
+									{#each getHourlyBuckets(s.history || []) as color, i (i)}
 										<div
 											class="group/item relative flex-1 cursor-help rounded-sm opacity-60 transition-all hover:h-12 hover:opacity-100"
 											style="background-color: {color}; height: {color === '#1f332f'
@@ -587,11 +687,11 @@
 																style="background-color: {color}"
 															></div>
 															<span class="font-bold"
-																>System {color === '#73E2A7'
+																>{color === '#73E2A7'
 																	? 'Healthy'
 																	: color === '#E5B181'
-																		? 'Degraded'
-																		: 'Critical'}</span
+																		? 'Slow response'
+																		: 'Down'}</span
 															>
 														</div>
 													{:else}
@@ -619,7 +719,7 @@
 							class="flex min-w-[120px] flex-col gap-2 border-t border-brand-light/5 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6"
 						>
 							<a
-								href="/dashboard/{s.id}"
+								href={resolve('/dashboard/[id]', { id: String(s.id) })}
 								class="w-full rounded-xl bg-brand-light/5 px-5 py-2.5 text-center text-xs font-bold transition-all hover:bg-brand-light/10"
 							>
 								Details
