@@ -15,6 +15,7 @@ type Config struct {
 	SMTPFrom     string
 	ClientID     string
 	ClientSecret string
+	JWTSecret    string
 }
 
 func Load() *Config {
@@ -30,6 +31,7 @@ func Load() *Config {
 		SMTPFrom:     getEnv("SMTP_FROM", "no-reply@localhost"),
 		ClientID:     getEnv("CLIENT_ID", ""),
 		ClientSecret: getEnv("CLIENT_SECRET", ""),
+		JWTSecret:    getEnv("JWT_SECRET", "dev-secret-change-me"),
 	}
 }
 

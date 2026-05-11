@@ -7,9 +7,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// JWTSecret повинен бути у файлі конфігурації або змінних оточення
-var JWTSecret = []byte("your-very-secret-key")
-
 func (s *Server) authMiddleware(c fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
@@ -18,7 +15,7 @@ func (s *Server) authMiddleware(c fiber.Ctx) error {
 
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return JWTSecret, nil
+		return []byte(s.Config.JWTSecret), nil
 	})
 
 	if err != nil || !token.Valid {

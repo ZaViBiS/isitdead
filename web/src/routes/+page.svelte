@@ -1,7 +1,20 @@
 <script lang="ts">
-	import { Activity, Clock, Bell, LineChart, Globe, Zap, ShieldCheck, ArrowRight, ExternalLink, History, BarChart3, History as HistoryIcon } from 'lucide-svelte';
+	import {
+		Activity,
+		ArrowRight,
+		BarChart3,
+		CheckCircle2,
+		Clock3,
+		Eye,
+		Gauge,
+		ListChecks,
+		Server as ServerIcon,
+		ShieldCheck,
+		Wifi,
+		XCircle
+	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { getStatusColor } from '$lib/utils';
+	import { resolve } from '$app/paths';
 
 	let isLoggedIn = $state(false);
 
@@ -11,122 +24,315 @@
 
 	const features = [
 		{
-			title: 'Real-time Monitoring',
-			description: 'We check your services every 30 seconds from multiple locations worldwide.',
-			icon: Activity
+			title: 'Website and API monitoring',
+			description:
+				'Track public pages, API health endpoints, and critical services from one dashboard.',
+			icon: Wifi
 		},
 		{
-			title: 'Instant Alerts',
-			description: 'Get notified via Email, Slack, or Telegram as soon as something goes wrong.',
-			icon: Bell
+			title: 'Clear incident history',
+			description: 'See failed checks, error responses, and outages without digging through noise.',
+			icon: XCircle
 		},
 		{
-			title: 'Incidents Log',
-			description: 'Focus on what matters. We filter out the noise and show only problematic checks.',
-			icon: History
+			title: 'Flexible check intervals',
+			description:
+				'Monitor high-priority endpoints often and low-priority services less frequently.',
+			icon: Clock3
 		},
 		{
-			title: 'Global Coverage',
-			description: 'Global checking stations ensure your site is reachable everywhere.',
-			icon: Globe
+			title: 'Response time tracking',
+			description: 'Watch latency trends so slow endpoints are visible before they become outages.',
+			icon: Gauge
 		},
 		{
-			title: 'Speed Analysis',
-			description: 'Monitor not just uptime, but also response times and latency.',
-			icon: Zap
+			title: 'At-a-glance status',
+			description: 'Quickly understand which services are healthy, degraded, or unavailable.',
+			icon: Eye
 		},
 		{
-			title: 'Interval Presets',
-			description: 'Flexible monitoring intervals from 30 seconds up to 24 hours.',
-			icon: Clock
+			title: 'Private dashboard',
+			description: 'Keep monitors and service history behind authenticated access for your team.',
+			icon: ShieldCheck
 		}
+	];
+
+	const monitors = [
+		{
+			name: 'Public Website',
+			target: 'https://example.com',
+			type: 'HTTP',
+			status: '200 OK',
+			uptime: '99.98%',
+			latency: '42ms'
+		},
+		{
+			name: 'API Gateway',
+			target: 'https://api.example.com/health',
+			type: 'HTTP',
+			status: '200 OK',
+			uptime: '99.94%',
+			latency: '68ms'
+		},
+		{
+			name: 'Database Port',
+			target: 'db.internal:5432',
+			type: 'TCP',
+			status: 'Connected',
+			uptime: '99.99%',
+			latency: '12ms'
+		}
+	];
+
+	const incidents = [
+		{ status: '500 Internal Server Error', time: '12:42', latency: '450ms' },
+		{ status: 'TCP Connection Error', time: '10:15', latency: '5000ms' },
+		{ status: '404 Not Found', time: 'Yesterday', latency: '120ms' }
+	];
+
+	const workflowItems = [
+		{ label: '1', value: 'Add the website, API endpoint, or TCP service you want to monitor.' },
+		{
+			label: '2',
+			value: 'Choose the check type and interval that fits the importance of the service.'
+		},
+		{
+			label: '3',
+			value: 'Watch uptime, latency, current status, and recent failures in the dashboard.'
+		},
+		{ label: '4', value: 'Open the incident history when something fails and see what changed.' }
+	];
+
+	const chartBars = [
+		44, 48, 54, 42, 60, 66, 72, 58, 64, 70, 78, 52, 46, 74, 80, 62, 57, 67, 73, 84, 76, 68, 59, 63,
+		71, 77, 55, 49, 65, 82, 88, 70
 	];
 </script>
 
-<div class="relative min-h-screen">
-	<!-- Background Glow -->
-	<div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] bg-gradient-to-b from-brand-primary/10 to-transparent blur-[120px] pointer-events-none -z-10"></div>
+<svelte:head>
+	<title>isitdead - uptime monitoring for small teams</title>
+	<meta
+		name="description"
+		content="Uptime monitoring for websites, APIs, and TCP services with status dashboards, latency tracking, and incident history."
+	/>
+</svelte:head>
 
-	<!-- Hero Section -->
-	<section class="relative pt-24 pb-32">
-		<div class="container mx-auto px-4 text-center">
-			<div class="inline-flex items-center gap-2 rounded-full bg-brand-primary/10 border border-brand-primary/20 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-brand-primary mb-8 animate-in fade-in slide-in-from-top-4">
-				<span class="flex h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"></span>
-				Infrastructure Intelligence
-			</div>
-			
-			<h1 class="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
-				Monitor everything<br />
-				<span class="text-brand-primary/80">without the headache</span>
-			</h1>
-			
-			<p class="max-w-2xl mx-auto text-lg md:text-xl text-brand-light/40 font-medium mb-12">
-				Professional-grade uptime monitoring and incidents tracking. 
-				Simple to set up, impossible to live without.
-			</p>
+<div class="relative isolate overflow-hidden">
+	<div class="pointer-events-none absolute inset-0 -z-10">
+		<div
+			class="absolute top-[-8rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/20 blur-[140px]"
+		></div>
+		<div
+			class="absolute top-[34rem] right-[-12rem] h-[28rem] w-[28rem] rounded-full bg-brand-soft/10 blur-[120px]"
+		></div>
+		<div
+			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(222,244,198,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(222,244,198,0.04)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black,transparent_82%)] bg-[size:72px_72px]"
+		></div>
+	</div>
 
-			<div class="flex flex-wrap justify-center gap-4">
-				<a
-					href={isLoggedIn ? '/dashboard' : '/register'}
-					class="group relative rounded-2xl bg-brand-primary px-10 py-5 text-lg font-black text-brand-dark transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-brand-primary/20"
+	<section class="px-4 py-20 sm:px-6 lg:py-28">
+		<div
+			class="container mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
+		>
+			<div class="animate-rise">
+				<div
+					class="mb-8 inline-flex items-center gap-3 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-4 py-2 text-xs font-black tracking-[0.28em] text-brand-primary uppercase shadow-2xl shadow-brand-primary/10"
 				>
-					<span class="flex items-center gap-2">
-						{isLoggedIn ? 'Go to Dashboard' : 'Start Monitoring Free'}
-						<ArrowRight class="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+					<span class="relative flex h-2.5 w-2.5">
+						<span
+							class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-primary opacity-40"
+						></span>
+						<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-primary"></span>
 					</span>
-				</a>
-				<a
-					href="#demo"
-					class="rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-10 py-5 text-lg font-black text-brand-light/60 transition-all hover:bg-brand-light/5 hover:border-brand-light/20 backdrop-blur-md"
-				>
-					View Live Demo
-				</a>
-			</div>
-		</div>
+					Uptime monitoring service
+				</div>
 
-		<!-- Dashboard Preview -->
-		<div class="container mx-auto px-4 mt-24">
-			<div class="relative group">
-				<div class="absolute -inset-1 bg-gradient-to-r from-brand-primary/20 to-brand-soft/20 rounded-[3rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-				<div class="relative rounded-[2.8rem] border border-brand-light/10 bg-brand-dark/80 p-4 shadow-2xl backdrop-blur-xl">
-					<div class="rounded-[2rem] border border-brand-light/5 bg-brand-light/[0.02] p-8">
-						<div class="flex items-center justify-between mb-12">
-							<div>
-								<h3 class="text-2xl font-black tracking-tight mb-1">Infrastructure Overview</h3>
-								<p class="text-xs font-bold text-brand-light/20 uppercase tracking-widest">Global Health Status</p>
+				<h1
+					class="max-w-5xl text-5xl leading-[0.9] font-black tracking-[-0.07em] text-brand-light sm:text-7xl lg:text-8xl"
+				>
+					Know what is down before users do.
+				</h1>
+
+				<p class="mt-8 max-w-2xl text-lg leading-8 font-medium text-brand-light/55 sm:text-xl">
+					isitdead watches your websites, APIs, and critical ports, then turns uptime, latency, and
+					failed checks into a dashboard your team can understand quickly.
+				</p>
+
+				<div class="mt-10 flex flex-col gap-4 sm:flex-row">
+					<a
+						href={isLoggedIn ? resolve('/dashboard') : resolve('/register')}
+						class="group inline-flex items-center justify-center rounded-2xl bg-brand-primary px-8 py-4 text-base font-black text-brand-dark shadow-2xl shadow-brand-primary/20 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0"
+					>
+						{isLoggedIn ? 'Open dashboard' : 'Create monitor'}
+						<ArrowRight class="ml-2 h-5 w-5 transition group-hover:translate-x-1" />
+					</a>
+					<a
+						href={resolve('/#demo')}
+						class="inline-flex items-center justify-center rounded-2xl border border-brand-light/10 bg-brand-light/[0.03] px-8 py-4 text-base font-black text-brand-light/75 backdrop-blur transition hover:border-brand-primary/30 hover:text-brand-light"
+					>
+						View product preview
+					</a>
+				</div>
+
+				<div class="mt-10 grid max-w-xl grid-cols-3 gap-3">
+					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.03] p-4">
+						<div class="text-2xl font-black text-brand-primary">HTTP</div>
+						<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
+							checks
+						</div>
+					</div>
+					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.03] p-4">
+						<div class="text-2xl font-black text-brand-primary">TCP</div>
+						<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
+							ports
+						</div>
+					</div>
+					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.03] p-4">
+						<div class="text-2xl font-black text-brand-primary">30d</div>
+						<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
+							history
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="demo" class="animate-rise animate-rise-delay relative">
+				<div
+					class="absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-primary/20 via-brand-soft/10 to-transparent blur-2xl"
+				></div>
+				<div
+					class="relative overflow-hidden rounded-[2.75rem] border border-brand-light/10 bg-[#111f1c]/90 p-3 shadow-2xl backdrop-blur-xl"
+				>
+					<div class="rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/80">
+						<div class="flex items-center justify-between border-b border-brand-light/10 px-5 py-4">
+							<div class="flex items-center gap-2">
+								<span class="h-3 w-3 rounded-full bg-brand-accent"></span>
+								<span class="h-3 w-3 rounded-full bg-[#E5B181]"></span>
+								<span class="h-3 w-3 rounded-full bg-brand-primary"></span>
 							</div>
-							<div class="flex items-center gap-2 px-4 py-2 bg-brand-primary/10 rounded-2xl border border-brand-primary/20">
-								<span class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"></span>
-								<span class="text-[10px] font-black uppercase tracking-widest text-brand-primary">All Systems Operational</span>
+							<div
+								class="rounded-full bg-brand-primary/10 px-3 py-1 text-[10px] font-black tracking-widest text-brand-primary uppercase"
+							>
+								Live dashboard
 							</div>
 						</div>
 
-						<div class="grid gap-6">
-							{#each ['Production API', 'Database Node', 'Auth Service'] as name, i}
-								<div class="rounded-3xl border border-brand-light/10 bg-brand-dark/40 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all hover:border-brand-primary/30">
-									<div class="flex items-center gap-4">
-										<div class="h-12 w-12 rounded-2xl bg-brand-light/5 flex items-center justify-center border border-brand-light/10">
-											<Globe class="h-6 w-6 text-brand-primary/60" />
-										</div>
+						<div class="p-5 sm:p-7">
+							<div class="grid gap-5 lg:grid-cols-[1fr_13rem]">
+								<div class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5">
+									<div class="mb-6 flex items-start justify-between gap-4">
 										<div>
-											<div class="font-bold text-lg">{name}</div>
-											<div class="text-xs text-brand-light/20 font-medium">s{i+1}.cluster.internal</div>
+											<p class="text-xs font-black tracking-[0.26em] text-brand-light/30 uppercase">
+												Infrastructure health
+											</p>
+											<h2 class="mt-2 text-2xl font-black tracking-tight">
+												All systems operational
+											</h2>
+										</div>
+										<div class="rounded-2xl bg-brand-primary/10 p-3 text-brand-primary">
+											<Activity class="h-6 w-6" />
 										</div>
 									</div>
-									<div class="flex gap-1.5 h-10 items-end flex-1 max-w-md">
-										{#each Array(40) as _, j}
-											<div 
-												class="h-full w-full rounded-sm transition-all hover:scale-y-125" 
-												style="background-color: {j === 25 ? '#D62246' : j > 30 ? '#E5B181' : '#73E2A7'}; opacity: {0.3 + (j/60)}"
+
+									<div class="flex h-32 items-end gap-1.5">
+										{#each chartBars as height, index (index)}
+											<div
+												class="flex-1 rounded-t-md transition hover:opacity-100"
+												class:bg-brand-accent={index === 12}
+												class:bg-[#E5B181]={index === 26}
+												class:bg-brand-primary={index !== 12 && index !== 26}
+												style={`height: ${height}%; opacity: ${index === 12 ? 0.85 : 0.28 + index / 62}`}
 											></div>
 										{/each}
 									</div>
-									<div class="text-right">
-										<div class="text-lg font-black text-brand-primary">99.98%</div>
-										<div class="text-[10px] font-bold text-brand-light/20 uppercase tracking-widest">Uptime</div>
+								</div>
+
+								<div class="grid gap-4">
+									<div
+										class="rounded-[2rem] border border-brand-primary/20 bg-brand-primary/10 p-5"
+									>
+										<div
+											class="flex items-center gap-2 text-xs font-black tracking-widest text-brand-primary uppercase"
+										>
+											<CheckCircle2 class="h-4 w-4" />
+											Uptime
+										</div>
+										<div class="mt-3 text-4xl font-black text-brand-primary">99.98%</div>
+									</div>
+									<div
+										class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5"
+									>
+										<div
+											class="flex items-center gap-2 text-xs font-black tracking-widest text-brand-light/35 uppercase"
+										>
+											<BarChart3 class="h-4 w-4" />
+											Average
+										</div>
+										<div class="mt-3 text-4xl font-black">
+											42<span class="ml-1 text-sm text-brand-light/25">ms</span>
+										</div>
 									</div>
 								</div>
-							{/each}
+							</div>
+
+							<div class="mt-5 space-y-3">
+								{#each monitors as monitor (monitor.name)}
+									<div
+										class="rounded-3xl border border-brand-light/10 bg-brand-dark/70 p-4 transition hover:border-brand-primary/25"
+									>
+										<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+											<div class="flex items-center gap-4">
+												<div
+													class="flex h-12 w-12 items-center justify-center rounded-2xl border border-brand-light/10 bg-brand-light/[0.04] text-brand-primary"
+												>
+													<ServerIcon class="h-6 w-6" />
+												</div>
+												<div>
+													<div class="flex flex-wrap items-center gap-2">
+														<h3 class="font-black">{monitor.name}</h3>
+														<span
+															class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-0.5 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
+														>
+															{monitor.type}
+														</span>
+													</div>
+													<p
+														class="mt-1 max-w-[16rem] truncate text-sm font-medium text-brand-light/35 sm:max-w-xs"
+													>
+														{monitor.target}
+													</p>
+												</div>
+											</div>
+											<div class="grid grid-cols-3 gap-3 text-right sm:min-w-64">
+												<div>
+													<div class="text-sm font-black text-brand-primary">{monitor.status}</div>
+													<div
+														class="text-[10px] font-bold tracking-widest text-brand-light/25 uppercase"
+													>
+														status
+													</div>
+												</div>
+												<div>
+													<div class="text-sm font-black">{monitor.uptime}</div>
+													<div
+														class="text-[10px] font-bold tracking-widest text-brand-light/25 uppercase"
+													>
+														uptime
+													</div>
+												</div>
+												<div>
+													<div class="text-sm font-black text-[#E5B181]">{monitor.latency}</div>
+													<div
+														class="text-[10px] font-bold tracking-widest text-brand-light/25 uppercase"
+													>
+														latency
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								{/each}
+							</div>
 						</div>
 					</div>
 				</div>
@@ -134,154 +340,170 @@
 		</div>
 	</section>
 
-	<!-- Features Section -->
-	<section class="py-32 bg-brand-light/[0.02] border-y border-brand-light/5">
-		<div class="container mx-auto px-4">
-			<div class="mb-20 text-center">
-				<h2 class="text-4xl md:text-5xl font-black tracking-tight mb-4">Everything you need<br />to sleep better</h2>
-				<p class="text-brand-light/40 font-medium">Professional monitoring features for modern dev teams.</p>
+	<section
+		id="features"
+		class="border-y border-brand-light/10 bg-brand-light/[0.025] px-4 py-24 sm:px-6"
+	>
+		<div class="container mx-auto max-w-7xl">
+			<div class="mb-14 max-w-3xl">
+				<p class="text-xs font-black tracking-[0.32em] text-brand-primary uppercase">
+					What is included
+				</p>
+				<h2 class="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-6xl">
+					The monitoring signals teams actually look at.
+				</h2>
 			</div>
-			
-			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-				{#each features as feature}
+
+			<div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+				{#each features as feature (feature.title)}
 					{@const Icon = feature.icon}
-					<div class="group rounded-[2.5rem] border border-brand-light/10 bg-brand-dark p-10 transition-all hover:shadow-2xl hover:border-brand-primary/30 hover:shadow-brand-primary/5">
-						<div class="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition-all group-hover:scale-110 group-hover:bg-brand-primary group-hover:text-brand-dark">
+					<article
+						class="group rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/70 p-7 transition hover:-translate-y-1 hover:border-brand-primary/30 hover:bg-brand-dark"
+					>
+						<div
+							class="mb-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary group-hover:text-brand-dark"
+						>
 							<Icon class="h-7 w-7" />
 						</div>
-						<h3 class="mb-3 text-2xl font-black tracking-tight">{feature.title}</h3>
-						<p class="text-brand-light/40 leading-relaxed font-medium">{feature.description}</p>
-					</div>
+						<h3 class="text-2xl font-black tracking-tight">{feature.title}</h3>
+						<p class="mt-3 leading-7 text-brand-light/45">{feature.description}</p>
+					</article>
 				{/each}
 			</div>
 		</div>
 	</section>
 
-	<!-- Demo Section -->
-	<section id="demo" class="py-32 relative">
-		<div class="absolute bottom-0 left-0 w-full h-[500px] bg-gradient-to-t from-brand-primary/5 to-transparent blur-[120px] pointer-events-none -z-10"></div>
-		
-		<div class="container mx-auto px-4">
-			<div class="mb-20 text-center">
-				<h2 class="text-4xl md:text-5xl font-black tracking-tight mb-4">Deep Insight</h2>
-				<p class="text-brand-light/40 font-medium">Analyze every incident with precision.</p>
+	<section class="px-4 py-24 sm:px-6">
+		<div class="container mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+			<div>
+				<p class="text-xs font-black tracking-[0.32em] text-brand-primary uppercase">
+					Incident review
+				</p>
+				<h2 class="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-6xl">
+					A timeline built for quick triage.
+				</h2>
+				<p class="mt-6 text-lg leading-8 text-brand-light/50">
+					The dashboard keeps recent checks visible and separates failing responses, so you can
+					understand what broke and when without reading server logs first.
+				</p>
 			</div>
 
-			<div class="max-w-5xl mx-auto rounded-[3rem] border border-brand-light/10 bg-brand-dark/50 p-8 lg:p-12 shadow-2xl backdrop-blur-xl">
-				<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-16">
-					<div class="flex items-start gap-6">
-						<div class="h-20 w-20 rounded-[2rem] bg-brand-light/5 flex items-center justify-center border border-brand-light/10">
-							<Globe class="h-10 w-10 text-brand-primary/60" />
+			<div class="rounded-[2.5rem] border border-brand-light/10 bg-brand-dark/80 p-5 shadow-2xl">
+				<div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div class="flex items-center gap-3">
+						<div class="rounded-2xl bg-brand-accent/10 p-3 text-brand-accent">
+							<XCircle class="h-6 w-6" />
 						</div>
 						<div>
-							<div class="flex items-center gap-3 mb-2">
-								<h3 class="text-4xl font-black tracking-tight">Main API Cluster</h3>
-								<span class="text-[10px] px-2.5 py-1 rounded-lg bg-brand-light/5 border border-brand-light/10 text-brand-light/40 uppercase font-black tracking-widest">HTTP</span>
-							</div>
-							<p class="text-lg font-medium text-brand-light/30">api.isitdead.io</p>
+							<h3 class="text-2xl font-black tracking-tight">Recent incidents</h3>
+							<p class="text-sm text-brand-light/35">Failed and degraded checks only</p>
 						</div>
 					</div>
-					<div class="flex gap-8 bg-brand-light/[0.02] border border-brand-light/5 rounded-[2rem] p-6">
-						<div class="text-right">
-							<div class="flex items-center justify-end gap-1.5 text-brand-light/40 text-[10px] font-bold uppercase tracking-widest mb-1">
-								<Clock class="h-3 w-3" /> 30d Uptime
-							</div>
-							<div class="text-3xl font-black text-brand-primary">99.98%</div>
-						</div>
-						<div class="w-px h-10 bg-brand-light/10 self-center"></div>
-						<div class="text-right">
-							<div class="flex items-center justify-end gap-1.5 text-brand-light/40 text-[10px] font-bold uppercase tracking-widest mb-1">
-								<BarChart3 class="h-3 w-3" /> Avg Latency
-							</div>
-							<div class="text-3xl font-black text-brand-light/80">42<span class="text-xs font-bold text-brand-light/20 ml-0.5">ms</span></div>
-						</div>
-					</div>
+					<span
+						class="rounded-full border border-brand-light/10 bg-brand-light/[0.03] px-4 py-2 text-xs font-black tracking-widest text-brand-light/35 uppercase"
+					>
+						Last 24 hours
+					</span>
 				</div>
 
-				<!-- Incidents Log Demo -->
-				<div class="rounded-[2.5rem] border border-brand-light/10 bg-brand-dark/80 p-8 lg:p-10">
-					<div class="mb-8 flex items-center justify-between">
-						<h3 class="text-xl font-bold flex items-center gap-2">
-							<HistoryIcon class="h-5 w-5 text-brand-primary" />
-							Incidents Log
-						</h3>
-						<span class="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-brand-light/5 rounded-full text-brand-light/40">
-							Recent Issues
-						</span>
-					</div>
-
-					<div class="overflow-hidden rounded-3xl border border-brand-light/5 bg-brand-light/[0.01]">
-						<div class="grid grid-cols-12 px-6 py-4 border-b border-brand-light/10 text-[10px] font-black uppercase tracking-widest text-brand-light/20 bg-brand-light/[0.02]">
-							<div class="col-span-1">Status</div>
-							<div class="col-span-6">Timestamp</div>
-							<div class="col-span-3">Check Response</div>
-							<div class="col-span-2 text-right">Latency</div>
-						</div>
-						<div class="divide-y divide-brand-light/5">
-							{#each [
-								{ status: '500 Internal Server Error', time: '12:42 PM', latency: 450 },
-								{ status: 'Connection Timeout', time: '10:15 AM', latency: 5000 },
-								{ status: '404 Not Found', time: 'Yesterday, 8:20 PM', latency: 120 }
-							] as incident}
-								<div class="grid grid-cols-12 px-6 py-4 items-center">
-									<div class="col-span-1">
-										<div class="h-3 w-3 rounded-full bg-brand-accent shadow-sm"></div>
-									</div>
-									<div class="col-span-6">
-										<span class="text-sm font-medium text-brand-light/80">{incident.time}</span>
-									</div>
-									<div class="col-span-3">
-										<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-brand-light/5 text-brand-light/40 border border-brand-light/10">
-											{incident.status}
-										</span>
-									</div>
-									<div class="col-span-2 text-right">
-										<span class="text-sm font-black font-mono tracking-tight text-brand-accent">
-											{incident.latency}<span class="text-[10px] ml-0.5 opacity-40">ms</span>
-										</span>
-									</div>
+				<div class="overflow-hidden rounded-[1.75rem] border border-brand-light/10">
+					{#each incidents as incident (incident.status)}
+						<div
+							class="grid gap-3 border-b border-brand-light/10 bg-brand-light/[0.015] p-4 last:border-b-0 sm:grid-cols-[1fr_7rem_6rem] sm:items-center"
+						>
+							<div>
+								<div class="text-sm font-black text-brand-light">{incident.status}</div>
+								<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/25 uppercase">
+									check response
 								</div>
-							{/each}
+							</div>
+							<div class="text-sm font-bold text-brand-light/60">{incident.time}</div>
+							<div class="text-sm font-black text-brand-accent sm:text-right">
+								{incident.latency}
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section id="how-it-works" class="px-4 pb-24 sm:px-6">
+		<div class="container mx-auto max-w-7xl">
+			<div
+				class="overflow-hidden rounded-[3rem] border border-brand-primary/20 bg-brand-primary text-brand-dark shadow-2xl shadow-brand-primary/10"
+			>
+				<div class="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
+					<div class="p-8 sm:p-12 lg:p-14">
+						<div
+							class="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-dark/10 px-4 py-2 text-xs font-black tracking-widest uppercase"
+						>
+							<ListChecks class="h-4 w-4" />
+							How it works
+						</div>
+						<h2 class="text-4xl leading-none font-black tracking-[-0.06em] sm:text-6xl">
+							Start watching a service in minutes.
+						</h2>
+						<p class="mt-6 max-w-xl text-lg leading-8 font-semibold text-brand-dark/70">
+							Add a monitor, choose how often it should be checked, and use the dashboard to track
+							current status, uptime, latency, and recent incidents.
+						</p>
+						<a
+							href={isLoggedIn ? resolve('/dashboard') : resolve('/register')}
+							class="mt-8 inline-flex items-center rounded-2xl bg-brand-dark px-7 py-4 font-black text-brand-primary transition hover:-translate-y-0.5"
+						>
+							{isLoggedIn ? 'Open monitors' : 'Create account'}
+							<ArrowRight class="ml-2 h-5 w-5" />
+						</a>
+					</div>
+
+					<div class="bg-brand-dark/95 p-5 sm:p-8 lg:p-10">
+						<div class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5">
+							<div class="mb-5 flex items-center gap-3 text-brand-light">
+								<CheckCircle2 class="h-5 w-5 text-brand-primary" />
+								<span class="font-black">Monitoring flow</span>
+							</div>
+							<div class="space-y-3">
+								{#each workflowItems as item (item.label)}
+									<div class="rounded-2xl border border-brand-light/10 bg-brand-dark/80 p-4">
+										<div class="text-xs font-black tracking-widest text-brand-primary uppercase">
+											Step {item.label}
+										</div>
+										<div class="mt-1 text-sm leading-6 text-brand-light/65">
+											{item.value}
+										</div>
+									</div>
+								{/each}
+							</div>
+							<p class="mt-5 text-sm leading-6 text-brand-light/40">
+								Designed for everyday operations: quick checks, clear state, and enough history to
+								understand what happened.
+							</p>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</section>
-
-	<!-- CTA Section -->
-	<section class="py-32">
-		<div class="container mx-auto px-4">
-			<div class="rounded-[4rem] bg-brand-primary p-12 lg:p-24 text-center relative overflow-hidden group">
-				<div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none"></div>
-				<h2 class="text-5xl md:text-7xl font-black text-brand-dark mb-8 tracking-tighter relative z-10">Ready to monitor?<br />It's free for beta users.</h2>
-				<a 
-					href="/register" 
-					class="inline-flex items-center gap-2 rounded-2xl bg-brand-dark px-12 py-6 text-xl font-black text-brand-primary transition-all hover:scale-105 active:scale-95 shadow-2xl relative z-10"
-				>
-					Create Account
-					<ArrowRight class="h-6 w-6" />
-				</a>
-			</div>
-		</div>
-	</section>
-
-	<!-- Footer -->
-	<footer class="py-12 border-t border-brand-light/5 text-center">
-		<div class="flex items-center justify-center gap-2 font-black text-brand-light/20 uppercase tracking-[0.3em] text-xs">
-			<Activity class="h-4 w-4" /> Isitdead &copy; 2026
-		</div>
-	</footer>
 </div>
 
 <style>
-	@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-	@keyframes slide-in-from-top-4 { from { transform: translateY(-1rem); } to { transform: translateY(0); } }
-
-	.animate-in {
-		animation-duration: 600ms;
-		animation-fill-mode: both;
+	@keyframes rise {
+		from {
+			opacity: 0;
+			transform: translateY(1.25rem);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
-	.fade-in { animation-name: fade-in; }
-	.slide-in-from-top-4 { animation-name: slide-in-from-top-4; }
+
+	.animate-rise {
+		animation: rise 700ms ease-out both;
+	}
+
+	.animate-rise-delay {
+		animation-delay: 140ms;
+	}
 </style>

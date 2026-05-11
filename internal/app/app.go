@@ -4,6 +4,7 @@ package app
 import (
 	"crypto/tls"
 	"embed"
+	"fmt"
 	"net/http"
 
 	"github.com/ZaViBiS/isitdead/internal/api"
@@ -59,7 +60,7 @@ func (a *App) Run() error {
 	// локальна розробка — без SSL
 	if a.config.Env == "dev" {
 		// Запускаємо HTTP сервер
-		return a.server.Listen(":8080")
+		return a.server.Listen(fmt.Sprintf(":%s", a.config.Port))
 	}
 
 	// Продакшен — автоматичний SSL через Let's Encrypt

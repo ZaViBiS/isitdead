@@ -11,7 +11,7 @@ Group=ubuntu
 WorkingDirectory=/home/ubuntu/isitdead
 
 # Path to the compiled Go binary
-ExecStart=/home/ubuntu/isitdead/bin/server
+ExecStart=/home/ubuntu/isitdead/bin/isitdead
 
 # Automatic restart on crash
 Restart=always
