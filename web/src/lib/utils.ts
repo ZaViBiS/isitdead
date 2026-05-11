@@ -15,6 +15,7 @@ export interface Server {
 	check_interval: number;
 	history: CheckResult[];
 	history30d?: CheckResult[];
+	incidents?: CheckResult[];
 }
 
 export function getStatusColor(status: string, latency: number): string {

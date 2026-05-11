@@ -40,7 +40,7 @@
 				const found = data.find((s: any) => s.id.toString() === id);
 				
 				if (found) {
-					server = { ...found, history: [], history30d: [] };
+					server = { ...found, history: [], history30d: [], incidents: [] };
 					// Fetch 30 days for metrics
 					const resHist = await fetch(`/api/servers/${id}/results?hours=720`, {
 						headers: { Authorization: `Bearer ${token}` }
@@ -50,9 +50,20 @@
 						const s = server;
 						if (s) {
 							s.history30d = dataHist;
-							// Filter last 24h for chart and logs
+							// Filter last 24h for chart
 							const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).getTime();
 							s.history = dataHist.filter((r: CheckResult) => new Date(r.created_at).getTime() > dayAgo);
+						}
+					}
+
+					// Fetch last 50 incidents
+					const resIncidents = await fetch(`/api/servers/${id}/results?incidents=true&limit=50`, {
+						headers: { Authorization: `Bearer ${token}` }
+					});
+					if (resIncidents.ok) {
+						const dataIncidents = await resIncidents.json();
+						if (server) {
+							server.incidents = dataIncidents;
 						}
 					}
 				} else {
@@ -187,10 +198,10 @@
 				<div class="mb-8 flex items-center justify-between">
 					<h3 class="text-xl font-bold flex items-center gap-2">
 						<History class="h-5 w-5 text-brand-primary" />
-						Activity Logs
+						Incidents Log
 					</h3>
 					<span class="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-brand-light/5 rounded-full text-brand-light/40">
-						Showing last 50 checks
+						Showing last 50 incidents
 					</span>
 				</div>
 
@@ -202,12 +213,12 @@
 						<div class="col-span-3 sm:col-span-2 text-right">Latency</div>
 					</div>
 					<div class="divide-y divide-brand-light/5 max-h-[600px] overflow-y-auto custom-scrollbar">
-						{#if server.history && server.history.length > 0}
-							{#each server.history.slice(0, 50) as result}
+						{#if server.incidents && server.incidents.length > 0}
+							{#each server.incidents as result}
 								<div class="grid grid-cols-12 px-6 py-4 items-center hover:bg-brand-light/[0.02] transition-colors group">
 									<div class="col-span-1">
-										<div 
-											class="h-3 w-3 rounded-full border-2 border-brand-dark shadow-sm" 
+										<div
+											class="h-3 w-3 rounded-full border-2 border-brand-dark shadow-sm"
 											style="background-color: {getStatusColor(result.status, result.latency)}"
 										></div>
 									</div>
@@ -229,12 +240,13 @@
 						{:else}
 							<div class="flex flex-col items-center justify-center py-20 text-brand-light/10 gap-4">
 								<ShieldCheck class="h-12 w-12 opacity-20" />
-								<p class="font-bold uppercase tracking-widest text-xs">Waiting for first check results...</p>
+								<p class="font-bold uppercase tracking-widest text-xs">No incidents recorded yet!</p>
 							</div>
 						{/if}
 					</div>
 				</div>
 			</div>
+
 		</div>
 	{:else}
 		<div class="flex h-[60vh] flex-col items-center justify-center gap-6 animate-pulse">

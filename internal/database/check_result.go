@@ -20,3 +20,18 @@ func (s *Storage) GetHistory(serverID uint) ([]model.CheckResult, error) {
 		Find(&results).Error
 	return results, err
 }
+
+// GetIncidents повертає тільки результати з помилками для сервера
+func (s *Storage) GetIncidents(serverID uint, limit int) ([]model.CheckResult, error) {
+	var results []model.CheckResult
+	query := s.DB.Where("server_id = ?", serverID).
+		Where("status NOT LIKE '2%' AND status != 'Connected'").
+		Order("created_at desc")
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	err := query.Find(&results).Error
+	return results, err
+}

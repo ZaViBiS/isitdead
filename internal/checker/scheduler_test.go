@@ -33,7 +33,7 @@ func TestScheduler(t *testing.T) {
 	defer ts.Close()
 
 	// Add server to DB
-	srv, err := storage.AddServer(user.ID, "Test Server", ts.URL, 1) // 1 second interval
+	srv, err := storage.AddServer(user.ID, "Test Server", ts.URL, "http", 1) // 1 second interval
 	assert.NoError(t, err)
 
 	scheduler := NewScheduler(storage)
