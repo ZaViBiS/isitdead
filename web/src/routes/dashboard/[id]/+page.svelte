@@ -2,25 +2,20 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { ArrowLeft, RefreshCw, ExternalLink, Globe, Activity, Clock, BarChart3, AlertCircle, ShieldCheck, History } from 'lucide-svelte';
-	import { getStatusColor, getFaviconUrl, type Server, type CheckResult } from '$lib/utils';
+	import {
+		getStatusColor,
+		getFaviconUrl,
+		calculateUptime,
+		calculateAvgLatency,
+		type Server,
+		type CheckResult
+	} from '$lib/utils';
 	import StatusChart from '$lib/StatusChart.svelte';
 	import { goto } from '$app/navigation';
 
 	let server = $state<Server | null>(null);
 	let error = $state('');
 	let isLoading = $state(true);
-
-	function calculateUptime(history: CheckResult[]) {
-		if (!history || history.length === 0) return 0;
-		const online = history.filter(r => r.status.startsWith('2') || r.status === 'Connected').length;
-		return (online / history.length) * 100;
-	}
-
-	function calculateAvgLatency(history: CheckResult[]) {
-		if (!history || history.length === 0) return 0;
-		const sum = history.reduce((acc, r) => acc + r.latency, 0);
-		return Math.round(sum / history.length);
-	}
 
 	onMount(async () => {
 		const id = page.params.id;
