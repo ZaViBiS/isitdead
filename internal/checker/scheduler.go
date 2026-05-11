@@ -12,19 +12,27 @@ import (
 
 // Scheduler керує циклічними перевірками серверів
 type Scheduler struct {
-	storage *database.Storage
-	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
+	storage  *database.Storage
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
+	mu       sync.Mutex
+	monitors map[uint]monitorControl
+}
+
+type monitorControl struct {
+	cancel context.CancelFunc
+	done   chan struct{}
 }
 
 // NewScheduler створює новий екземпляр планувальника
 func NewScheduler(db *database.Storage) *Scheduler {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Scheduler{
-		storage: db,
-		ctx:     ctx,
-		cancel:  cancel,
+		storage:  db,
+		ctx:      ctx,
+		cancel:   cancel,
+		monitors: make(map[uint]monitorControl),
 	}
 }
 
@@ -47,14 +55,38 @@ func (s *Scheduler) Start() error {
 // Stop зупиняє всі процеси моніторингу
 func (s *Scheduler) Stop() {
 	s.cancel()
+	s.mu.Lock()
+	for id, monitor := range s.monitors {
+		monitor.cancel()
+		delete(s.monitors, id)
+	}
+	s.mu.Unlock()
 	s.wg.Wait()
 }
 
 // RunServerMonitor запускає окрему горутину для моніторингу конкретного сервера
 func (s *Scheduler) RunServerMonitor(srv model.Server) {
+	s.StopServerMonitor(srv.ID)
+
+	ctx, cancel := context.WithCancel(s.ctx)
+	done := make(chan struct{})
+
+	s.mu.Lock()
+	s.monitors[srv.ID] = monitorControl{cancel: cancel, done: done}
 	s.wg.Add(1)
+	s.mu.Unlock()
+
 	go func() {
-		defer s.wg.Done()
+		defer func() {
+			close(done)
+			s.mu.Lock()
+			if current, ok := s.monitors[srv.ID]; ok && current.done == done {
+				delete(s.monitors, srv.ID)
+			}
+			s.mu.Unlock()
+			s.wg.Done()
+		}()
+
 		log.Info().Str("server", srv.Name).Str("url", srv.URL).Int("interval", srv.CheckInterval).Msg("Monitoring started")
 
 		// Перша перевірка при запуску
@@ -65,7 +97,7 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 
 		for {
 			select {
-			case <-s.ctx.Done():
+			case <-ctx.Done():
 				log.Info().Str("server", srv.Name).Msg("Monitoring stopped")
 				return
 			case <-ticker.C:
@@ -73,6 +105,20 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 			}
 		}
 	}()
+}
+
+// StopServerMonitor зупиняє моніторинг конкретного сервера.
+func (s *Scheduler) StopServerMonitor(serverID uint) {
+	s.mu.Lock()
+	monitor, ok := s.monitors[serverID]
+	if ok {
+		delete(s.monitors, serverID)
+	}
+	s.mu.Unlock()
+
+	if ok {
+		monitor.cancel()
+	}
 }
 
 func (s *Scheduler) performCheck(srv model.Server) {

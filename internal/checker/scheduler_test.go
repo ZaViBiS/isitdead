@@ -69,4 +69,17 @@ func TestScheduler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "200 OK", servers[0].Status)
 	})
+
+	t.Run("Stop Server Monitor", func(t *testing.T) {
+		historyBeforeStop, err := storage.GetHistory(srv.ID)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, historyBeforeStop)
+
+		scheduler.StopServerMonitor(srv.ID)
+		time.Sleep(1500 * time.Millisecond)
+
+		historyAfterStop, err := storage.GetHistory(srv.ID)
+		assert.NoError(t, err)
+		assert.Len(t, historyAfterStop, len(historyBeforeStop))
+	})
 }
