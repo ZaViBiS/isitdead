@@ -73,7 +73,7 @@ func (s *Server) handleLogin(c fiber.Ctx) error {
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 
-	t, err := token.SignedString(JWTSecret)
+	t, err := token.SignedString([]byte(s.Config.JWTSecret))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}

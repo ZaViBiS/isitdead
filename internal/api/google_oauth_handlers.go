@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -13,8 +14,13 @@ import (
 )
 
 func (s *Server) getGoogleOauthConfig() *oauth2.Config {
+	redirectURL := fmt.Sprintf("https://%s/api/auth/google/callback", s.Config.Domain)
+	if s.Config.Env == "dev" {
+		redirectURL = fmt.Sprintf("http://localhost:%s/api/auth/google/callback", s.Config.Port)
+	}
+
 	return &oauth2.Config{
-		RedirectURL:  "http://localhost:8080/api/auth/google/callback",
+		RedirectURL:  redirectURL,
 		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
 		ClientID:     s.Config.ClientID,
 		ClientSecret: s.Config.ClientSecret,
@@ -67,7 +73,7 @@ func (s *Server) handleGoogleCallback(c fiber.Ctx) error {
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 
-	t, err := jwtToken.SignedString(JWTSecret)
+	t, err := jwtToken.SignedString([]byte(s.Config.JWTSecret))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not generate token"})
 	}
