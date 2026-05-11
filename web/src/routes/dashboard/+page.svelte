@@ -19,6 +19,8 @@
 		getStatusColor,
 		getHourlyBuckets,
 		getFaviconUrl,
+		calculateUptime,
+		calculateAvgLatency,
 		type Server,
 		type CheckResult
 	} from '$lib/utils';
@@ -184,21 +186,7 @@
 		}
 	}
 
-	function calculateUptime(history: CheckResult[]) {
-		if (!history || history.length === 0) return 0;
-		const online = history.filter(
-			(r) => r.status.startsWith('2') || r.status === 'Connected'
-		).length;
-		return (online / history.length) * 100;
-	}
-
-	function calculateAvgLatency(history: CheckResult[]) {
-		if (!history || history.length === 0) return 0;
-		const sum = history.reduce((acc, r) => acc + r.latency, 0);
-		return Math.round(sum / history.length);
-	}
-
-	const intervalPresets = [30, 60, 180, 300, 600, 1800, 360, 7200, 14400, 21600, 43200, 86400];
+	const intervalPresets = [30, 60, 180, 300, 600, 1800, 3600, 7200, 14400, 21600, 36000, 43200, 86400];
 
 	function formatInterval(seconds: number) {
 		if (seconds < 60) return `${seconds}s`;

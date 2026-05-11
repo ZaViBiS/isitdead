@@ -47,6 +47,18 @@ export function formatDate(dateStr: string): string {
 	}).format(date);
 }
 
+export function calculateUptime(history: CheckResult[]) {
+	if (!history || history.length === 0) return 0;
+	const online = history.filter((r) => r.status.startsWith('2') || r.status === 'Connected').length;
+	return (online / history.length) * 100;
+}
+
+export function calculateAvgLatency(history: CheckResult[]) {
+	if (!history || history.length === 0) return 0;
+	const sum = history.reduce((acc, r) => acc + r.latency, 0);
+	return Math.round(sum / history.length);
+}
+
 export function getHourlyBuckets(history: CheckResult[]): string[] {
 	const buckets: string[] = Array(24).fill('#1f332f');
 	const now = new Date();
