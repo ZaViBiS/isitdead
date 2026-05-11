@@ -16,7 +16,7 @@ func TestCheck(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		status, latency := Check(ts.URL)
+		status, latency := Check("http", ts.URL)
 
 		assert.Equal(t, "200 OK", status)
 		assert.GreaterOrEqual(t, latency, int64(0))
@@ -28,7 +28,7 @@ func TestCheck(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		status, _ := Check(ts.URL)
+		status, _ := Check("http", ts.URL)
 
 		assert.Equal(t, "404 Not Found", status)
 	})
@@ -39,13 +39,13 @@ func TestCheck(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		status, _ := Check(ts.URL)
+		status, _ := Check("http", ts.URL)
 
 		assert.Equal(t, "500 Internal Server Error", status)
 	})
 
 	t.Run("invalid url", func(t *testing.T) {
-		status, _ := Check("http://invalid.url.that.does.not.exist")
+		status, _ := Check("http", "http://invalid.url.that.does.not.exist")
 
 		assert.Contains(t, status, "no such host")
 	})
@@ -57,7 +57,7 @@ func TestCheck(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		status, _ := Check(ts.URL)
+		status, _ := Check("http", ts.URL)
 
 		assert.Contains(t, status, "Client.Timeout exceeded")
 	})

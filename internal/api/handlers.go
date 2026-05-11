@@ -35,14 +35,28 @@ func (s *Server) handleGetServerResults(c fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access denied"})
 	}
 
-	results, err := s.DB.GetHistory(uint(serverID))
+	incidentsOnly := c.Query("incidents") == "true"
+	limitStr := c.Query("limit")
+	limit := 0
+	if limitStr != "" {
+		limit, _ = strconv.Atoi(limitStr)
+	}
+
+	var results []model.CheckResult
+
+	if incidentsOnly {
+		results, err = s.DB.GetIncidents(uint(serverID), limit)
+	} else {
+		results, err = s.DB.GetHistory(uint(serverID))
+	}
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch results"})
 	}
 
 	// Фільтрація за часом (наприклад, за останні N годин)
 	hoursStr := c.Query("hours")
-	if hoursStr != "" {
+	if hoursStr != "" && !incidentsOnly {
 		hours, err := strconv.Atoi(hoursStr)
 		if err == nil && hours > 0 {
 			since := time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
@@ -56,10 +70,9 @@ func (s *Server) handleGetServerResults(c fiber.Ctx) error {
 		}
 	}
 
-	limitStr := c.Query("limit")
-	if limitStr != "" && hoursStr == "" { // limit працює тільки якщо не вказано години
-		limit, err := strconv.Atoi(limitStr)
-		if err == nil && limit > 0 && limit < len(results) {
+	// limit для звичайної історії (якщо не вказано години)
+	if !incidentsOnly && limit > 0 && hoursStr == "" {
+		if len(results) > limit {
 			results = results[len(results)-limit:]
 		}
 	}
