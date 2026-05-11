@@ -116,8 +116,8 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	}
 
 	// Запускаємо моніторинг для нового сервера негайно
-	if s.scheduler != nil {
-		s.scheduler.RunServerMonitor(*server)
+	if s.Scheduler != nil {
+		s.Scheduler.RunServerMonitor(*server)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(server)
@@ -149,8 +149,8 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 	}
 
 	// Оновлюємо планувальник, якщо він активний
-	if s.scheduler != nil {
-		s.scheduler.RunServerMonitor(*server)
+	if s.Scheduler != nil {
+		s.Scheduler.RunServerMonitor(*server)
 	}
 
 	return c.JSON(server)

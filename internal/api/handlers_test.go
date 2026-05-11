@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,21 @@ import (
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/stretchr/testify/assert"
 )
+
+type stubMailer struct {
+	lastTo    string
+	lastToken string
+	err       error
+}
+
+func (m *stubMailer) SendVerificationEmail(to, token string) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.lastTo = to
+	m.lastToken = token
+	return nil
+}
 
 func TestAPI(t *testing.T) {
 	dbPath := "test_api.db"
@@ -28,7 +44,10 @@ func TestAPI(t *testing.T) {
 
 	sched := checker.NewScheduler(storage)
 	defer sched.Stop()
-	server, _ := New(storage, sched, embed.FS{})
+	mailer := &stubMailer{}
+	server, err := New(storage, sched, mailer, embed.FS{})
+	assert.NoError(t, err)
+	verificationToken := ""
 
 	t.Run("Ping", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/ping", nil)
@@ -36,7 +55,7 @@ func TestAPI(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
-	t.Run("Register", func(t *testing.T) {
+	t.Run("Register and Verify", func(t *testing.T) {
 		payload := map[string]string{
 			"username": "testuser",
 			"email":    "test@example.com",
@@ -48,6 +67,26 @@ func TestAPI(t *testing.T) {
 
 		resp, _ := server.App.Test(req)
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
+		assert.Equal(t, "test@example.com", mailer.lastTo)
+		assert.NotEmpty(t, mailer.lastToken)
+		verificationToken = mailer.lastToken
+
+		loginPayload := map[string]string{
+			"email":    "test@example.com",
+			"password": "password123",
+		}
+		loginBody, _ := json.Marshal(loginPayload)
+		loginReq := httptest.NewRequest("POST", "/api/login", bytes.NewReader(loginBody))
+		loginReq.Header.Set("Content-Type", "application/json")
+
+		loginResp, _ := server.App.Test(loginReq)
+		assert.Equal(t, http.StatusForbidden, loginResp.StatusCode)
+	})
+
+	t.Run("Confirm Email", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/auth/confirm?token="+verificationToken, nil)
+		resp, _ := server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
 	t.Run("Login and Protected Route", func(t *testing.T) {
@@ -76,10 +115,27 @@ func TestAPI(t *testing.T) {
 
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		
+
 		var servers []interface{}
 		json.NewDecoder(resp.Body).Decode(&servers)
 		assert.Equal(t, 0, len(servers))
+	})
+
+	t.Run("Register Fails When Mailer Fails", func(t *testing.T) {
+		mailer.err = errors.New("smtp failed")
+		t.Cleanup(func() { mailer.err = nil })
+
+		payload := map[string]string{
+			"username": "mail-failure",
+			"email":    "mail-failure@example.com",
+			"password": "password123",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest("POST", "/api/register", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, _ := server.App.Test(req)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})
 
 	t.Run("Add, Update and Delete Server", func(t *testing.T) {

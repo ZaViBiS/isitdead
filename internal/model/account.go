@@ -18,3 +18,10 @@ type User struct {
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
+
+type EmailVerification struct {
+	ID        uint      `gorm:"primaryKey"`
+	UserID    uint      `gorm:"not null"`
+	Token     string    `gorm:"uniqueIndex;not null"`
+	CreatedAt time.Time `json:"created_at"`
+}

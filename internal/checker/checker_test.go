@@ -1,64 +1,80 @@
 package checker
 
 import (
+	"context"
+	"fmt"
+	"io"
 	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func setDefaultTransport(t *testing.T, rt http.RoundTripper) {
+	prev := http.DefaultTransport
+	http.DefaultTransport = rt
+	t.Cleanup(func() {
+		http.DefaultTransport = prev
+	})
+}
+
+func httpResponse(statusCode int) *http.Response {
+	return &http.Response{
+		StatusCode: statusCode,
+		Status:     fmt.Sprintf("%d %s", statusCode, http.StatusText(statusCode)),
+		Body:       io.NopCloser(strings.NewReader("")),
+		Header:     make(http.Header),
+	}
+}
+
 func TestCheck(t *testing.T) {
 	t.Run("successful check", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			return httpResponse(http.StatusOK), nil
 		}))
-		defer ts.Close()
-
-		status, latency := Check("http", ts.URL)
+		status, latency := Check("http", "http://example.test")
 
 		assert.Equal(t, "200 OK", status)
 		assert.GreaterOrEqual(t, latency, int64(0))
 	})
 
 	t.Run("not found check", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			return httpResponse(http.StatusNotFound), nil
 		}))
-		defer ts.Close()
-
-		status, _ := Check("http", ts.URL)
+		status, _ := Check("http", "http://example.test")
 
 		assert.Equal(t, "404 Not Found", status)
 	})
 
 	t.Run("server error check", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			return httpResponse(http.StatusInternalServerError), nil
 		}))
-		defer ts.Close()
-
-		status, _ := Check("http", ts.URL)
+		status, _ := Check("http", "http://example.test")
 
 		assert.Equal(t, "500 Internal Server Error", status)
 	})
 
 	t.Run("invalid url", func(t *testing.T) {
-		status, _ := Check("http", "http://invalid.url.that.does.not.exist")
+		status, _ := Check("http", "://bad-url")
 
-		assert.Contains(t, status, "no such host")
+		assert.Contains(t, status, "missing protocol scheme")
 	})
 
 	t.Run("timeout", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(11 * time.Second) // Check timeout is 10s
-			w.WriteHeader(http.StatusOK)
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			return nil, context.DeadlineExceeded
 		}))
-		defer ts.Close()
+		status, _ := Check("http", "http://example.test")
 
-		status, _ := Check("http", ts.URL)
-
-		assert.Contains(t, status, "Client.Timeout exceeded")
+		assert.Contains(t, status, "context deadline exceeded")
 	})
 }

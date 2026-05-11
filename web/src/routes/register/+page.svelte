@@ -37,10 +37,11 @@
 
 			if (res.ok) {
 				const data = await res.json();
-				localStorage.setItem('token', data.token);
-				localStorage.setItem('user', JSON.stringify(data.user));
-				message = 'Registration successful! Redirecting...';
-				setTimeout(() => goto('/dashboard'), 1500);
+				message = data.message || 'Registration successful! Please check your email to confirm your account.';
+				// Очищуємо форму
+				username = '';
+				email = '';
+				password = '';
 			} else {
 				const data = await res.json();
 				message = data.error || 'Registration failed. Please try again.';

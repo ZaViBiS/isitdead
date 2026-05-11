@@ -6,6 +6,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/ping", s.handlePing)
 	api.Post("/register", s.handleRegister)
 	api.Post("/login", s.handleLogin)
+	api.Get("/auth/confirm", s.handleConfirmEmail)
 
 	// Google OAuth
 	api.Get("/auth/google", s.handleGoogleLogin)

@@ -16,7 +16,7 @@ func TestServerCRUD(t *testing.T) {
 	defer storage.Close()
 
 	// 1. Створюємо тестового користувача
-	user, err := storage.AddUser("server_owner", "owner@example.com", "pass123")
+	user, _, err := storage.AddUser("server_owner", "owner@example.com", "pass123")
 	assert.NoError(t, err)
 
 	// 2. Тест: AddServer
@@ -64,8 +64,8 @@ func TestServerSecurity(t *testing.T) {
 	assert.NoError(t, err)
 	defer storage.Close()
 
-	user1, _ := storage.AddUser("u1", "u1@ex.com", "p")
-	user2, _ := storage.AddUser("u2", "u2@ex.com", "p")
+	user1, _, _ := storage.AddUser("u1", "u1@ex.com", "p")
+	user2, _, _ := storage.AddUser("u2", "u2@ex.com", "p")
 
 	// User 1 додає сервер
 	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", "http", 60)

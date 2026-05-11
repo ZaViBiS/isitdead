@@ -30,10 +30,10 @@ func TestAddUser_DuplicateEmail(t *testing.T) {
 	defer storage.Close()
 
 	email := "duplicate@example.com"
-	_, err = storage.AddUser("user1", email, "password")
+	_, _, err = storage.AddUser("user1", email, "password")
 	assert.NoError(t, err)
 
 	// Спроба додати користувача з таким самим email має повернути помилку
-	_, err = storage.AddUser("user2", email, "otherpassword")
+	_, _, err = storage.AddUser("user2", email, "otherpassword")
 	assert.Error(t, err, "Should fail when email is duplicated")
 }

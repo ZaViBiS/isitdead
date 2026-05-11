@@ -22,7 +22,7 @@ func TestUserFlow(t *testing.T) {
 	email := "test@example.com"
 	password := "password123"
 
-	user, err := storage.AddUser(username, email, password)
+	user, _, err := storage.AddUser(username, email, password)
 	assert.NoError(t, err)
 	assert.NotNil(t, user)
 	assert.Equal(t, username, user.Username)

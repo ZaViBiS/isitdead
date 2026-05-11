@@ -9,26 +9,36 @@ import (
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/checker"
+	"github.com/ZaViBiS/isitdead/internal/config"
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	"github.com/rs/zerolog/log"
 )
 
+type VerificationMailer interface {
+	SendVerificationEmail(to, token string) error
+}
+
 type Server struct {
 	App       *fiber.App
 	DB        *database.Storage
-	scheduler *checker.Scheduler
+	Scheduler *checker.Scheduler
+	Config    *config.Config
+	Mailer    VerificationMailer
 }
 
 // New повертає готовий backend для сайту
-func New(db *database.Storage, sched *checker.Scheduler, staticFiles embed.FS) (*Server, error) {
+func New(db *database.Storage, sched *checker.Scheduler, mailer VerificationMailer, staticFiles embed.FS) (*Server, error) {
 	app := fiber.New()
+	cfg := config.Load()
 
 	s := &Server{
 		App:       app,
 		DB:        db,
-		scheduler: sched,
+		Scheduler: sched,
+		Config:    cfg,
+		Mailer:    mailer,
 	}
 
 	// Логування запитів
