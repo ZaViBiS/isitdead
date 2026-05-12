@@ -1,4 +1,19 @@
-<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<script lang="ts">
+	let { class: className = 'h-8 w-8', title = 'isitdead' } = $props<{
+		class?: string;
+		title?: string;
+	}>();
+</script>
+
+<svg
+	class={className}
+	viewBox="0 0 64 64"
+	fill="none"
+	xmlns="http://www.w3.org/2000/svg"
+	role="img"
+	aria-label={title}
+>
+	<title>{title}</title>
 	<rect width="64" height="64" rx="17" fill="#12211D" />
 	<rect x="13" y="22" width="38" height="20" rx="10" fill="#DEF4C6" fill-opacity="0.14" />
 	<rect

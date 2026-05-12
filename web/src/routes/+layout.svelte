@@ -1,9 +1,10 @@
 <script lang="ts">
 	import '../routes/layout.css';
-	import { Activity, Globe, LayoutDashboard, LogOut } from 'lucide-svelte';
+	import { Globe, LayoutDashboard, LogOut } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import LogoMark from '$lib/LogoMark.svelte';
 
 	let { children } = $props();
 	let isLoggedIn = $state(false);
@@ -27,7 +28,7 @@
 	>
 		<nav class="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
 			<a href={resolve('/')} class="flex items-center gap-2 text-xl font-bold tracking-tight">
-				<Activity class="h-6 w-6 text-brand-primary" />
+				<LogoMark class="h-8 w-8" title="isitdead home" />
 				<span>isitdead</span>
 			</a>
 
@@ -92,7 +93,7 @@
 		<div class="container mx-auto px-4 sm:px-6">
 			<div class="flex flex-col items-center justify-between gap-6 md:flex-row">
 				<div class="flex items-center gap-2">
-					<Activity class="h-5 w-5 text-brand-primary" />
+					<LogoMark class="h-7 w-7" title="isitdead" />
 					<span class="font-bold">isitdead</span>
 				</div>
 				<p class="text-center text-sm text-brand-light/60">
