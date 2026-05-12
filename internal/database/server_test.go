@@ -20,12 +20,18 @@ func TestServerCRUD(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 2. Тест: AddServer
-	server, err := storage.AddServer(user.ID, "Google", "https://google.com", "http", 300)
+	server, err := storage.AddServer(user.ID, "Google", "https://google.com", "http", 300, true, "google-status")
 	assert.NoError(t, err)
 	assert.NotNil(t, server)
 	assert.Equal(t, "Google", server.Name)
 	assert.Equal(t, user.ID, server.UserID)
 	assert.Equal(t, 300, server.CheckInterval)
+	assert.True(t, server.Public)
+	assert.Equal(t, "google-status", server.PublicSlug)
+
+	publicServer, err := storage.GetPublicServerBySlug("google-status")
+	assert.NoError(t, err)
+	assert.Equal(t, server.ID, publicServer.ID)
 
 	// 3. Тест: GetUserServers
 	servers, err := storage.GetUserServers(user.ID)
@@ -34,10 +40,12 @@ func TestServerCRUD(t *testing.T) {
 	assert.Equal(t, "https://google.com", servers[0].URL)
 
 	// 4. Тест: UpdateServer
-	updated, err := storage.UpdateServer(user.ID, server.ID, "Google Search", "https://google.com/search", "http", 300)
+	updated, err := storage.UpdateServer(user.ID, server.ID, "Google Search", "https://google.com/search", "http", 300, false, "")
 	assert.NoError(t, err)
 	assert.Equal(t, "Google Search", updated.Name)
 	assert.Equal(t, "https://google.com/search", updated.URL)
+	assert.False(t, updated.Public)
+	assert.Empty(t, updated.PublicSlug)
 
 	// 5. Тест: UpdateServerStatus
 	err = storage.UpdateServerStatus(server.ID, "200 OK", 150)
@@ -68,10 +76,10 @@ func TestServerSecurity(t *testing.T) {
 	user2, _, _ := storage.AddUser("u2", "u2@ex.com", "p")
 
 	// User 1 додає сервер
-	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", "http", 300)
+	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", "http", 300, false, "")
 
 	// Тест: User 2 намагається оновити сервер User 1
-	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com", "http", 300)
+	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com", "http", 300, false, "")
 	assert.Error(t, err, "User 2 should not be able to update User 1's server")
 
 	// Тест: User 2 намагається видалити сервер User 1

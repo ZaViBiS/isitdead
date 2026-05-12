@@ -1,12 +1,30 @@
 package api
 
 import (
+	"errors"
+	"fmt"
+	"html"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 )
+
+type publicMonitorResponse struct {
+	ID            uint      `json:"id"`
+	Name          string    `json:"name"`
+	URL           string    `json:"url"`
+	CheckType     string    `json:"check_type"`
+	Status        string    `json:"status"`
+	Latency       int64     `json:"latency"`
+	CheckInterval int       `json:"check_interval"`
+	PublicSlug    string    `json:"public_slug"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
 
 func (s *Server) handleGetServerResults(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
@@ -35,49 +53,57 @@ func (s *Server) handleGetServerResults(c fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access denied"})
 	}
 
-	incidentsOnly := c.Query("incidents") == "true"
-	limitStr := c.Query("limit")
-	limit := 0
-	if limitStr != "" {
-		limit, _ = strconv.Atoi(limitStr)
-	}
+	return s.respondWithServerResults(c, uint(serverID))
+}
 
-	var results []model.CheckResult
-
-	if incidentsOnly {
-		results, err = s.DB.GetIncidents(uint(serverID), limit)
-	} else {
-		results, err = s.DB.GetHistory(uint(serverID))
-	}
-
+func (s *Server) handleGetPublicMonitor(c fiber.Ctx) error {
+	server, err := s.DB.GetPublicServerBySlug(c.Params("slug"))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch results"})
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Public monitor not found"})
+	}
+	return c.JSON(toPublicMonitorResponse(*server))
+}
+
+func (s *Server) handleGetPublicMonitorResults(c fiber.Ctx) error {
+	server, err := s.DB.GetPublicServerBySlug(c.Params("slug"))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Public monitor not found"})
+	}
+	return s.respondWithServerResults(c, server.ID)
+}
+
+func (s *Server) handleAdminGetPublicMonitors(c fiber.Ctx) error {
+	servers, err := s.DB.GetPublicServers()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch public monitors"})
+	}
+	return c.JSON(servers)
+}
+
+func (s *Server) handleAdminUpdatePublicMonitor(c fiber.Ctx) error {
+	serverID, err := parseServerID(c)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid server ID"})
 	}
 
-	// Фільтрація за часом (наприклад, за останні N годин)
-	hoursStr := c.Query("hours")
-	if hoursStr != "" && !incidentsOnly {
-		hours, err := strconv.Atoi(hoursStr)
-		if err == nil && hours > 0 {
-			since := time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
-			filtered := []model.CheckResult{}
-			for _, r := range results {
-				if r.CreatedAt.UTC().After(since) {
-					filtered = append(filtered, r)
-				}
-			}
-			results = filtered
+	var req struct {
+		Public     bool   `json:"public"`
+		PublicSlug string `json:"public_slug"`
+	}
+
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	server, err := s.DB.UpdatePublicServer(serverID, req.Public, req.PublicSlug)
+	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
 		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not update public monitor"})
 	}
 
-	// limit для звичайної історії (якщо не вказано години)
-	if !incidentsOnly && limit > 0 && hoursStr == "" {
-		if len(results) > limit {
-			results = results[len(results)-limit:]
-		}
-	}
-
-	return c.JSON(results)
+	return c.JSON(server)
 }
 
 func (s *Server) handleGetNotificationPreferences(c fiber.Ctx) error {
@@ -208,8 +234,11 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 		req.CheckInterval = 300 // default
 	}
 
-	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckType, req.CheckInterval)
+	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckType, req.CheckInterval, false, "")
 	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create server"})
 	}
 
@@ -241,8 +270,11 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	server, err := s.DB.UpdateServer(userID, uint(serverID), req.Name, req.URL, req.CheckType, req.CheckInterval)
+	server, err := s.DB.UpdateServer(userID, uint(serverID), req.Name, req.URL, req.CheckType, req.CheckInterval, false, "")
 	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update server"})
 	}
 
@@ -277,4 +309,85 @@ func (s *Server) handleDeleteServer(c fiber.Ctx) error {
 
 func (s *Server) handlePing(c fiber.Ctx) error {
 	return c.SendString("pong")
+}
+
+func (s *Server) handleSitemap(c fiber.Ctx) error {
+	servers, err := s.DB.GetPublicServers()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Could not build sitemap")
+	}
+
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
+	for _, server := range servers {
+		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod></url>\n",
+			html.EscapeString(s.publicStatusURL(server.PublicSlug)),
+			server.UpdatedAt.UTC().Format("2006-01-02"),
+		)
+	}
+	b.WriteString(`</urlset>` + "\n")
+
+	c.Set("Content-Type", "application/xml; charset=utf-8")
+	return c.SendString(b.String())
+}
+
+func (s *Server) respondWithServerResults(c fiber.Ctx, serverID uint) error {
+	incidentsOnly := c.Query("incidents") == "true"
+	limitStr := c.Query("limit")
+	limit := 0
+	if limitStr != "" {
+		limit, _ = strconv.Atoi(limitStr)
+	}
+
+	var (
+		results []model.CheckResult
+		err     error
+	)
+
+	if incidentsOnly {
+		results, err = s.DB.GetIncidents(serverID, limit)
+	} else {
+		results, err = s.DB.GetHistory(serverID)
+	}
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch results"})
+	}
+
+	hoursStr := c.Query("hours")
+	if hoursStr != "" && !incidentsOnly {
+		hours, err := strconv.Atoi(hoursStr)
+		if err == nil && hours > 0 {
+			since := time.Now().UTC().Add(-time.Duration(hours) * time.Hour)
+			filtered := []model.CheckResult{}
+			for _, r := range results {
+				if r.CreatedAt.UTC().After(since) {
+					filtered = append(filtered, r)
+				}
+			}
+			results = filtered
+		}
+	}
+
+	if !incidentsOnly && limit > 0 && hoursStr == "" && len(results) > limit {
+		results = results[len(results)-limit:]
+	}
+
+	return c.JSON(results)
+}
+
+func toPublicMonitorResponse(server model.Server) publicMonitorResponse {
+	return publicMonitorResponse{
+		ID:            server.ID,
+		Name:          server.Name,
+		URL:           server.URL,
+		CheckType:     server.CheckType,
+		Status:        server.Status,
+		Latency:       server.Latency,
+		CheckInterval: server.CheckInterval,
+		PublicSlug:    server.PublicSlug,
+		CreatedAt:     server.CreatedAt,
+		UpdatedAt:     server.UpdatedAt,
+	}
 }

@@ -16,6 +16,7 @@ type Config struct {
 	ClientID     string
 	ClientSecret string
 	JWTSecret    string
+	AdminEmails  string
 }
 
 func Load() *Config {
@@ -32,6 +33,7 @@ func Load() *Config {
 		ClientID:     getEnv("CLIENT_ID", ""),
 		ClientSecret: getEnv("CLIENT_SECRET", ""),
 		JWTSecret:    getEnv("JWT_SECRET", "dev-secret-change-me"),
+		AdminEmails:  getEnv("ADMIN_EMAILS", ""),
 	}
 }
 

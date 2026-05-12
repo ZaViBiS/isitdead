@@ -12,6 +12,8 @@ type Server struct {
 	Name          string         `gorm:"not null" json:"name"`
 	URL           string         `gorm:"not null" json:"url"`
 	CheckType     string         `gorm:"not null;default:'http'" json:"check_type"` // 'http', 'ping', or 'links'
+	Public        bool           `gorm:"not null;default:false" json:"public"`
+	PublicSlug    string         `gorm:"index" json:"public_slug"`
 	Status        string         `json:"status"`
 	Latency       int64          `json:"latency"`
 	CheckInterval int            `gorm:"not null" json:"check_interval"`

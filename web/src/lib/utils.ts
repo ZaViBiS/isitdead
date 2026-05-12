@@ -10,6 +10,8 @@ export interface Server {
 	name: string;
 	url: string;
 	check_type: string;
+	public: boolean;
+	public_slug: string;
 	status: string;
 	latency: number;
 	check_interval: number;

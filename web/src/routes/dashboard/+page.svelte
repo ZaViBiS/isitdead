@@ -780,6 +780,14 @@
 										>
 											{compactStatus(s.status)}
 										</p>
+										{#if s.public && s.public_slug}
+											<a
+												href={`/status/${s.public_slug}`}
+												class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-brand-primary/15 bg-brand-primary/10 px-2 py-1 text-[10px] font-black text-brand-primary uppercase"
+											>
+												Public page <ExternalLink class="h-3 w-3" />
+											</a>
+										{/if}
 									</div>
 								</div>
 							</div>

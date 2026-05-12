@@ -169,10 +169,59 @@ func TestAPI(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
 		var srv struct {
-			ID uint `json:"id"`
+			ID         uint   `json:"id"`
+			Public     bool   `json:"public"`
+			PublicSlug string `json:"public_slug"`
 		}
 		json.NewDecoder(resp.Body).Decode(&srv)
+		assert.False(t, srv.Public)
+		assert.Empty(t, srv.PublicSlug)
 		serverIDStr := strconv.Itoa(int(srv.ID))
+
+		// Regular users cannot enable public pages through the server update API.
+		userPublicUpdate := map[string]interface{}{
+			"name":           "Test Server",
+			"url":            "http://example.com",
+			"check_interval": 300,
+			"check_type":     "http",
+			"public":         true,
+			"public_slug":    "test-server",
+		}
+		body, _ = json.Marshal(userPublicUpdate)
+		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		req = httptest.NewRequest("GET", "/api/public/monitors/test-server", nil)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+		// Admin can publish the monitor.
+		server.Config.AdminEmails = "test@example.com"
+		adminPublicUpdate := map[string]interface{}{
+			"public":      true,
+			"public_slug": "test-server",
+		}
+		body, _ = json.Marshal(adminPublicUpdate)
+		req = httptest.NewRequest("PUT", "/api/admin/servers/"+serverIDStr+"/public", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// Public monitor
+		req = httptest.NewRequest("GET", "/api/public/monitors/test-server", nil)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var publicSrv map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&publicSrv)
+		assert.Equal(t, "Test Server", publicSrv["name"])
+		assert.Nil(t, publicSrv["user_id"])
 
 		// Notification preferences
 		req = httptest.NewRequest("GET", "/api/servers/"+serverIDStr+"/notifications", nil)

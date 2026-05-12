@@ -32,3 +32,23 @@ func (s *Server) authMiddleware(c fiber.Ctx) error {
 
 	return c.Next()
 }
+
+func (s *Server) adminMiddleware(c fiber.Ctx) error {
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing user context"})
+	}
+
+	user, err := s.DB.GetUserByID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
+	}
+
+	for _, email := range strings.Split(s.Config.AdminEmails, ",") {
+		if strings.EqualFold(strings.TrimSpace(email), user.Email) && strings.TrimSpace(email) != "" {
+			return c.Next()
+		}
+	}
+
+	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Admin access required"})
+}

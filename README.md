@@ -49,8 +49,10 @@ cmd/server/main.go
 - `web/src/routes/login/+page.svelte` і `register/+page.svelte` - auth UI.
 - `web/src/routes/dashboard/+page.svelte` - список моніторів, add/edit/delete, URL normalization, interval controls.
 - `web/src/routes/dashboard/[id]/+page.svelte` - detail сторінка монітора.
+- `web/src/routes/admin/public-pages/+page.svelte` - admin UI для керування public status pages.
 - `web/src/lib/*` - shared UI/helpers: logo, chart, utils.
 - `web/static/favicon.svg` - favicon, який Vite копіює у build.
+- `web/static/robots.txt` - robots rules для public status pages і sitemap.
 
 Основний runtime flow:
 
@@ -97,6 +99,17 @@ login page
   -> create verified user OR link existing user by email
   -> set auth cookie/JWT
   -> redirect to dashboard
+
+Flow public status pages:
+
+```text
+admin page
+  -> PUT /api/admin/servers/:id/public
+  -> store public flag + public_slug in SQLite
+  -> GET /status/:slug renders SEO HTML on backend
+  -> GET /sitemap.xml includes public pages
+  -> robots.txt allows /status/ and points to sitemap.xml
+```
 ```
 
 ## Швидкий локальний запуск
@@ -250,6 +263,31 @@ prod: https://isitdead.cc/api/auth/google/callback
 - Явний `http://example.com` або `https://example.com` треба залишати як є.
 - Default polling interval: `5m` / `300s`.
 - Якщо backend отримує некоректний interval менше `10s`, fallback має бути `300s`.
+
+## Public pages
+
+Public status pages не вмикаються з user dashboard. Їх вмикає тільки admin через `/admin/public-pages`.
+
+Для цього потрібне:
+
+- `ADMIN_EMAILS` у config;
+- admin email має бути серед дозволених;
+- public page має свій `public_slug`, наприклад `wikipedia-down`.
+
+SEO/індексація:
+
+- URL виглядає як `/status/wikipedia-down`;
+- HTML рендериться backend-ом, не через client-side fetch;
+- у сторінки є `title`, `meta description`, canonical, OpenGraph і JSON-LD;
+- `sitemap.xml` генерується автоматично;
+- `robots.txt` дозволяє `/status/` і вказує sitemap.
+
+Корисні env для production:
+
+```sh
+ADMIN_EMAILS=your@email.com
+DOMAIN=isitdead.cc
+```
 
 ## Production
 
