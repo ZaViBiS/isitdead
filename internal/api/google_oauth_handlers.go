@@ -53,17 +53,11 @@ func (s *Server) handleGoogleCallback(c fiber.Ctx) error {
 	// Шукаємо користувача за Google ID
 	user, err := s.DB.GetUserByGoogleID(userInfo.Id)
 	if err != nil {
-		// Якщо не знайшли за Google ID, спробуємо за Email (якщо користувач раніше реєструвався звичайно)
-		user, err = s.DB.GetUserByEmail(userInfo.Email)
-		if err == nil {
-			// Користувач існує, прив'язуємо Google ID (якщо потрібно)
-			// Для спрощення просто продовжуємо, але в ідеалі треба оновити запис
-		} else {
-			// Створюємо нового користувача
-			user, err = s.DB.AddGoogleUser(userInfo.Name, userInfo.Email, userInfo.Id)
-			if err != nil {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
-			}
+		// Якщо Google ID ще не прив'язаний, створюємо користувача або прив'язуємо
+		// існуючий email-акаунт до Google.
+		user, err = s.DB.AddGoogleUser(userInfo.Name, userInfo.Email, userInfo.Id)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create user"})
 		}
 	}
 
