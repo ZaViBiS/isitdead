@@ -1,3 +1,5 @@
-# allow crawling everything by default
 User-agent: *
 Disallow:
+Allow: /status/
+
+Sitemap: https://isitdead.cc/sitemap.xml
