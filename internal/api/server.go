@@ -84,6 +84,9 @@ func New(db *database.Storage, sched *checker.Scheduler, mailer VerificationMail
 		if path == "/api" || strings.HasPrefix(path, "/api/") {
 			return c.Next()
 		}
+		if !isKnownSPARoute(path) {
+			return c.Status(fiber.StatusNotFound).Type("html").SendString(s.siteNotFoundHTML(path))
+		}
 
 		index, err := distFS.Open("index.html")
 		if err != nil {
