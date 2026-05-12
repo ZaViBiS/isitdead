@@ -338,7 +338,7 @@
 						required
 						class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/50 px-5 py-3 transition-all outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
 						placeholder={newType === 'http'
-							? 'example.com or https://example.com'
+							? 'example.com or http://example.com'
 							: 'example.com:80'}
 					/>
 					{#if willNormalizeMonitorUrl(newUrl, newType)}
