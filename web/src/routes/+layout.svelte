@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../routes/layout.css';
-	import { Globe, LayoutDashboard, LogOut } from 'lucide-svelte';
+	import { Globe, LayoutDashboard, LogOut, ShieldCheck } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -8,15 +8,34 @@
 
 	let { children } = $props();
 	let isLoggedIn = $state(false);
+	let isAdmin = $state(false);
 
 	onMount(() => {
-		isLoggedIn = !!localStorage.getItem('token');
+		const token = localStorage.getItem('token');
+		isLoggedIn = !!token;
+		isAdmin = false;
+		if (token) void refreshUser(token);
 	});
+
+	async function refreshUser(token: string) {
+		try {
+			const res = await fetch('/api/me', {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (!res.ok) return;
+			const user = await res.json();
+			localStorage.setItem('user', JSON.stringify(user));
+			isAdmin = user.is_admin === true;
+		} catch {
+			isAdmin = false;
+		}
+	}
 
 	function handleLogout() {
 		localStorage.removeItem('token');
 		localStorage.removeItem('user');
 		isLoggedIn = false;
+		isAdmin = false;
 		goto(resolve('/'));
 	}
 </script>
@@ -34,6 +53,15 @@
 
 			<div class="flex items-center gap-4 sm:gap-6">
 				{#if isLoggedIn}
+					{#if isAdmin}
+						<a
+							href={resolve('/admin/public-pages')}
+							class="flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-2 text-sm font-black text-brand-primary hover:bg-brand-primary/15"
+						>
+							<ShieldCheck class="h-4 w-4" />
+							<span class="hidden sm:inline">Admin</span>
+						</a>
+					{/if}
 					<a
 						href={resolve('/dashboard')}
 						class="flex items-center gap-2 text-sm font-medium hover:text-brand-primary"
