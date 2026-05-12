@@ -96,7 +96,7 @@
 
 	function normalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
-		if (checkType !== 'http' || trimmed === '') return trimmed;
+		if (!['http', 'links'].includes(checkType) || trimmed === '') return trimmed;
 		if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
 		return `https://${trimmed}`;
 	}
@@ -104,11 +104,17 @@
 	function willNormalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
 		return (
-			checkType === 'http' &&
+			['http', 'links'].includes(checkType) &&
 			trimmed !== '' &&
 			!trimmed.startsWith('http://') &&
 			!trimmed.startsWith('https://')
 		);
+	}
+
+	function getTargetPlaceholder(checkType: string) {
+		if (checkType === 'ping') return 'example.com:80';
+		if (checkType === 'links') return 'example.com or https://example.com';
+		return 'example.com or http://example.com';
 	}
 
 	function isServerOnline(server: Server) {
@@ -361,9 +367,7 @@
 							bind:value={newUrl}
 							required
 							class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-							placeholder={newType === 'http'
-								? 'example.com or http://example.com'
-								: 'example.com:80'}
+							placeholder={getTargetPlaceholder(newType)}
 						/>
 						{#if willNormalizeMonitorUrl(newUrl, newType)}
 							<p
@@ -386,6 +390,7 @@
 						>
 							<option value="http">HTTP (GET)</option>
 							<option value="ping">TCP port</option>
+							<option value="links">Broken links</option>
 						</select>
 					</div>
 					<div class="space-y-2">
@@ -501,6 +506,7 @@
 								>
 									<option value="http">HTTP (GET)</option>
 									<option value="ping">TCP port</option>
+									<option value="links">Broken links</option>
 								</select>
 							</div>
 							<div class="space-y-2 md:col-span-2">

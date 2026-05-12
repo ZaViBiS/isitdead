@@ -34,6 +34,15 @@ func httpResponse(statusCode int) *http.Response {
 	}
 }
 
+func htmlResponse(body string) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Status:     "200 OK",
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     http.Header{"Content-Type": []string{"text/html"}},
+	}
+}
+
 func TestCheck(t *testing.T) {
 	t.Run("successful check", func(t *testing.T) {
 		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
@@ -76,5 +85,83 @@ func TestCheck(t *testing.T) {
 		status, _ := Check("http", "http://example.test")
 
 		assert.Contains(t, status, "context deadline exceeded")
+	})
+}
+
+func TestLinkCheck(t *testing.T) {
+	t.Run("healthy page and references", func(t *testing.T) {
+		baseURL := "https://example.test"
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			path := req.URL.Path
+			if path == "" {
+				path = "/"
+			}
+			switch path {
+			case "/":
+				return htmlResponse(`<html><body><a href="/about">About</a><img src="/logo.png"></body></html>`), nil
+			case "/about":
+				return htmlResponse(`<html><body>About</body></html>`), nil
+			case "/logo.png":
+				return httpResponse(http.StatusOK), nil
+			default:
+				return httpResponse(http.StatusNotFound), nil
+			}
+		}))
+
+		status, latency := LinkCheck(baseURL)
+
+		assert.Equal(t, "200 OK", status)
+		assert.GreaterOrEqual(t, latency, int64(0))
+	})
+
+	t.Run("reports broken references with source page", func(t *testing.T) {
+		baseURL := "https://example.test"
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			path := req.URL.Path
+			if path == "" {
+				path = "/"
+			}
+			switch path {
+			case "/":
+				return htmlResponse(`<html><body><a href="/missing">Missing</a><img src="/broken.png"></body></html>`), nil
+			case "/missing":
+				return httpResponse(http.StatusNotFound), nil
+			case "/broken.png":
+				return httpResponse(http.StatusInternalServerError), nil
+			default:
+				return httpResponse(http.StatusNotFound), nil
+			}
+		}))
+
+		status, _ := LinkCheck(baseURL)
+
+		assert.Contains(t, status, "Broken links: 2")
+		assert.Contains(t, status, "404 Not Found "+baseURL+"/missing from "+baseURL)
+		assert.Contains(t, status, "500 Internal Server Error "+baseURL+"/broken.png from "+baseURL)
+	})
+
+	t.Run("crawls internal links", func(t *testing.T) {
+		baseURL := "https://example.test"
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			path := req.URL.Path
+			if path == "" {
+				path = "/"
+			}
+			switch path {
+			case "/":
+				return htmlResponse(`<html><body><a href="/child">Child</a></body></html>`), nil
+			case "/child":
+				return htmlResponse(`<html><body><a href="/gone">Gone</a></body></html>`), nil
+			case "/gone":
+				return httpResponse(http.StatusNotFound), nil
+			default:
+				return httpResponse(http.StatusNotFound), nil
+			}
+		}))
+
+		status, _ := LinkCheck(baseURL)
+
+		assert.Contains(t, status, "Broken links: 1")
+		assert.Contains(t, status, "404 Not Found "+baseURL+"/gone from "+baseURL+"/child")
 	})
 }
