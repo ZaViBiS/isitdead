@@ -15,7 +15,7 @@ func TestBuildVerificationMessageIncludesRFC5322Headers(t *testing.T) {
 	for _, header := range []string{
 		"From: no-reply@isitdead.cc\r\n",
 		"To: user@example.com\r\n",
-		"Subject: Confirm your email for IsItDead\r\n",
+		"Subject: Confirm your email for isitdead.cc\r\n",
 		"Date: ",
 		"MIME-Version: 1.0\r\n",
 		"Content-Type: text/html; charset=UTF-8\r\n",

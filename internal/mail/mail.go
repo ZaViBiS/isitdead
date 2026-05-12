@@ -41,7 +41,7 @@ func buildVerificationMessage(from, to, body string) []byte {
 	var msg bytes.Buffer
 	msg.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	msg.WriteString("Subject: Confirm your email for IsItDead\r\n")
+	msg.WriteString("Subject: Confirm your email for isitdead.cc\r\n")
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
 	msg.WriteString("MIME-Version: 1.0\r\n")
 	msg.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
