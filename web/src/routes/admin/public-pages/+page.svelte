@@ -83,18 +83,23 @@
 		</div>
 		<h1 class="text-3xl font-black text-brand-light sm:text-5xl">Public pages</h1>
 		<p class="mt-3 max-w-2xl text-sm leading-6 text-brand-light/45 sm:text-base">
-			Publish curated monitor pages for search traffic. Normal users cannot enable these pages from the dashboard.
+			Publish curated monitor pages for search traffic. Normal users cannot enable these pages from
+			the dashboard.
 		</p>
 	</section>
 
 	{#if error}
-		<div class="mb-6 rounded-2xl border border-brand-accent/20 bg-brand-accent/10 p-4 text-brand-accent">
+		<div
+			class="mb-6 rounded-2xl border border-brand-accent/20 bg-brand-accent/10 p-4 text-brand-accent"
+		>
 			{error}
 		</div>
 	{/if}
 
 	{#if isLoading}
-		<div class="flex min-h-80 items-center justify-center rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.025]">
+		<div
+			class="flex min-h-80 items-center justify-center rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.025]"
+		>
 			<RefreshCw class="h-9 w-9 animate-spin text-brand-primary" />
 		</div>
 	{:else}
@@ -105,7 +110,9 @@
 						<div class="min-w-0">
 							<div class="flex flex-wrap items-center gap-2">
 								<h2 class="truncate text-lg font-black">{server.name}</h2>
-								<span class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-0.5 text-[10px] font-black text-brand-light/45 uppercase">
+								<span
+									class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-0.5 text-[10px] font-black text-brand-light/45 uppercase"
+								>
 									{server.check_type}
 								</span>
 							</div>
@@ -113,8 +120,14 @@
 						</div>
 
 						<div class="grid gap-3 sm:grid-cols-[auto_minmax(16rem,1fr)_auto] sm:items-center">
-							<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-brand-light/10 bg-brand-light/[0.03] px-4 py-3">
-								<input type="checkbox" bind:checked={server.public} class="h-5 w-5 accent-brand-primary" />
+							<label
+								class="flex cursor-pointer items-center gap-3 rounded-xl border border-brand-light/10 bg-brand-light/[0.03] px-4 py-3"
+							>
+								<input
+									type="checkbox"
+									bind:checked={server.public}
+									class="h-5 w-5 accent-brand-primary"
+								/>
 								<span class="text-sm font-bold text-brand-light/75">Public</span>
 							</label>
 							<input
@@ -127,7 +140,7 @@
 							<div class="flex gap-2">
 								{#if server.public && server.public_slug}
 									<a
-										href={`/status/${server.public_slug}`}
+										href={resolve('/status/[slug]', { slug: server.public_slug })}
 										target="_blank"
 										class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-light/[0.06] text-brand-light/45 transition hover:bg-brand-light/10 hover:text-brand-primary"
 										title="Open public page"
