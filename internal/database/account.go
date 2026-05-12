@@ -65,17 +65,23 @@ func (s *Storage) AddGoogleUser(username, email, googleID string) (*model.User, 
 	// Перевіряємо чи вже існує користувач з таким email
 	existing, _ := s.GetUserByEmail(email)
 	if existing != nil {
-		// Якщо користувач існує, але не має GoogleID - оновлюємо його
-		if existing.GoogleID == nil || *existing.GoogleID == "" {
-			err := s.executeWrite(func(db *gorm.DB) error {
-				return db.Model(existing).Updates(map[string]interface{}{
-					"google_id":      &googleID,
+		err := s.executeWrite(func(db *gorm.DB) error {
+			return db.Transaction(func(tx *gorm.DB) error {
+				if err := tx.Model(existing).Updates(map[string]interface{}{
+					"google_id":      googleID,
 					"verified_email": true,
-				}).Error
+				}).Error; err != nil {
+					return err
+				}
+
+				return tx.Where("user_id = ?", existing.ID).Delete(&model.EmailVerification{}).Error
 			})
-			return existing, err
+		})
+		if err != nil {
+			return nil, err
 		}
-		return existing, nil
+
+		return s.GetUserByEmail(email)
 	}
 
 	user := &model.User{
