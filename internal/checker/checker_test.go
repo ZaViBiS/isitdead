@@ -34,6 +34,11 @@ func httpResponse(statusCode int) *http.Response {
 	}
 }
 
+func assertMonitorUserAgent(t *testing.T, req *http.Request) {
+	t.Helper()
+	assert.Equal(t, monitorUserAgent, req.Header.Get("User-Agent"))
+}
+
 func htmlResponse(body string) *http.Response {
 	return &http.Response{
 		StatusCode: http.StatusOK,
@@ -46,6 +51,7 @@ func htmlResponse(body string) *http.Response {
 func TestCheck(t *testing.T) {
 	t.Run("successful check", func(t *testing.T) {
 		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			assertMonitorUserAgent(t, req)
 			return httpResponse(http.StatusOK), nil
 		}))
 		status, latency := Check("http", "http://example.test")
@@ -92,6 +98,7 @@ func TestLinkCheck(t *testing.T) {
 	t.Run("healthy page and references", func(t *testing.T) {
 		baseURL := "https://example.test"
 		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			assertMonitorUserAgent(t, req)
 			path := req.URL.Path
 			if path == "" {
 				path = "/"

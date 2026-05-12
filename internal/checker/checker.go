@@ -17,6 +17,7 @@ const (
 	maxLinkCheckPages      = 20
 	maxLinkCheckReferences = 120
 	maxBrokenLinkExamples  = 5
+	monitorUserAgent       = "isitdead.cc monitor/1.0 (+https://isitdead.cc)"
 )
 
 type linkReference struct {
@@ -51,7 +52,12 @@ func HttpCheck(url string) (status string, latency int64) {
 		Timeout: 10 * time.Second,
 	}
 
-	resp, err := client.Get(url)
+	req, err := newMonitorRequest(http.MethodGet, url)
+	if err != nil {
+		return err.Error(), time.Since(start).Milliseconds()
+	}
+
+	resp, err := client.Do(req)
 	elapsed := time.Since(start).Milliseconds()
 
 	if err != nil {
@@ -88,7 +94,13 @@ func LinkCheck(rawURL string) (status string, latency int64) {
 		}
 		visitedPages[pageKey] = true
 
-		resp, err := client.Get(pageKey)
+		req, err := newMonitorRequest(http.MethodGet, pageKey)
+		if err != nil {
+			broken = append(broken, brokenReference{target: pageKey, source: "crawl", status: err.Error()})
+			continue
+		}
+
+		resp, err := client.Do(req)
 		if err != nil {
 			broken = append(broken, brokenReference{target: pageKey, source: "crawl", status: err.Error()})
 			continue
@@ -242,7 +254,7 @@ func parseSrcset(srcset string) []string {
 }
 
 func checkReference(client *http.Client, target string) string {
-	req, err := http.NewRequest(http.MethodHead, target, nil)
+	req, err := newMonitorRequest(http.MethodHead, target)
 	if err != nil {
 		return err.Error()
 	}
@@ -256,7 +268,12 @@ func checkReference(client *http.Client, target string) string {
 		}
 	}
 
-	resp, err = client.Get(target)
+	req, err = newMonitorRequest(http.MethodGet, target)
+	if err != nil {
+		return err.Error()
+	}
+
+	resp, err = client.Do(req)
 	if err != nil {
 		return err.Error()
 	}
@@ -265,6 +282,15 @@ func checkReference(client *http.Client, target string) string {
 		return resp.Status
 	}
 	return ""
+}
+
+func newMonitorRequest(method, target string) (*http.Request, error) {
+	req, err := http.NewRequest(method, target, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", monitorUserAgent)
+	return req, nil
 }
 
 func sameHost(a, b *url.URL) bool {
