@@ -1,26 +1,129 @@
-# isitdead
+# isitdead development notes
 
-Self-hosted uptime monitor на Go + SvelteKit. Сервіс перевіряє HTTP endpoints і TCP порти, зберігає історію в SQLite та віддає dashboard зі статичних файлів, вбудованих у Go binary.
+Цей файл не є публічною презентацією проєкту. Це коротка шпаргалка для розробки, деплою і дебагу, щоб не тримати деталі в голові.
 
-## Можливості
+## Архітектура
 
-- HTTP GET checks і TCP Ping checks.
-- Історія перевірок, uptime, latency та список інцидентів.
-- Реєстрація з email verification.
-- Login/password auth і Google OAuth.
-- SQLite без окремого database server.
-- Один production binary після збірки frontend.
+- Backend: Go, entrypoint `cmd/server`.
+- Frontend: SvelteKit у `web`.
+- Database: SQLite, шлях задається через `DB_PATH`.
+- У production frontend збирається в `web/dist` і віддається Go server-ом.
+- У dev можна запускати Go API і Vite окремо; Vite proxy-ить `/api` на backend.
 
-## Вимоги
+## Карта проєкту
 
-- Go `1.26+`, відповідно до `go.mod`.
-- Node.js і npm, сумісні з поточним SvelteKit/Vite стеком у `web/package.json`.
-- SMTP акаунт для реєстрації користувачів через email verification.
-- Домен з A/AAAA записом на сервер, якщо запускаєш `ENV=prod`.
+```text
+cmd/server/main.go
+  -> internal/app/app.go
+       -> internal/config/config.go
+       -> internal/database/database.go
+       -> internal/checker/scheduler.go
+       -> internal/mail/mail.go
+       -> internal/api/server.go
+            -> internal/api/routes.go
+            -> internal/api/auth_handlers.go
+            -> internal/api/google_oauth_handlers.go
+            -> internal/api/handlers.go
+  -> embed.go
+       -> web/dist
+```
 
-## Локальний запуск
+Що за що відповідає:
 
-Збери frontend. Це потрібно, бо Go binary embed-ить `web/dist`.
+- `cmd/server/main.go` - мінімальний entrypoint: налаштовує logger, створює `app.App`, запускає `Run`.
+- `internal/app/app.go` - composition root. Тут збираються config, database, scheduler, mailer і API server. Тут же вирішується `dev` HTTP чи `prod` HTTPS через `autocert`.
+- `internal/config/config.go` - всі env defaults. Якщо щось "чомусь не підхопилось", перше місце для перевірки.
+- `internal/api/server.go` - Fiber app, request logging, API routes, static serving з `web/dist`, SPA fallback.
+- `internal/api/routes.go` - список HTTP endpoints. Публічні auth routes реєструються до `authMiddleware`, monitor routes після нього.
+- `internal/api/auth.go` - JWT middleware і helpers для auth.
+- `internal/api/auth_handlers.go` - register/login/email confirmation.
+- `internal/api/google_oauth_handlers.go` - Google OAuth start/callback і linking існуючого email account.
+- `internal/api/handlers.go` - CRUD моніторів і results API.
+- `internal/database/*.go` - GORM/SQLite storage. `database.go` запускає один write worker через `writerChan`, конкретні файли тримають methods для users/servers/results.
+- `internal/checker/checker.go` - фактичні HTTP/TCP checks.
+- `internal/checker/scheduler.go` - фонові goroutines для кожного monitor-а, перший check одразу, далі ticker по `CheckInterval`.
+- `internal/mail/mail.go` - verification emails, SMTP 465 implicit TLS, headers.
+- `internal/model/*.go` - GORM models і request/domain structs.
+- `embed.go` - embed-ить `web/dist` у Go binary. Якщо `web/dist` нема або він старий, production/static UI теж буде старий.
+- `web/src/routes/+page.svelte` - головна сторінка/preview.
+- `web/src/routes/login/+page.svelte` і `register/+page.svelte` - auth UI.
+- `web/src/routes/dashboard/+page.svelte` - список моніторів, add/edit/delete, URL normalization, interval controls.
+- `web/src/routes/dashboard/[id]/+page.svelte` - detail сторінка монітора.
+- `web/src/lib/*` - shared UI/helpers: logo, chart, utils.
+- `web/static/favicon.svg` - favicon, який Vite копіює у build.
+
+Основний runtime flow:
+
+```text
+process start
+  -> config.Load()
+  -> database.Init(DB_PATH) + AutoMigrate + write worker
+  -> checker.NewScheduler(db)
+  -> mail.New(config)
+  -> api.New(db, scheduler, mailer, embedded web/dist)
+  -> scheduler.Start() loads monitors from DB and starts checks
+  -> HTTP/HTTPS server starts
+```
+
+Flow додавання монітора:
+
+```text
+dashboard form
+  -> POST /api/servers with JWT
+  -> internal/api/handlers.go validates/fills defaults
+  -> internal/database/server.go writes monitor
+  -> scheduler.RunServerMonitor(server)
+  -> first check runs immediately
+  -> check result saved and server status updated
+```
+
+Flow registration:
+
+```text
+register page
+  -> POST /api/register
+  -> user + email verification token in SQLite
+  -> mail.SendVerificationEmail()
+  -> user clicks /api/auth/confirm?token=...
+  -> email becomes verified
+```
+
+Flow Google login:
+
+```text
+login page
+  -> GET /api/auth/google
+  -> Google callback
+  -> create verified user OR link existing user by email
+  -> set auth cookie/JWT
+  -> redirect to dashboard
+```
+
+## Швидкий локальний запуск
+
+Backend:
+
+```sh
+ENV=dev \
+PORT=8080 \
+DB_PATH=./isitdead.db \
+JWT_SECRET=local-dev-secret \
+SMTP_HOST=localhost \
+SMTP_PORT=465 \
+SMTP_USER= \
+SMTP_PASS= \
+SMTP_FROM=no-reply@localhost \
+go run ./cmd/server
+```
+
+Frontend dev server:
+
+```sh
+cd web
+VITE_API_PROXY_TARGET=http://localhost:8080 npm run dev
+```
+
+Перед запуском Go binary після змін у frontend треба зібрати `web/dist`:
 
 ```sh
 cd web
@@ -29,148 +132,179 @@ npm run build
 cd ..
 ```
 
-Запусти backend:
+## Часті команди
 
 ```sh
-ENV=dev \
-PORT=8080 \
-DB_PATH=./isitdead.db \
-JWT_SECRET=local-dev-secret \
-SMTP_HOST=localhost \
-SMTP_PORT=1025 \
-SMTP_USER= \
-SMTP_PASS= \
-SMTP_FROM=no-reply@localhost \
-go run ./cmd/server
+make dev-back      # go run ./cmd/server
+make dev-front     # Vite dev server
+make build-front   # npm ci + npm run build у web
+make build         # Go binary у ./bin/isitdead
+make build-all     # frontend + backend
+make test          # go test ./... -v
+make fmt           # gofmt
+make tidy          # go mod tidy
 ```
 
-Для frontend dev server:
+Якщо Go test впирається в cache permission, використовуй локальний cache:
+
+```sh
+GOCACHE=/tmp/go-build-cache go test ./...
+```
+
+Frontend checks:
 
 ```sh
 cd web
-VITE_API_PROXY_TARGET=http://localhost:8080 npm run dev
+npm run check
 ```
 
-`VITE_API_PROXY_TARGET` використовується тільки у Vite dev server для proxy `/api` на Go backend. У production frontend і API працюють з одного Go server, тому окремий proxy не потрібен.
+## Конфіг
 
-## Збірка
+Go код читає конфіг тільки зі змінних середовища. `.env` сам по собі не завантажується. Для локальної розробки використовуй shell export, `direnv`, dotenv runner або systemd `EnvironmentFile`.
 
-Повна збірка frontend + backend:
-
-```sh
-make build-all
-```
-
-Binary буде тут:
-
-```sh
-./bin/isitdead
-```
-
-Запуск з уже зібраним binary:
-
-```sh
-ENV=dev PORT=8080 DB_PATH=./isitdead.db JWT_SECRET=local-dev-secret ./bin/isitdead
-```
-
-## Конфігурація
-
-Застосунок читає конфігурацію зі змінних середовища. Файл `.env` не завантажується автоматично самим Go кодом. Для локального запуску експортуй змінні shell-ом, використовуй `direnv`/dotenv runner або запускай через systemd `EnvironmentFile`.
-
-| Змінна | Default | Опис |
+| Змінна | Default | Нотатка |
 | --- | --- | --- |
-| `ENV` | `dev` | `dev` запускає HTTP server на `PORT`. `prod` запускає HTTPS на `:443` через Let's Encrypt і HTTP challenge на `:80`. |
-| `PORT` | `8080` | Порт для `ENV=dev`. Також використовується у dev email/OAuth callback URL. |
-| `DOMAIN` | `localhost` | Production домен без `http://` або `https://`, наприклад `status.example.com`. |
-| `DB_PATH` | `/tmp/isitdead.db` | Шлях до SQLite database file. У production краще використовувати persistent директорію. |
-| `JWT_SECRET` | `dev-secret-change-me` | Secret для підпису JWT. У production обов'язково задай довге випадкове значення. |
-| `SMTP_HOST` | `localhost` | SMTP host для листів підтвердження email. |
-| `SMTP_PORT` | `587` | SMTP port. |
+| `ENV` | `dev` | `dev` слухає HTTP на `PORT`; `prod` слухає HTTPS на `:443` і HTTP challenge/redirect на `:80`. |
+| `PORT` | `8080` | Dev port backend-а. Також впливає на dev confirmation/OAuth URLs. |
+| `DOMAIN` | `localhost` | Production домен без protocol, наприклад `isitdead.cc`. |
+| `DB_PATH` | `/tmp/isitdead.db` | У production ставити в persistent директорію. |
+| `JWT_SECRET` | `dev-secret-change-me` | У production обов'язково довгий random secret. |
+| `SMTP_HOST` | `localhost` | SMTP host для verification emails. |
+| `SMTP_PORT` | `465` | `465` йде через implicit TLS; інші порти йдуть через стандартний SMTP client. |
 | `SMTP_USER` | empty | SMTP username. |
 | `SMTP_PASS` | empty | SMTP password. |
-| `SMTP_FROM` | `no-reply@localhost` | From address у листах підтвердження. |
-| `CLIENT_ID` | empty | Google OAuth Client ID. Потрібен тільки для Google login. |
-| `CLIENT_SECRET` | empty | Google OAuth Client Secret. Потрібен тільки для Google login. |
+| `SMTP_FROM` | `no-reply@localhost` | Має бути нормальна адреса з домену, з якого дозволено слати пошту. |
+| `CLIENT_ID` | empty | Google OAuth Client ID. |
+| `CLIENT_SECRET` | empty | Google OAuth Client Secret. |
 
-Приклад `.env` для production:
+Production приклад:
 
 ```sh
 ENV=prod
-DOMAIN=status.example.com
+DOMAIN=isitdead.cc
 DB_PATH=/var/lib/isitdead/isitdead.db
-JWT_SECRET=replace-with-a-long-random-secret
+JWT_SECRET=replace-with-long-random-secret
 
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=postmaster@example.com
+SMTP_HOST=127.0.0.1
+SMTP_PORT=465
+SMTP_USER=no-reply@isitdead.cc
 SMTP_PASS=replace-with-smtp-password
-SMTP_FROM=no-reply@example.com
+SMTP_FROM=no-reply@isitdead.cc
 
 CLIENT_ID=replace-with-google-client-id
 CLIENT_SECRET=replace-with-google-client-secret
 ```
 
-## Email verification
+## Пошта
 
-Реєстрація користувача викликає `SMTP_*` конфігурацію і надсилає confirmation link.
+Verification email відправляється при email/password registration. Якщо SMTP недоступний або лист не зібрався коректно, registration поверне помилку.
 
-Для `ENV=dev` confirmation URL буде:
+Для Stalwart на тому самому VPS робочий варіант:
 
-```text
-http://localhost:PORT/api/auth/confirm?token=...
+```sh
+SMTP_HOST=127.0.0.1
+SMTP_PORT=465
+SMTP_FROM=no-reply@isitdead.cc
 ```
 
-Для `ENV=prod` confirmation URL буде:
+Корисна перевірка портів:
 
-```text
-https://DOMAIN/api/auth/confirm?token=...
+```sh
+ss -ltnp | rg ':587|:465|:25'
 ```
 
-Якщо SMTP не налаштований або недоступний, registration поверне помилку і користувач не зможе підтвердити email.
+Важливо:
 
-## Google OAuth
+- `SMTP_PORT=465` використовує implicit TLS.
+- Якщо Stalwart не слухає `587`, не ставити `SMTP_PORT=587`.
+- `SMTP_FROM` має бути заповнений, інакше Gmail може відхилити лист як RFC 5322 non-compliant.
+- Поточний subject verification email: `Confirm your email for isitdead.cc`.
 
-У Google Cloud Console створи OAuth Client типу `Web application` і додай callback URL.
-
-Для local dev з default port:
-
-```text
-http://localhost:8080/api/auth/google/callback
-```
-
-Для production:
+Confirmation URL:
 
 ```text
-https://status.example.com/api/auth/google/callback
+dev:  http://localhost:PORT/api/auth/confirm?token=...
+prod: https://DOMAIN/api/auth/confirm?token=...
 ```
 
-Після цього задай `CLIENT_ID` і `CLIENT_SECRET`. Якщо запускаєш dev backend не на `8080`, callback URL має використовувати твій `PORT`.
+## Auth і Google OAuth
 
-## Production notes
+Google callback URLs:
 
-У `ENV=prod` застосунок слухає `:443` і використовує Let's Encrypt через `autocert`. Для цього:
+```text
+dev:  http://localhost:8080/api/auth/google/callback
+prod: https://isitdead.cc/api/auth/google/callback
+```
 
-- `DOMAIN` має вказувати на сервер.
-- Порти `80` і `443` мають бути відкриті.
-- Процес має право слухати privileged ports або запускатися за reverse proxy/з потрібними capabilities.
-- Сертифікати кешуються в директорії `./certs` відносно working directory.
+Якщо dev backend не на `8080`, callback у Google Cloud Console має відповідати фактичному `PORT`.
 
-Systemd unit є в `isitdead.service`. Перед використанням зміни `User`, `Group`, `WorkingDirectory`, `ExecStart` і `EnvironmentFile` під свій сервер.
+Поведінка, яку важливо не зламати:
+
+- Email/password registration створює user і verification token.
+- Google login створює verified user, якщо такого email ще нема.
+- Якщо email уже є після незавершеної email registration, Google login має прив'язати `google_id` і підтвердити email.
+
+## Монітори
+
+- HTTP monitor без protocol у UI нормалізується в `https://example.com`.
+- Явний `http://example.com` або `https://example.com` треба залишати як є.
+- Default polling interval: `5m` / `300s`.
+- Якщо backend отримує некоректний interval менше `10s`, fallback має бути `300s`.
+
+## Production
+
+У `ENV=prod` застосунок сам підіймає HTTPS через Let's Encrypt `autocert`.
+
+Перед запуском перевірити:
+
+- `DOMAIN` вказує на VPS через A/AAAA record.
+- Порти `80` і `443` відкриті.
+- Процес має право слухати privileged ports або має відповідні capabilities.
+- Cert cache пишеться в `./certs` відносно working directory.
+- `DB_PATH` не в `/tmp`.
+- `JWT_SECRET`, SMTP і Google OAuth змінні задані реально, не default.
+
+Systemd unit лежить у `isitdead.service`. Перед використанням звірити:
+
+- `User`
+- `Group`
+- `WorkingDirectory`
+- `ExecStart`
+- `EnvironmentFile`
+
+Типові команди:
 
 ```sh
 sudo cp isitdead.service /etc/systemd/system/isitdead.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now isitdead
 sudo systemctl status isitdead
+journalctl -u isitdead -f
 ```
 
-## Команди розробки
+## Перед комітом
+
+Мінімально:
 
 ```sh
-make build-front   # зібрати SvelteKit frontend
-make build         # зібрати Go binary
-make build-all     # frontend + backend
-make test          # Go tests
-make dev-back      # go run ./cmd/server
-make dev-front     # Vite dev server
+GOCACHE=/tmp/go-build-cache go test ./...
+cd web && npm run check
 ```
+
+Якщо змінював UI, перевірити dashboard на desktop і mobile. Особливо mobile layout, бо це місце вже ламалося.
+
+Якщо змінював email/auth:
+
+- registration через email/password;
+- verification link;
+- Google login для нового email;
+- Google login для email, який уже є, але ще не verified;
+- помилки SMTP у logs.
+
+## Нюанси, які легко забути
+
+- Не додавати `https://`, якщо користувач явно ввів `http://`.
+- `web/dist` має існувати для production/static serving.
+- Frontend dev proxy працює тільки у Vite dev server, production йде через один Go server.
+- `.env` не читається автоматично Go кодом.
+- Gmail дуже строго перевіряє email headers, особливо `From`, `To`, `Subject`, `Date`, MIME headers.
