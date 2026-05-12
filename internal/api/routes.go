@@ -13,7 +13,6 @@ func (s *Server) setupRoutes() {
 	api.Get("/auth/google/callback", s.handleGoogleCallback)
 
 	// Public monitor pages
-	s.App.Get("/status/:slug", s.handlePublicStatusPage)
 	s.App.Get("/sitemap.xml", s.handleSitemap)
 	api.Get("/public/monitors/:slug", s.handleGetPublicMonitor)
 	api.Get("/public/monitors/:slug/results", s.handleGetPublicMonitorResults)

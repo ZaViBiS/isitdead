@@ -79,5 +79,5 @@ func isKnownSPARoute(path string) bool {
 		return true
 	}
 
-	return strings.HasPrefix(cleanPath, "/dashboard/")
+	return strings.HasPrefix(cleanPath, "/dashboard/") || strings.HasPrefix(cleanPath, "/status/")
 }
