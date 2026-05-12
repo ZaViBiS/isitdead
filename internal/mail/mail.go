@@ -1,9 +1,11 @@
 package mail
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"net/smtp"
+	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/config"
 )
@@ -17,9 +19,6 @@ func New(cfg *config.Config) *Mailer {
 }
 
 func (m *Mailer) SendVerificationEmail(to, token string) error {
-	subject := "Subject: Confirm your email for IsItDead\n"
-	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-
 	confirmURL := fmt.Sprintf("https://%s/api/auth/confirm?token=%s", m.cfg.Domain, token)
 	if m.cfg.Env == "dev" {
 		confirmURL = fmt.Sprintf("http://localhost:%s/api/auth/confirm?token=%s", m.cfg.Port, token)
@@ -27,7 +26,7 @@ func (m *Mailer) SendVerificationEmail(to, token string) error {
 
 	body := fmt.Sprintf("<html><body><h1>Welcome!</h1><p>Please click the link below to confirm your email:</p><a href=\"%s\">%s</a></body></html>", confirmURL, confirmURL)
 
-	msg := []byte(subject + mime + body)
+	msg := buildVerificationMessage(m.cfg.SMTPFrom, to, body)
 	addr := fmt.Sprintf("%s:%s", m.cfg.SMTPHost, m.cfg.SMTPPort)
 
 	auth := smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPass, m.cfg.SMTPHost)
@@ -36,6 +35,19 @@ func (m *Mailer) SendVerificationEmail(to, token string) error {
 	}
 
 	return smtp.SendMail(addr, auth, m.cfg.SMTPFrom, []string{to}, msg)
+}
+
+func buildVerificationMessage(from, to, body string) []byte {
+	var msg bytes.Buffer
+	msg.WriteString(fmt.Sprintf("From: %s\r\n", from))
+	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
+	msg.WriteString("Subject: Confirm your email for IsItDead\r\n")
+	msg.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
+	msg.WriteString("MIME-Version: 1.0\r\n")
+	msg.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+	msg.WriteString("\r\n")
+	msg.WriteString(body)
+	return msg.Bytes()
 }
 
 func sendMailImplicitTLS(addr, host string, auth smtp.Auth, from, to string, msg []byte) error {
