@@ -18,6 +18,16 @@ export interface Server {
 	incidents?: CheckResult[];
 }
 
+export interface NotificationPreference {
+	id?: number;
+	user_id?: number;
+	server_id?: number;
+	channel: string;
+	event: string;
+	enabled: boolean;
+	destination?: string;
+}
+
 export function getStatusColor(status: string, latency: number): string {
 	if (!status) return '#D62246';
 	if (!(status.startsWith('2') || status === 'Connected')) return '#D62246';

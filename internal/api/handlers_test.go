@@ -174,6 +174,33 @@ func TestAPI(t *testing.T) {
 		json.NewDecoder(resp.Body).Decode(&srv)
 		serverIDStr := strconv.Itoa(int(srv.ID))
 
+		// Notification preferences
+		req = httptest.NewRequest("GET", "/api/servers/"+serverIDStr+"/notifications", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var prefs []struct {
+			Channel string `json:"channel"`
+			Event   string `json:"event"`
+			Enabled bool   `json:"enabled"`
+		}
+		json.NewDecoder(resp.Body).Decode(&prefs)
+		assert.Len(t, prefs, 2)
+
+		updatePrefsPayload := []map[string]interface{}{
+			{"channel": "email", "event": "down", "enabled": false},
+			{"channel": "email", "event": "recovered", "enabled": true},
+		}
+		body, _ = json.Marshal(updatePrefsPayload)
+		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr+"/notifications", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
 		// Update Server
 		updatePayload := map[string]interface{}{
 			"name":           "Updated Name",

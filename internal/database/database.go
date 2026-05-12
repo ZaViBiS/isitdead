@@ -32,7 +32,7 @@ func Init(dbPath string) (*Storage, error) {
 	}
 
 	// автоматично створює/оновлює таблиці
-	if err := db.AutoMigrate(&model.User{}, &model.Server{}, &model.CheckResult{}, &model.EmailVerification{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Server{}, &model.CheckResult{}, &model.EmailVerification{}, &model.NotificationPreference{}); err != nil {
 		panic(err)
 	}
 
