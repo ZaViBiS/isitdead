@@ -12,7 +12,7 @@ import (
 func (s *Server) handlePublicStatusPage(c fiber.Ctx) error {
 	server, err := s.DB.GetPublicServerBySlug(c.Params("slug"))
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).Type("html").SendString(publicNotFoundHTML())
+		return c.Status(fiber.StatusNotFound).Type("html").SendString(s.siteNotFoundHTML(c.Path()))
 	}
 
 	results, _ := s.DB.GetHistory(server.ID)
@@ -190,10 +190,6 @@ func (s *Server) publicHomeURL() string {
 		return fmt.Sprintf("http://localhost:%s", s.Config.Port)
 	}
 	return fmt.Sprintf("https://%s", s.Config.Domain)
-}
-
-func publicNotFoundHTML() string {
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Status page not found</title></head><body><h1>Status page not found</h1></body></html>`
 }
 
 func isPublicHealthy(status string) bool {
