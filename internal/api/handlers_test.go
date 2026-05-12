@@ -158,7 +158,7 @@ func TestAPI(t *testing.T) {
 		srvPayload := map[string]interface{}{
 			"name":           "Test Server",
 			"url":            "http://example.com",
-			"check_interval": 60,
+			"check_interval": 300,
 		}
 		body, _ = json.Marshal(srvPayload)
 		req = httptest.NewRequest("POST", "/api/servers", bytes.NewReader(body))

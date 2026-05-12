@@ -20,12 +20,12 @@ func TestServerCRUD(t *testing.T) {
 	assert.NoError(t, err)
 
 	// 2. Тест: AddServer
-	server, err := storage.AddServer(user.ID, "Google", "https://google.com", "http", 60)
+	server, err := storage.AddServer(user.ID, "Google", "https://google.com", "http", 300)
 	assert.NoError(t, err)
 	assert.NotNil(t, server)
 	assert.Equal(t, "Google", server.Name)
 	assert.Equal(t, user.ID, server.UserID)
-	assert.Equal(t, 60, server.CheckInterval)
+	assert.Equal(t, 300, server.CheckInterval)
 
 	// 3. Тест: GetUserServers
 	servers, err := storage.GetUserServers(user.ID)
@@ -34,7 +34,7 @@ func TestServerCRUD(t *testing.T) {
 	assert.Equal(t, "https://google.com", servers[0].URL)
 
 	// 4. Тест: UpdateServer
-	updated, err := storage.UpdateServer(user.ID, server.ID, "Google Search", "https://google.com/search", "http", 60)
+	updated, err := storage.UpdateServer(user.ID, server.ID, "Google Search", "https://google.com/search", "http", 300)
 	assert.NoError(t, err)
 	assert.Equal(t, "Google Search", updated.Name)
 	assert.Equal(t, "https://google.com/search", updated.URL)
@@ -68,15 +68,15 @@ func TestServerSecurity(t *testing.T) {
 	user2, _, _ := storage.AddUser("u2", "u2@ex.com", "p")
 
 	// User 1 додає сервер
-	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", "http", 60)
+	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", "http", 300)
 
 	// Тест: User 2 намагається оновити сервер User 1
-	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com", "http", 60)
+	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com", "http", 300)
 	assert.Error(t, err, "User 2 should not be able to update User 1's server")
 
 	// Тест: User 2 намагається видалити сервер User 1
 	err = storage.DeleteServer(user2.ID, srv1.ID)
-	// GORM Delete по ID і UserID просто не знайде запис, якщо їх немає, і не поверне помилку через специфіку роботи, 
+	// GORM Delete по ID і UserID просто не знайде запис, якщо їх немає, і не поверне помилку через специфіку роботи,
 	// але ми можемо перевірити чи сервер все ще на місці.
 	assert.NoError(t, err)
 

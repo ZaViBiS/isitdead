@@ -35,13 +35,13 @@
 	let newName = $state('');
 	let newUrl = $state('');
 	let newType = $state('http');
-	let newInterval = $state(60);
+	let newInterval = $state(300);
 
 	let editingServer = $state<Server | null>(null);
 	let editName = $state('');
 	let editUrl = $state('');
 	let editType = $state('http');
-	let editInterval = $state(60);
+	let editInterval = $state(300);
 
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
@@ -165,7 +165,7 @@
 				newName = '';
 				newUrl = '';
 				newType = 'http';
-				newInterval = 60;
+				newInterval = 300;
 				fetchHistory(server);
 			}
 		} catch {

@@ -107,7 +107,7 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	}
 
 	if req.CheckInterval < 10 {
-		req.CheckInterval = 60 // default
+		req.CheckInterval = 300 // default
 	}
 
 	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckType, req.CheckInterval)
