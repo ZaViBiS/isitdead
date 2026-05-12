@@ -12,6 +12,7 @@
 		Globe2,
 		ShieldCheck,
 		Settings,
+		Mail,
 		X
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
@@ -23,7 +24,8 @@
 		calculateUptime,
 		calculateAvgLatency,
 		type Server,
-		type CheckResult
+		type CheckResult,
+		type NotificationPreference
 	} from '$lib/utils';
 
 	let servers = $state<Server[]>([]);
@@ -36,12 +38,16 @@
 	let newUrl = $state('');
 	let newType = $state('http');
 	let newInterval = $state(300);
+	let newNotifyEmailDown = $state(true);
+	let newNotifyEmailRecovered = $state(true);
 
 	let editingServer = $state<Server | null>(null);
 	let editName = $state('');
 	let editUrl = $state('');
 	let editType = $state('http');
 	let editInterval = $state(300);
+	let editNotifyEmailDown = $state(true);
+	let editNotifyEmailRecovered = $state(true);
 
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
@@ -117,6 +123,40 @@
 		return 'example.com or http://example.com';
 	}
 
+	function notificationPayload(emailDown: boolean, emailRecovered: boolean): NotificationPreference[] {
+		return [
+			{ channel: 'email', event: 'down', enabled: emailDown },
+			{ channel: 'email', event: 'recovered', enabled: emailRecovered }
+		];
+	}
+
+	function preferenceEnabled(prefs: NotificationPreference[], event: string) {
+		return prefs.find((pref) => pref.channel === 'email' && pref.event === event)?.enabled ?? true;
+	}
+
+	async function fetchNotificationPreferences(serverID: number) {
+		const token = localStorage.getItem('token');
+		const res = await fetch(`/api/servers/${serverID}/notifications`, {
+			headers: { Authorization: `Bearer ${token}` }
+		});
+		if (!res.ok) throw new Error('Failed to load notification preferences');
+		return (await res.json()) as NotificationPreference[];
+	}
+
+	async function saveNotificationPreferences(
+		serverID: number,
+		emailDown: boolean,
+		emailRecovered: boolean
+	) {
+		const token = localStorage.getItem('token');
+		const res = await fetch(`/api/servers/${serverID}/notifications`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+			body: JSON.stringify(notificationPayload(emailDown, emailRecovered))
+		});
+		if (!res.ok) throw new Error('Failed to save notification preferences');
+	}
+
 	function isServerOnline(server: Server) {
 		return server.status.startsWith('2') || server.status === 'Connected';
 	}
@@ -167,11 +207,14 @@
 				const newSrv = await res.json();
 				const server: Server = { ...newSrv, history: [], history30d: [] };
 				servers.push(server);
+				await saveNotificationPreferences(server.id, newNotifyEmailDown, newNotifyEmailRecovered);
 				isAdding = false;
 				newName = '';
 				newUrl = '';
 				newType = 'http';
 				newInterval = 300;
+				newNotifyEmailDown = true;
+				newNotifyEmailRecovered = true;
 				fetchHistory(server);
 			}
 		} catch {
@@ -179,13 +222,23 @@
 		}
 	}
 
-	function openEdit(server: Server) {
+	async function openEdit(server: Server) {
 		editingServer = server;
 		editName = server.name;
 		editUrl = server.url;
 		editType = server.check_type;
 		editInterval = server.check_interval;
+		editNotifyEmailDown = true;
+		editNotifyEmailRecovered = true;
 		isEditing = true;
+
+		try {
+			const prefs = await fetchNotificationPreferences(server.id);
+			editNotifyEmailDown = preferenceEnabled(prefs, 'down');
+			editNotifyEmailRecovered = preferenceEnabled(prefs, 'recovered');
+		} catch {
+			error = 'Failed to load notification preferences';
+		}
 	}
 
 	async function updateServer(e: SubmitEvent) {
@@ -216,6 +269,11 @@
 						history30d: servers[idx].history30d
 					};
 				}
+				await saveNotificationPreferences(
+					editingServer.id,
+					editNotifyEmailDown,
+					editNotifyEmailRecovered
+				);
 				isEditing = false;
 				editingServer = null;
 			}
@@ -418,6 +476,34 @@
 							{/each}
 						</div>
 					</div>
+					<div
+						class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-4 sm:grid-cols-2 lg:col-span-4"
+					>
+						<div class="flex items-center gap-3 sm:col-span-2">
+							<Mail class="h-4 w-4 text-brand-primary" />
+							<div class="text-xs font-bold text-brand-light/45 uppercase">Notifications</div>
+						</div>
+						<label
+							class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3"
+						>
+							<span class="text-sm font-bold text-brand-light/75">Email when down</span>
+							<input
+								type="checkbox"
+								bind:checked={newNotifyEmailDown}
+								class="h-5 w-5 accent-brand-primary"
+							/>
+						</label>
+						<label
+							class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3"
+						>
+							<span class="text-sm font-bold text-brand-light/75">Email when recovered</span>
+							<input
+								type="checkbox"
+								bind:checked={newNotifyEmailRecovered}
+								class="h-5 w-5 accent-brand-primary"
+							/>
+						</label>
+					</div>
 					<div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end lg:col-span-4">
 						<button
 							type="button"
@@ -533,6 +619,34 @@
 										</button>
 									{/each}
 								</div>
+							</div>
+							<div
+								class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-4 md:col-span-2 md:grid-cols-2"
+							>
+								<div class="flex items-center gap-3 md:col-span-2">
+									<Mail class="h-4 w-4 text-brand-primary" />
+									<div class="text-xs font-bold text-brand-light/45 uppercase">Notifications</div>
+								</div>
+								<label
+									class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3"
+								>
+									<span class="text-sm font-bold text-brand-light/75">Email when down</span>
+									<input
+										type="checkbox"
+										bind:checked={editNotifyEmailDown}
+										class="h-5 w-5 accent-brand-primary"
+									/>
+								</label>
+								<label
+									class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3"
+								>
+									<span class="text-sm font-bold text-brand-light/75">Email when recovered</span>
+									<input
+										type="checkbox"
+										bind:checked={editNotifyEmailRecovered}
+										class="h-5 w-5 accent-brand-primary"
+									/>
+								</label>
 							</div>
 						</div>
 						<div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

@@ -17,7 +17,17 @@ func (s *Storage) AddServer(userID uint, name, url, checkType string, checkInter
 	}
 
 	err := s.executeWrite(func(db *gorm.DB) error {
-		return db.Create(server).Error
+		return db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Create(server).Error; err != nil {
+				return err
+			}
+			for _, pref := range DefaultNotificationPreferences(userID, server.ID) {
+				if err := tx.Create(&pref).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		})
 	})
 	if err != nil {
 		return nil, err
@@ -71,7 +81,12 @@ func (s *Storage) UpdateServerStatus(serverID uint, status string, latency int64
 // DeleteServer видаляє сервер з бази даних
 func (s *Storage) DeleteServer(userID, serverID uint) error {
 	return s.executeWrite(func(db *gorm.DB) error {
-		return db.Where("id = ? AND user_id = ?", serverID, userID).Delete(&model.Server{}).Error
+		return db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Where("id = ? AND user_id = ?", serverID, userID).Delete(&model.Server{}).Error; err != nil {
+				return err
+			}
+			return tx.Where("server_id = ? AND user_id = ?", serverID, userID).Delete(&model.NotificationPreference{}).Error
+		})
 	})
 }
 

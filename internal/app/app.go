@@ -12,6 +12,7 @@ import (
 	"github.com/ZaViBiS/isitdead/internal/config"
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/ZaViBiS/isitdead/internal/mail"
+	"github.com/ZaViBiS/isitdead/internal/notify"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -36,6 +37,8 @@ func New(staticFiles embed.FS) (*App, error) {
 
 	// Поштовий сервіс
 	mailer := mail.New(cfg)
+	notifier := notify.NewService(db, notify.NewEmailSender(mailer))
+	sched.SetNotifier(notifier)
 
 	// Backend + Frontend (embed)
 	server, err := api.New(db, sched, mailer, staticFiles)

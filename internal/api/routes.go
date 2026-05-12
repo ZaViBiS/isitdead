@@ -17,6 +17,8 @@ func (s *Server) setupRoutes() {
 	api.Get("/servers", s.handleGetServers)
 	api.Post("/servers", s.handleAddServer)
 	api.Put("/servers/:id", s.handleUpdateServer)
+	api.Get("/servers/:id/notifications", s.handleGetNotificationPreferences)
+	api.Put("/servers/:id/notifications", s.handleUpdateNotificationPreferences)
 	api.Delete("/servers/:id", s.handleDeleteServer)
 	api.Get("/servers/:id/results", s.handleGetServerResults)
 }

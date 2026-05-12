@@ -80,6 +80,76 @@ func (s *Server) handleGetServerResults(c fiber.Ctx) error {
 	return c.JSON(results)
 }
 
+func (s *Server) handleGetNotificationPreferences(c fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	serverID, err := parseServerID(c)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid server ID"})
+	}
+
+	if !s.userOwnsServer(userID, serverID) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access denied"})
+	}
+
+	if err := s.DB.EnsureDefaultNotificationPreferences(userID, serverID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not prepare notification preferences"})
+	}
+
+	prefs, err := s.DB.GetUserNotificationPreferences(userID, serverID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch notification preferences"})
+	}
+
+	return c.JSON(prefs)
+}
+
+func (s *Server) handleUpdateNotificationPreferences(c fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	serverID, err := parseServerID(c)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid server ID"})
+	}
+
+	if !s.userOwnsServer(userID, serverID) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Access denied"})
+	}
+
+	var req []struct {
+		Channel     string `json:"channel"`
+		Event       string `json:"event"`
+		Enabled     bool   `json:"enabled"`
+		Destination string `json:"destination"`
+	}
+
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	prefs := make([]model.NotificationPreference, 0, len(req))
+	for _, item := range req {
+		if !isAllowedNotificationPreference(item.Channel, item.Event) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unsupported notification preference"})
+		}
+		prefs = append(prefs, model.NotificationPreference{
+			Channel:     item.Channel,
+			Event:       item.Event,
+			Enabled:     item.Enabled,
+			Destination: item.Destination,
+		})
+	}
+
+	if err := s.DB.SaveUserNotificationPreferences(userID, serverID, prefs); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not save notification preferences"})
+	}
+
+	saved, err := s.DB.GetUserNotificationPreferences(userID, serverID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch notification preferences"})
+	}
+
+	return c.JSON(saved)
+}
+
 func (s *Server) handleGetServers(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	servers, err := s.DB.GetUserServers(userID)
@@ -87,6 +157,34 @@ func (s *Server) handleGetServers(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch servers"})
 	}
 	return c.JSON(servers)
+}
+
+func parseServerID(c fiber.Ctx) (uint, error) {
+	serverID, err := strconv.ParseUint(c.Params("id"), 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint(serverID), nil
+}
+
+func (s *Server) userOwnsServer(userID, serverID uint) bool {
+	servers, err := s.DB.GetUserServers(userID)
+	if err != nil {
+		return false
+	}
+	for _, srv := range servers {
+		if srv.ID == serverID {
+			return true
+		}
+	}
+	return false
+}
+
+func isAllowedNotificationPreference(channel, event string) bool {
+	if channel != model.NotificationChannelEmail {
+		return false
+	}
+	return event == model.NotificationEventDown || event == model.NotificationEventUp
 }
 
 func (s *Server) handleAddServer(c fiber.Ctx) error {

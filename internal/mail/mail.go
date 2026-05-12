@@ -26,7 +26,11 @@ func (m *Mailer) SendVerificationEmail(to, token string) error {
 
 	body := fmt.Sprintf("<html><body><h1>Welcome!</h1><p>Please click the link below to confirm your email:</p><a href=\"%s\">%s</a></body></html>", confirmURL, confirmURL)
 
-	msg := buildVerificationMessage(m.cfg.SMTPFrom, to, body)
+	return m.SendHTML(to, "Confirm your email for isitdead.cc", body)
+}
+
+func (m *Mailer) SendHTML(to, subject, body string) error {
+	msg := buildMessage(m.cfg.SMTPFrom, to, subject, body)
 	addr := fmt.Sprintf("%s:%s", m.cfg.SMTPHost, m.cfg.SMTPPort)
 
 	auth := smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPass, m.cfg.SMTPHost)
@@ -38,10 +42,14 @@ func (m *Mailer) SendVerificationEmail(to, token string) error {
 }
 
 func buildVerificationMessage(from, to, body string) []byte {
+	return buildMessage(from, to, "Confirm your email for isitdead.cc", body)
+}
+
+func buildMessage(from, to, subject, body string) []byte {
 	var msg bytes.Buffer
 	msg.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	msg.WriteString("Subject: Confirm your email for isitdead.cc\r\n")
+	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
 	msg.WriteString("MIME-Version: 1.0\r\n")
 	msg.WriteString("Content-Type: text/html; charset=UTF-8\r\n")

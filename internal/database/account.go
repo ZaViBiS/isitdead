@@ -51,6 +51,15 @@ func (s *Storage) GetUserByEmail(email string) (*model.User, error) {
 	return &user, nil
 }
 
+// GetUserByID знаходить користувача за ID
+func (s *Storage) GetUserByID(userID uint) (*model.User, error) {
+	var user model.User
+	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // GetUserByGoogleID знаходить користувача за Google ID
 func (s *Storage) GetUserByGoogleID(googleID string) (*model.User, error) {
 	var user model.User

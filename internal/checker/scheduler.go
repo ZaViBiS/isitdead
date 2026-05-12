@@ -13,6 +13,7 @@ import (
 // Scheduler керує циклічними перевірками серверів
 type Scheduler struct {
 	storage  *database.Storage
+	notifier TransitionNotifier
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
@@ -23,6 +24,10 @@ type Scheduler struct {
 type monitorControl struct {
 	cancel context.CancelFunc
 	done   chan struct{}
+}
+
+type TransitionNotifier interface {
+	Notify(ctx context.Context, server model.Server, previousState, currentState string, latency int64) error
 }
 
 // NewScheduler створює новий екземпляр планувальника
@@ -36,6 +41,10 @@ func NewScheduler(db *database.Storage) *Scheduler {
 	}
 }
 
+func (s *Scheduler) SetNotifier(notifier TransitionNotifier) {
+	s.notifier = notifier
+}
+
 // Start запускає моніторинг для всіх серверів у базі
 func (s *Scheduler) Start() error {
 	servers, err := s.storage.GetAllServers()
@@ -46,6 +55,9 @@ func (s *Scheduler) Start() error {
 	log.Info().Int("count", len(servers)).Msg("Starting scheduler for servers")
 
 	for _, server := range servers {
+		if err := s.storage.EnsureDefaultNotificationPreferences(server.UserID, server.ID); err != nil {
+			return err
+		}
 		s.RunServerMonitor(server)
 	}
 
@@ -89,8 +101,10 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 
 		log.Info().Str("server", srv.Name).Str("url", srv.URL).Int("interval", srv.CheckInterval).Msg("Monitoring started")
 
+		current := srv
+
 		// Перша перевірка при запуску
-		s.performCheck(srv)
+		current.Status, current.Latency = s.performCheck(current)
 
 		ticker := time.NewTicker(time.Duration(srv.CheckInterval) * time.Second)
 		defer ticker.Stop()
@@ -101,7 +115,7 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 				log.Info().Str("server", srv.Name).Msg("Monitoring stopped")
 				return
 			case <-ticker.C:
-				s.performCheck(srv)
+				current.Status, current.Latency = s.performCheck(current)
 			}
 		}
 	}()
@@ -121,7 +135,8 @@ func (s *Scheduler) StopServerMonitor(serverID uint) {
 	}
 }
 
-func (s *Scheduler) performCheck(srv model.Server) {
+func (s *Scheduler) performCheck(srv model.Server) (string, int64) {
+	previousStatus := srv.Status
 	status, latency := Check(srv.CheckType, srv.URL)
 
 	log.Debug().
@@ -146,4 +161,12 @@ func (s *Scheduler) performCheck(srv model.Server) {
 	if err != nil {
 		log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to update server status")
 	}
+
+	if s.notifier != nil {
+		if err := s.notifier.Notify(s.ctx, srv, previousStatus, status, latency); err != nil {
+			log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to process notifications")
+		}
+	}
+
+	return status, latency
 }
