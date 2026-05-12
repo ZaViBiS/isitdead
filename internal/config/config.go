@@ -25,7 +25,7 @@ func Load() *Config {
 		Domain:       getEnv("DOMAIN", "localhost"),
 		DBPath:       getEnv("DB_PATH", "/tmp/isitdead.db"),
 		SMTPHost:     getEnv("SMTP_HOST", "localhost"),
-		SMTPPort:     getEnv("SMTP_PORT", "587"),
+		SMTPPort:     getEnv("SMTP_PORT", "465"),
 		SMTPUser:     getEnv("SMTP_USER", ""),
 		SMTPPass:     getEnv("SMTP_PASS", ""),
 		SMTPFrom:     getEnv("SMTP_FROM", "no-reply@localhost"),
