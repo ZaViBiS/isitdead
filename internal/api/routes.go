@@ -20,6 +20,7 @@ func (s *Server) setupRoutes() {
 
 	// Protected routes
 	api.Use(s.authMiddleware)
+	api.Get("/me", s.handleGetMe)
 	api.Get("/servers", s.handleGetServers)
 	api.Post("/servers", s.handleAddServer)
 	api.Put("/servers/:id", s.handleUpdateServer)

@@ -80,7 +80,26 @@ func (s *Server) handleLogin(c fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"token": t,
-		"user":  fiber.Map{"id": user.ID, "username": user.Username, "email": user.Email},
+		"user":  fiber.Map{"id": user.ID, "username": user.Username, "email": user.Email, "is_admin": s.isAdminEmail(user.Email)},
+	})
+}
+
+func (s *Server) handleGetMe(c fiber.Ctx) error {
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing user context"})
+	}
+
+	user, err := s.DB.GetUserByID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+		"is_admin": s.isAdminEmail(user.Email),
 	})
 }
 

@@ -44,11 +44,18 @@ func (s *Server) adminMiddleware(c fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
 	}
 
-	for _, email := range strings.Split(s.Config.AdminEmails, ",") {
-		if strings.EqualFold(strings.TrimSpace(email), user.Email) && strings.TrimSpace(email) != "" {
-			return c.Next()
-		}
+	if s.isAdminEmail(user.Email) {
+		return c.Next()
 	}
 
 	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Admin access required"})
+}
+
+func (s *Server) isAdminEmail(userEmail string) bool {
+	for _, email := range strings.Split(s.Config.AdminEmails, ",") {
+		if strings.EqualFold(strings.TrimSpace(email), userEmail) && strings.TrimSpace(email) != "" {
+			return true
+		}
+	}
+	return false
 }
