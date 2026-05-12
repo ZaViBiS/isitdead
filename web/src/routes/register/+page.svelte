@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Activity, Mail, Lock, User, ArrowRight } from 'lucide-svelte';
+	import { Mail, Lock, User, ArrowRight } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import LogoMark from '$lib/LogoMark.svelte';
 
 	let username = $state('');
 	let email = $state('');
@@ -61,11 +62,7 @@
 		class="w-full max-w-md space-y-8 rounded-3xl border border-brand-light/10 bg-brand-dark p-8 shadow-xl md:p-10"
 	>
 		<div class="text-center">
-			<div
-				class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-primary text-brand-dark"
-			>
-				<Activity class="h-6 w-6" />
-			</div>
+			<LogoMark class="mx-auto h-12 w-12" title="isitdead" />
 			<h2 class="mt-6 text-3xl font-extrabold tracking-tight">Create your account</h2>
 			<p class="mt-2 text-sm text-brand-light/60">
 				Start monitoring your services in less than a minute.
