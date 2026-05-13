@@ -45,7 +45,7 @@ func TestScheduler(t *testing.T) {
 	stubHTTP200Transport(t)
 
 	// Add server to DB
-	srv, err := storage.AddServer(user.ID, "Test Server", "http://example.test", "http", 1, false, "") // 1 second interval
+	srv, err := storage.AddServer(user.ID, "Test Server", "http://example.test", "http", 1, 10, false, "") // 1 second interval
 	assert.NoError(t, err)
 
 	scheduler := NewScheduler(storage)

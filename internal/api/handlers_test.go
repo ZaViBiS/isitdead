@@ -154,11 +154,26 @@ func TestAPI(t *testing.T) {
 		json.NewDecoder(resp.Body).Decode(&loginResp)
 		token := loginResp.Token
 
+		// Timeout is required for monitor create/update payloads.
+		missingTimeoutPayload := map[string]interface{}{
+			"name":           "Missing Timeout",
+			"url":            "http://example.com",
+			"check_interval": 300,
+		}
+		body, _ = json.Marshal(missingTimeoutPayload)
+		req = httptest.NewRequest("POST", "/api/servers", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
 		// Add Server
 		srvPayload := map[string]interface{}{
 			"name":           "Test Server",
 			"url":            "http://example.com",
 			"check_interval": 300,
+			"timeout":        10,
 		}
 		body, _ = json.Marshal(srvPayload)
 		req = httptest.NewRequest("POST", "/api/servers", bytes.NewReader(body))
@@ -172,10 +187,12 @@ func TestAPI(t *testing.T) {
 			ID         uint   `json:"id"`
 			Public     bool   `json:"public"`
 			PublicSlug string `json:"public_slug"`
+			Timeout    int    `json:"timeout"`
 		}
 		json.NewDecoder(resp.Body).Decode(&srv)
 		assert.False(t, srv.Public)
 		assert.Empty(t, srv.PublicSlug)
+		assert.Equal(t, 10, srv.Timeout)
 		serverIDStr := strconv.Itoa(int(srv.ID))
 
 		// Regular users cannot enable public pages through the server update API.
@@ -184,6 +201,7 @@ func TestAPI(t *testing.T) {
 			"url":            "http://example.com",
 			"check_interval": 300,
 			"check_type":     "http",
+			"timeout":        10,
 			"public":         true,
 			"public_slug":    "test-server",
 		}
@@ -256,6 +274,7 @@ func TestAPI(t *testing.T) {
 			"url":            "http://example.com/updated",
 			"check_interval": 120,
 			"check_type":     "http",
+			"timeout":        15,
 		}
 		body, _ = json.Marshal(updatePayload)
 		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
@@ -264,6 +283,20 @@ func TestAPI(t *testing.T) {
 
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		missingUpdateTimeoutPayload := map[string]interface{}{
+			"name":           "Updated Name",
+			"url":            "http://example.com/updated",
+			"check_interval": 120,
+			"check_type":     "http",
+		}
+		body, _ = json.Marshal(missingUpdateTimeoutPayload)
+		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		// Delete Server
 		req = httptest.NewRequest("DELETE", "/api/servers/"+serverIDStr, nil)

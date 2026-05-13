@@ -10,7 +10,7 @@ import (
 )
 
 // AddServer додає новий сервер для моніторингу
-func (s *Storage) AddServer(userID uint, name, url, checkType string, checkInterval int, public bool, publicSlug string) (*model.Server, error) {
+func (s *Storage) AddServer(userID uint, name, url, checkType string, checkInterval int, timeout int, public bool, publicSlug string) (*model.Server, error) {
 	slug, err := s.preparePublicSlug(0, name, public, publicSlug)
 	if err != nil {
 		return nil, err
@@ -25,6 +25,7 @@ func (s *Storage) AddServer(userID uint, name, url, checkType string, checkInter
 		PublicSlug:    slug,
 		Status:        "unknown",
 		CheckInterval: checkInterval,
+		Timeout:       timeout,
 	}
 
 	err = s.executeWrite(func(db *gorm.DB) error {
@@ -57,7 +58,7 @@ func (s *Storage) GetUserServers(userID uint) ([]model.Server, error) {
 }
 
 // UpdateServer оновлює дані сервера
-func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType string, interval int, public bool, publicSlug string) (*model.Server, error) {
+func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType string, interval int, timeout int, public bool, publicSlug string) (*model.Server, error) {
 	var server model.Server
 	// Перевіряємо, що сервер належить саме цьому користувачу
 	if err := s.DB.Where("id = ? AND user_id = ?", serverID, userID).First(&server).Error; err != nil {
@@ -73,6 +74,7 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType strin
 	server.URL = url
 	server.CheckType = checkType
 	server.CheckInterval = interval
+	server.Timeout = timeout
 	server.Public = public
 	server.PublicSlug = slug
 
