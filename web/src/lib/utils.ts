@@ -15,6 +15,7 @@ export interface Server {
 	status: string;
 	latency: number;
 	check_interval: number;
+	timeout: number;
 	history: CheckResult[];
 	history30d?: CheckResult[];
 	incidents?: CheckResult[];
@@ -41,7 +42,7 @@ export function getFaviconUrl(url: string): string {
 	try {
 		const domain = new URL(url.startsWith('http') ? url : `http://${url}`).hostname;
 		return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-	} catch (e) {
+	} catch {
 		return '';
 	}
 }
@@ -74,14 +75,14 @@ export function calculateAvgLatency(history: CheckResult[]) {
 export function getHourlyBuckets(history: CheckResult[]): string[] {
 	const buckets: string[] = Array(24).fill('#1f332f');
 	const now = new Date();
-	const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
-	
+	const nowUTC = now.getTime() + now.getTimezoneOffset() * 60000;
+
 	for (let i = 0; i < 24; i++) {
 		// Time window in UTC
 		const hourStart = nowUTC - (24 - i) * 60 * 60 * 1000;
 		const hourEnd = nowUTC - (23 - i) * 60 * 60 * 1000;
-		
-		const hourResults = history.filter(h => {
+
+		const hourResults = history.filter((h) => {
 			const d = new Date(h.created_at).getTime();
 			return d >= hourStart && d < hourEnd;
 		});
@@ -101,6 +102,6 @@ export function getHourlyBuckets(history: CheckResult[]): string[] {
 			buckets[i] = worstColor;
 		}
 	}
-	
+
 	return buckets;
 }

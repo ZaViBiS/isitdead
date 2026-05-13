@@ -220,6 +220,7 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 		URL           string `json:"url"`
 		CheckType     string `json:"check_type"`
 		CheckInterval int    `json:"check_interval"`
+		Timeout       int    `json:"timeout"`
 	}
 
 	if err := c.Bind().Body(&req); err != nil {
@@ -233,8 +234,11 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	if req.CheckInterval < 10 {
 		req.CheckInterval = 300 // default
 	}
+	if req.Timeout <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Timeout is required"})
+	}
 
-	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckType, req.CheckInterval, false, "")
+	server, err := s.DB.AddServer(userID, req.Name, req.URL, req.CheckType, req.CheckInterval, req.Timeout, false, "")
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
@@ -264,13 +268,18 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 		URL           string `json:"url"`
 		CheckType     string `json:"check_type"`
 		CheckInterval int    `json:"check_interval"`
+		Timeout       int    `json:"timeout"`
 	}
 
 	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
 
-	server, err := s.DB.UpdateServer(userID, uint(serverID), req.Name, req.URL, req.CheckType, req.CheckInterval, false, "")
+	if req.Timeout <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Timeout is required"})
+	}
+
+	server, err := s.DB.UpdateServer(userID, uint(serverID), req.Name, req.URL, req.CheckType, req.CheckInterval, req.Timeout, false, "")
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
@@ -321,7 +330,8 @@ func (s *Server) handleSitemap(c fiber.Ctx) error {
 	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
 	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
 	for _, server := range servers {
-		fmt.Fprintf(&b, "  <url><loc>%s</loc><lastmod>%s</lastmod></url>\n",
+		fmt.Fprintf(
+			&b, "  <url><loc>%s</loc><lastmod>%s</lastmod></url>\n",
 			html.EscapeString(s.publicStatusURL(server.PublicSlug)),
 			server.UpdatedAt.UTC().Format("2006-01-02"),
 		)

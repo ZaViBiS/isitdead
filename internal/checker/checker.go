@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	maxLinkCheckPages      = 20
-	maxLinkCheckReferences = 120
-	maxBrokenLinkExamples  = 5
-	monitorUserAgent       = "isitdead.cc monitor/1.0 (+https://isitdead.cc)"
+	maxLinkCheckPages        = 20
+	maxLinkCheckReferences   = 120
+	maxBrokenLinkExamples    = 5
+	monitorUserAgent         = "isitdead.cc monitor/1.0 (+https://isitdead.cc)"
+	defaultConnectionTimeout = 10 * time.Second
 )
 
 type linkReference struct {
@@ -33,23 +34,24 @@ type brokenReference struct {
 }
 
 // Check виконує перевірку залежно від типу.
-func Check(checkType, target string) (status string, latency int64) {
+func Check(checkType, target string, timeoutSeconds int) (status string, latency int64) {
+	timeout := connectionTimeout(timeoutSeconds)
 	switch checkType {
 	case "ping":
-		return TcpPing(target)
+		return TCPPing(target, timeout)
 	case "links":
-		return LinkCheck(target)
+		return LinkCheck(target, timeout)
 	default:
-		return HttpCheck(target)
+		return HttpCheck(target, timeout)
 	}
 }
 
 // HttpCheck виконує запит до URL і повертає статус та затримку
-func HttpCheck(url string) (status string, latency int64) {
+func HttpCheck(url string, timeout time.Duration) (status string, latency int64) {
 	start := time.Now()
 
 	client := http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: timeout,
 	}
 
 	req, err := newMonitorRequest(http.MethodGet, url)
@@ -69,7 +71,7 @@ func HttpCheck(url string) (status string, latency int64) {
 }
 
 // LinkCheck crawls a site entry page and reports broken pages/assets with sources.
-func LinkCheck(rawURL string) (status string, latency int64) {
+func LinkCheck(rawURL string, timeout time.Duration) (status string, latency int64) {
 	start := time.Now()
 
 	baseURL, err := parseHTTPURL(rawURL)
@@ -77,7 +79,7 @@ func LinkCheck(rawURL string) (status string, latency int64) {
 		return err.Error(), time.Since(start).Milliseconds()
 	}
 
-	client := http.Client{Timeout: 10 * time.Second}
+	client := http.Client{Timeout: timeout}
 	visitedPages := map[string]bool{}
 	queuedPages := map[string]bool{baseURL.String(): true}
 	queue := []*url.URL{baseURL}
@@ -310,8 +312,15 @@ func formatBrokenReferences(broken []brokenReference) string {
 	return b.String()
 }
 
-// TcpPing виконує спробу підключення до TCP порту (TCP Ping)
-func TcpPing(target string) (status string, latency int64) {
+func connectionTimeout(timeoutSeconds int) time.Duration {
+	if timeoutSeconds <= 0 {
+		return defaultConnectionTimeout
+	}
+	return time.Duration(timeoutSeconds) * time.Second
+}
+
+// TCPPing виконує спробу підключення до TCP порту.
+func TCPPing(target string, timeout time.Duration) (status string, latency int64) {
 	start := time.Now()
 
 	// Якщо порт не вказано, додаємо за замовчуванням 80
@@ -319,7 +328,7 @@ func TcpPing(target string) (status string, latency int64) {
 		target = target + ":80"
 	}
 
-	conn, err := net.DialTimeout("tcp", target, 5*time.Second)
+	conn, err := net.DialTimeout("tcp", target, timeout)
 	elapsed := time.Since(start).Milliseconds()
 
 	if err != nil {

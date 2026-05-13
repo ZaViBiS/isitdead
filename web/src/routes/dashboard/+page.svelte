@@ -38,6 +38,7 @@
 	let newUrl = $state('');
 	let newType = $state('http');
 	let newInterval = $state(300);
+	let newTimeout = $state(10);
 	let newNotifyEmailDown = $state(true);
 	let newNotifyEmailRecovered = $state(true);
 
@@ -46,6 +47,7 @@
 	let editUrl = $state('');
 	let editType = $state('http');
 	let editInterval = $state(300);
+	let editTimeout = $state(10);
 	let editNotifyEmailDown = $state(true);
 	let editNotifyEmailRecovered = $state(true);
 
@@ -202,7 +204,8 @@
 					name: newName,
 					url: normalizeMonitorUrl(newUrl, newType),
 					check_type: newType,
-					check_interval: Number(newInterval)
+					check_interval: Number(newInterval),
+					timeout: Number(newTimeout)
 				})
 			});
 
@@ -216,6 +219,7 @@
 				newUrl = '';
 				newType = 'http';
 				newInterval = 300;
+				newTimeout = 10;
 				newNotifyEmailDown = true;
 				newNotifyEmailRecovered = true;
 				fetchHistory(server);
@@ -231,6 +235,7 @@
 		editUrl = server.url;
 		editType = server.check_type;
 		editInterval = server.check_interval;
+		editTimeout = server.timeout;
 		editNotifyEmailDown = true;
 		editNotifyEmailRecovered = true;
 		isEditing = true;
@@ -256,7 +261,8 @@
 					name: editName,
 					url: normalizeMonitorUrl(editUrl, editType),
 					check_type: editType,
-					check_interval: Number(editInterval)
+					check_interval: Number(editInterval),
+					timeout: Number(editTimeout)
 				})
 			});
 
@@ -305,6 +311,7 @@
 	const intervalPresets = [
 		30, 60, 180, 300, 600, 1800, 3600, 7200, 14400, 21600, 36000, 43200, 86400
 	];
+	const timeoutPresets = [3, 5, 10, 15, 30, 60];
 
 	function formatInterval(seconds: number) {
 		if (seconds < 60) return `${seconds}s`;
@@ -403,7 +410,7 @@
 				</div>
 				<form
 					onsubmit={addServer}
-					class="grid gap-4 p-4 sm:p-6 lg:grid-cols-[1fr_1.25fr_0.8fr_1.3fr]"
+					class="grid gap-4 p-4 sm:p-6 lg:grid-cols-[1fr_1.25fr_0.8fr_0.9fr_1.3fr]"
 				>
 					<div class="space-y-2">
 						<label for="name" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
@@ -456,6 +463,26 @@
 					</div>
 					<div class="space-y-2">
 						<div class="ml-1 flex items-center justify-between">
+							<label for="timeout" class="text-xs font-bold text-brand-light/45 uppercase"
+								>Timeout</label
+							>
+							<span
+								class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+								>{newTimeout}s</span
+							>
+						</div>
+						<select
+							id="timeout"
+							bind:value={newTimeout}
+							class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+						>
+							{#each timeoutPresets as preset (preset)}
+								<option value={preset}>{preset}s</option>
+							{/each}
+						</select>
+					</div>
+					<div class="space-y-2">
+						<div class="ml-1 flex items-center justify-between">
 							<label for="interval" class="text-xs font-bold text-brand-light/45 uppercase"
 								>Interval</label
 							>
@@ -480,7 +507,7 @@
 						</div>
 					</div>
 					<div
-						class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-4 sm:grid-cols-2 lg:col-span-4"
+						class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-4 sm:grid-cols-2 lg:col-span-5"
 					>
 						<div class="flex items-center gap-3 sm:col-span-2">
 							<Mail class="h-4 w-4 text-brand-primary" />
@@ -507,7 +534,7 @@
 							/>
 						</label>
 					</div>
-					<div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end lg:col-span-4">
+					<div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end lg:col-span-5">
 						<button
 							type="button"
 							onclick={() => (isAdding = false)}
@@ -622,6 +649,26 @@
 										</button>
 									{/each}
 								</div>
+							</div>
+							<div class="space-y-2 md:col-span-2">
+								<div class="ml-1 flex items-center justify-between">
+									<label for="edit-timeout" class="text-xs font-bold text-brand-light/45 uppercase"
+										>Timeout</label
+									>
+									<span
+										class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+										>{editTimeout}s</span
+									>
+								</div>
+								<select
+									id="edit-timeout"
+									bind:value={editTimeout}
+									class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+								>
+									{#each timeoutPresets as preset (preset)}
+										<option value={preset}>{preset}s</option>
+									{/each}
+								</select>
 							</div>
 							<div
 								class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-4 md:col-span-2 md:grid-cols-2"

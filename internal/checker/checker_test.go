@@ -54,7 +54,7 @@ func TestCheck(t *testing.T) {
 			assertMonitorUserAgent(t, req)
 			return httpResponse(http.StatusOK), nil
 		}))
-		status, latency := Check("http", "http://example.test")
+		status, latency := Check("http", "http://example.test", 10)
 
 		assert.Equal(t, "200 OK", status)
 		assert.GreaterOrEqual(t, latency, int64(0))
@@ -64,7 +64,7 @@ func TestCheck(t *testing.T) {
 		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 			return httpResponse(http.StatusNotFound), nil
 		}))
-		status, _ := Check("http", "http://example.test")
+		status, _ := Check("http", "http://example.test", 10)
 
 		assert.Equal(t, "404 Not Found", status)
 	})
@@ -73,13 +73,13 @@ func TestCheck(t *testing.T) {
 		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 			return httpResponse(http.StatusInternalServerError), nil
 		}))
-		status, _ := Check("http", "http://example.test")
+		status, _ := Check("http", "http://example.test", 10)
 
 		assert.Equal(t, "500 Internal Server Error", status)
 	})
 
 	t.Run("invalid url", func(t *testing.T) {
-		status, _ := Check("http", "://bad-url")
+		status, _ := Check("http", "://bad-url", 10)
 
 		assert.Contains(t, status, "missing protocol scheme")
 	})
@@ -88,7 +88,7 @@ func TestCheck(t *testing.T) {
 		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 			return nil, context.DeadlineExceeded
 		}))
-		status, _ := Check("http", "http://example.test")
+		status, _ := Check("http", "http://example.test", 10)
 
 		assert.Contains(t, status, "context deadline exceeded")
 	})
@@ -115,7 +115,7 @@ func TestLinkCheck(t *testing.T) {
 			}
 		}))
 
-		status, latency := LinkCheck(baseURL)
+		status, latency := LinkCheck(baseURL, defaultConnectionTimeout)
 
 		assert.Equal(t, "200 OK", status)
 		assert.GreaterOrEqual(t, latency, int64(0))
@@ -140,7 +140,7 @@ func TestLinkCheck(t *testing.T) {
 			}
 		}))
 
-		status, _ := LinkCheck(baseURL)
+		status, _ := LinkCheck(baseURL, defaultConnectionTimeout)
 
 		assert.Contains(t, status, "Broken links: 2")
 		assert.Contains(t, status, "404 Not Found "+baseURL+"/missing from "+baseURL)
@@ -166,7 +166,7 @@ func TestLinkCheck(t *testing.T) {
 			}
 		}))
 
-		status, _ := LinkCheck(baseURL)
+		status, _ := LinkCheck(baseURL, defaultConnectionTimeout)
 
 		assert.Contains(t, status, "Broken links: 1")
 		assert.Contains(t, status, "404 Not Found "+baseURL+"/gone from "+baseURL+"/child")

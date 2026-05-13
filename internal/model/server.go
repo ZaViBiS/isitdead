@@ -17,6 +17,7 @@ type Server struct {
 	Status        string         `json:"status"`
 	Latency       int64          `json:"latency"`
 	CheckInterval int            `gorm:"not null" json:"check_interval"`
+	Timeout       int            `gorm:"not null;default:10" json:"timeout"`
 	LastCheck     *time.Time     `json:"last_check"`
 	UserID        uint           `gorm:"not null" json:"user_id"`
 	CreatedAt     time.Time      `json:"created_at"`

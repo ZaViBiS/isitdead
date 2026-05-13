@@ -137,7 +137,7 @@ func (s *Scheduler) StopServerMonitor(serverID uint) {
 
 func (s *Scheduler) performCheck(srv model.Server) (string, int64) {
 	previousStatus := srv.Status
-	status, latency := Check(srv.CheckType, srv.URL)
+	status, latency := Check(srv.CheckType, srv.URL, srv.Timeout)
 
 	log.Debug().
 		Str("server", srv.URL).
