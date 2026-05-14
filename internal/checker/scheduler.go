@@ -26,6 +26,11 @@ type monitorControl struct {
 	done   chan struct{}
 }
 
+type lastResult struct {
+	Status  string
+	Latency int64
+}
+
 type TransitionNotifier interface {
 	Notify(ctx context.Context, server model.Server, previousState, currentState string, latency int64) error
 }
@@ -101,10 +106,8 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 
 		log.Info().Str("server", srv.Name).Str("url", srv.URL).Int("interval", srv.CheckInterval).Msg("Monitoring started")
 
-		current := srv
-
-		// Перша перевірка при запуску
-		current.Status, current.Latency = s.performCheck(current)
+		var last lastResult
+		last = s.performCheck(srv, last)
 
 		ticker := time.NewTicker(time.Duration(srv.CheckInterval) * time.Second)
 		defer ticker.Stop()
@@ -115,7 +118,7 @@ func (s *Scheduler) RunServerMonitor(srv model.Server) {
 				log.Info().Str("server", srv.Name).Msg("Monitoring stopped")
 				return
 			case <-ticker.C:
-				current.Status, current.Latency = s.performCheck(current)
+				last = s.performCheck(srv, last)
 			}
 		}
 	}()
@@ -135,8 +138,7 @@ func (s *Scheduler) StopServerMonitor(serverID uint) {
 	}
 }
 
-func (s *Scheduler) performCheck(srv model.Server) (string, int64) {
-	previousStatus := srv.Status
+func (s *Scheduler) performCheck(srv model.Server, last lastResult) lastResult {
 	status, latency := Check(srv.CheckType, srv.URL, srv.Timeout)
 
 	log.Debug().
@@ -156,17 +158,14 @@ func (s *Scheduler) performCheck(srv model.Server) (string, int64) {
 		log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to save check result")
 	}
 
-	// 2. Оновлюємо поточний стан сервера
-	err = s.storage.UpdateServerStatus(srv.ID, status, latency)
-	if err != nil {
-		log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to update server status")
-	}
-
 	if s.notifier != nil {
-		if err := s.notifier.Notify(s.ctx, srv, previousStatus, status, latency); err != nil {
+		if err := s.notifier.Notify(s.ctx, srv, last.Status, status, latency); err != nil {
 			log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to process notifications")
 		}
 	}
 
-	return status, latency
+	return lastResult{
+		Status:  status,
+		Latency: latency,
+	}
 }

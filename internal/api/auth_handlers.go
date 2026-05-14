@@ -3,7 +3,6 @@ package api
 import (
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
@@ -11,7 +10,7 @@ import (
 )
 
 func (s *Server) handleRegister(c fiber.Ctx) error {
-	var req model.RegisterRequest
+	var req registerRequest
 	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
@@ -46,7 +45,7 @@ func (s *Server) handleRegister(c fiber.Ctx) error {
 }
 
 func (s *Server) handleLogin(c fiber.Ctx) error {
-	var req model.LoginRequest
+	var req loginRequest
 	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}

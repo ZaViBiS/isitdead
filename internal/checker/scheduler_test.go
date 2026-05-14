@@ -45,7 +45,7 @@ func TestScheduler(t *testing.T) {
 	stubHTTP200Transport(t)
 
 	// Add server to DB
-	srv, err := storage.AddServer(user.ID, "Test Server", "http://example.test", "http", 1, 10, false, "") // 1 second interval
+	srv, err := storage.AddServer(user.ID, "Test Server", "http://example.test", "http", 1, 10) // 1 second interval
 	assert.NoError(t, err)
 
 	scheduler := NewScheduler(storage)
@@ -64,10 +64,7 @@ func TestScheduler(t *testing.T) {
 		assert.GreaterOrEqual(t, len(history), 1)
 		assert.Equal(t, "200 OK", history[0].Status)
 
-		// Check if server status was updated
-		servers, err := storage.GetUserServers(user.ID)
-		assert.NoError(t, err)
-		assert.Equal(t, "200 OK", servers[0].Status)
+		assert.GreaterOrEqual(t, history[0].Latency, int64(0))
 	})
 
 	t.Run("Stop Server Monitor", func(t *testing.T) {

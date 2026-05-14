@@ -22,6 +22,8 @@
 		calculateUptime,
 		getFaviconUrl,
 		getHourlyBuckets,
+		getLatestCheck,
+		getRecentHistory,
 		getStatusColor,
 		type CheckResult
 	} from '$lib/utils';
@@ -31,8 +33,6 @@
 		name: string;
 		url: string;
 		check_type: string;
-		status: string;
-		latency: number;
 		check_interval: number;
 		public_slug: string;
 		created_at: string;
@@ -77,8 +77,7 @@
 
 			if (historyRes.ok) {
 				history30d = (await historyRes.json()) as CheckResult[];
-				const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-				history24h = history30d.filter((result) => new Date(result.created_at).getTime() > dayAgo);
+				history24h = getRecentHistory(history30d, 24);
 			}
 
 			if (incidentsRes.ok) {
@@ -134,7 +133,7 @@
 	}
 
 	function latestCheck() {
-		return history30d.length > 0 ? history30d[history30d.length - 1] : null;
+		return getLatestCheck(history30d);
 	}
 
 	function lastUpdatedLabel() {
@@ -145,7 +144,7 @@
 	}
 
 	function maxLatency(history: CheckResult[]) {
-		return Math.max(...history.map((result) => result.latency), monitor?.latency ?? 0, 0);
+		return Math.max(...history.map((result) => result.latency), latestCheck()?.latency ?? 0, 0);
 	}
 
 	function targetHref(url: string, checkType: string) {
@@ -239,10 +238,13 @@
 		{:else}
 			{@const uptime = calculateUptime(history30d)}
 			{@const avgLatency = calculateAvgLatency(history30d)}
-			{@const healthy = isHealthyStatus(monitor.status)}
-			{@const unknown = isUnknownStatus(monitor.status)}
-			{@const statusLabel = currentLabel(monitor.status)}
-			{@const color = publicStatusColor(monitor.status, monitor.latency)}
+			{@const current = latestCheck()}
+			{@const currentStatus = current?.status ?? 'unknown'}
+			{@const currentLatency = current?.latency ?? 0}
+			{@const healthy = isHealthyStatus(currentStatus)}
+			{@const unknown = isUnknownStatus(currentStatus)}
+			{@const statusLabel = currentLabel(currentStatus)}
+			{@const color = publicStatusColor(currentStatus, currentLatency)}
 			{@const href = targetHref(monitor.url, monitor.check_type)}
 
 			<section class="mb-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-start">
@@ -444,15 +446,17 @@
 						{avgLatency}<span class="ml-1 text-sm text-brand-light/30">ms</span>
 					</div>
 				</div>
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
-					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
-						<span class="text-xs font-bold uppercase">Last response</span>
-						<Activity class="h-4 w-4 text-brand-primary" />
+					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
+						<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
+							<span class="text-xs font-bold uppercase">Last response</span>
+							<Activity class="h-4 w-4 text-brand-primary" />
+						</div>
+						<div class="text-3xl font-black text-brand-light/85">
+							{current ? currentLatency : 'No data'}{#if current}<span
+									class="ml-1 text-sm text-brand-light/30">ms</span
+								>{/if}
+						</div>
 					</div>
-					<div class="text-3xl font-black text-brand-light/85">
-						{monitor.latency}<span class="ml-1 text-sm text-brand-light/30">ms</span>
-					</div>
-				</div>
 				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
 					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
 						<span class="text-xs font-bold uppercase">Interval</span>

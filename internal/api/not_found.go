@@ -7,8 +7,9 @@ import (
 )
 
 func (s *Server) siteNotFoundHTML(path string) string {
-	homeURL := s.publicHomeURL()
-	return fmt.Sprintf(`<!doctype html>
+	homeURL := "https://isitdead.cc"
+	return fmt.Sprintf(
+		`<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">

@@ -20,11 +20,12 @@
 	import {
 		getStatusColor,
 		getHourlyBuckets,
+		getRecentHistory,
+		getCurrentCheck,
 		getFaviconUrl,
 		calculateUptime,
 		calculateAvgLatency,
 		type Server,
-		type CheckResult,
 		type NotificationPreference
 	} from '$lib/utils';
 
@@ -93,9 +94,7 @@
 			if (res.ok) {
 				const data = await res.json();
 				s.history30d = data;
-				// Filter for 24h for the mini chart
-				const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).getTime();
-				s.history = data.filter((r: CheckResult) => new Date(r.created_at).getTime() > dayAgo);
+				s.history = getRecentHistory(data, 24);
 			}
 		} catch {
 			console.error('Failed to fetch history');
@@ -163,7 +162,8 @@
 	}
 
 	function isServerOnline(server: Server) {
-		return server.status.startsWith('2') || server.status === 'Connected';
+		const current = getCurrentCheck(server);
+		return current?.status.startsWith('2') === true || current?.status === 'Connected';
 	}
 
 	function getOverallUptime() {
@@ -744,13 +744,16 @@
 					<Plus class="h-5 w-5" /> Add monitor
 				</button>
 			</section>
-		{:else}
-			<section class="grid gap-4">
-				{#each servers as s (s.id)}
-					{@const uptime = calculateUptime(s.history30d || [])}
-					{@const avgLatency = calculateAvgLatency(s.history30d || [])}
-					{@const isOnline = s.status.startsWith('2') || s.status === 'Connected'}
-					{@const isUnknown = !s.status || s.status === 'unknown'}
+			{:else}
+				<section class="grid gap-4">
+					{#each servers as s (s.id)}
+						{@const uptime = calculateUptime(s.history30d || [])}
+						{@const avgLatency = calculateAvgLatency(s.history30d || [])}
+						{@const current = getCurrentCheck(s)}
+						{@const currentStatus = current?.status ?? 'unknown'}
+						{@const currentLatency = current?.latency ?? 0}
+						{@const isOnline = currentStatus.startsWith('2') || currentStatus === 'Connected'}
+						{@const isUnknown = currentStatus === 'unknown'}
 
 					<article
 						class="group rounded-[1.75rem] border border-brand-light/10 bg-[#111f1c]/90 p-4 shadow-xl shadow-black/10 transition hover:border-brand-primary/30 sm:p-5"
@@ -781,7 +784,7 @@
 										</div>
 										<div
 											class="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border-4 border-[#111f1c]"
-											style="background-color: {getStatusColor(s.status, s.latency)}"
+											style="background-color: {getStatusColor(currentStatus, currentLatency)}"
 										>
 											{#if isOnline}
 												<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-dark"></span>
@@ -807,7 +810,7 @@
 											>
 												<span
 													class="h-1.5 w-1.5 rounded-full"
-													style="background-color: {getStatusColor(s.status, s.latency)}"
+													style="background-color: {getStatusColor(currentStatus, currentLatency)}"
 												></span>
 												{isOnline ? 'Online' : isUnknown ? 'Unknown' : 'Down'}
 											</span>
@@ -821,15 +824,15 @@
 												class="shrink-0 rounded-lg p-1 transition hover:bg-brand-light/5 hover:text-brand-primary"
 												title="Open target"
 											>
-												<ExternalLink class="h-3.5 w-3.5" />
-											</a>
-										</div>
-										<p
-											class="mt-2 truncate text-xs font-medium text-brand-light/25"
-											title={s.status}
-										>
-											{compactStatus(s.status)}
-										</p>
+													<ExternalLink class="h-3.5 w-3.5" />
+												</a>
+											</div>
+											<p
+												class="mt-2 truncate text-xs font-medium text-brand-light/25"
+												title={currentStatus}
+											>
+												{compactStatus(currentStatus)}
+											</p>
 										{#if s.public && s.public_slug}
 											<a
 												href={resolve('/status/[slug]', { slug: s.public_slug })}

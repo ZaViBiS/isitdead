@@ -2,6 +2,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/ZaViBiS/isitdead"
 	"github.com/ZaViBiS/isitdead/internal/app"
 	"github.com/ZaViBiS/isitdead/internal/logger"
@@ -10,8 +12,8 @@ import (
 )
 
 func main() {
-	// Ініціалізуємо логер (наприклад, перевіряючи ENV змінну)
-	debug := true //os.Getenv("DEBUG") == "true"
+	// Ініціалізуємо логер
+	debug := os.Getenv("DEBUG") == "true"
 	logger.Setup(debug)
 
 	a, err := app.New(isitdead.StaticFiles)
