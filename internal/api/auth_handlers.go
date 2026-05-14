@@ -98,7 +98,6 @@ func (s *Server) handleGetMe(c fiber.Ctx) error {
 		"id":       user.ID,
 		"username": user.Username,
 		"email":    user.Email,
-		"is_admin": s.isAdminEmail(user.Email),
 	})
 }
 
