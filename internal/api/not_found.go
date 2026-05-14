@@ -76,7 +76,7 @@ func isKnownSPARoute(path string) bool {
 	}
 
 	switch cleanPath {
-	case "/", "/login", "/register", "/dashboard", "/admin/public-pages":
+	case "/", "/login", "/register", "/dashboard":
 		return true
 	}
 
