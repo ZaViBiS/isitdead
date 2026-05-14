@@ -12,8 +12,6 @@ export interface Server {
 	check_type: string;
 	public: boolean;
 	public_slug: string;
-	status: string;
-	latency: number;
 	check_interval: number;
 	timeout: number;
 	history: CheckResult[];
@@ -72,15 +70,25 @@ export function calculateAvgLatency(history: CheckResult[]) {
 	return Math.round(sum / history.length);
 }
 
-export function getHourlyBuckets(history: CheckResult[]): string[] {
+export function getLatestCheck(history?: CheckResult[]): CheckResult | null {
+	return history && history.length > 0 ? history[history.length - 1] : null;
+}
+
+export function getCurrentCheck(server: Server): CheckResult | null {
+	return getLatestCheck(server.history30d ?? server.history);
+}
+
+export function getRecentHistory(history: CheckResult[], hours: number): CheckResult[] {
+	const since = Date.now() - hours * 60 * 60 * 1000;
+	return history.filter((result) => new Date(result.created_at).getTime() >= since);
+}
+
+export function getHourlyBuckets(history: CheckResult[], nowMs = Date.now()): string[] {
 	const buckets: string[] = Array(24).fill('#1f332f');
-	const now = new Date();
-	const nowUTC = now.getTime() + now.getTimezoneOffset() * 60000;
 
 	for (let i = 0; i < 24; i++) {
-		// Time window in UTC
-		const hourStart = nowUTC - (24 - i) * 60 * 60 * 1000;
-		const hourEnd = nowUTC - (23 - i) * 60 * 60 * 1000;
+		const hourStart = nowMs - (24 - i) * 60 * 60 * 1000;
+		const hourEnd = nowMs - (23 - i) * 60 * 60 * 1000;
 
 		const hourResults = history.filter((h) => {
 			const d = new Date(h.created_at).getTime();

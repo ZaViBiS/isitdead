@@ -13,6 +13,7 @@ func (s *Storage) AddCheckResult(result model.CheckResult) error {
 }
 
 // GetHistory повертає всю історію результатів перевірки для сервера
+// TODO: додати ліміт
 func (s *Storage) GetHistory(serverID uint) ([]model.CheckResult, error) {
 	var results []model.CheckResult
 	err := s.DB.Where("server_id = ?", serverID).

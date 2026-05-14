@@ -15,6 +15,8 @@
 	import {
 		getStatusColor,
 		getFaviconUrl,
+		getRecentHistory,
+		getCurrentCheck,
 		calculateUptime,
 		calculateAvgLatency,
 		type Server,
@@ -56,11 +58,7 @@
 						const s = server;
 						if (s) {
 							s.history30d = dataHist;
-							// Filter last 24h for chart
-							const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).getTime();
-							s.history = dataHist.filter(
-								(r: CheckResult) => new Date(r.created_at).getTime() > dayAgo
-							);
+							s.history = getRecentHistory(dataHist, 24);
 						}
 					}
 
@@ -110,7 +108,10 @@
 	{:else if server}
 		{@const uptime = calculateUptime(server.history30d || [])}
 		{@const avgLatency = calculateAvgLatency(server.history30d || [])}
-		{@const isOnline = server.status.startsWith('2') || server.status === 'Connected'}
+		{@const current = getCurrentCheck(server)}
+		{@const currentStatus = current?.status ?? 'unknown'}
+		{@const currentLatency = current?.latency ?? 0}
+		{@const isOnline = currentStatus.startsWith('2') || currentStatus === 'Connected'}
 
 		<div class="mb-12 flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
 			<div class="flex items-start gap-6">
@@ -137,12 +138,12 @@
 									parent.appendChild(icon);
 								}
 							}}
-						/>
-					</div>
-					<div
-						class="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-4 border-brand-dark"
-						style="background-color: {getStatusColor(server.status, server.latency)}"
-					>
+							/>
+						</div>
+						<div
+							class="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-4 border-brand-dark"
+							style="background-color: {getStatusColor(currentStatus, currentLatency)}"
+						>
 						{#if isOnline}
 							<div class="h-2 w-2 animate-pulse rounded-full bg-brand-dark"></div>
 						{/if}

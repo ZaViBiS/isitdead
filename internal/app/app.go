@@ -37,6 +37,8 @@ func New(staticFiles embed.FS) (*App, error) {
 
 	// Поштовий сервіс
 	mailer := mail.New(cfg)
+
+	// сервіс нотифікацій
 	notifier := notify.NewService(db, notify.NewEmailSender(mailer))
 	sched.SetNotifier(notifier)
 
