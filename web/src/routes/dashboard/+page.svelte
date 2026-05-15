@@ -343,7 +343,9 @@
 					<span class="h-2 w-2 rounded-full bg-brand-primary"></span>
 					Live operations
 				</div>
-				<h1 class="text-3xl font-black text-brand-light sm:text-5xl">Your monitors</h1>
+				<h1 class="text-3xl font-black tracking-tight text-brand-light sm:text-5xl">
+					Your monitors
+				</h1>
 				<p
 					class="mt-3 flex max-w-2xl items-start gap-2 text-sm leading-6 text-brand-light/45 sm:text-base"
 				>
@@ -744,16 +746,16 @@
 					<Plus class="h-5 w-5" /> Add monitor
 				</button>
 			</section>
-			{:else}
-				<section class="grid gap-4">
-					{#each servers as s (s.id)}
-						{@const uptime = calculateUptime(s.history30d || [])}
-						{@const avgLatency = calculateAvgLatency(s.history30d || [])}
-						{@const current = getCurrentCheck(s)}
-						{@const currentStatus = current?.status ?? 'unknown'}
-						{@const currentLatency = current?.latency ?? 0}
-						{@const isOnline = currentStatus.startsWith('2') || currentStatus === 'Connected'}
-						{@const isUnknown = currentStatus === 'unknown'}
+		{:else}
+			<section class="grid gap-4">
+				{#each servers as s (s.id)}
+					{@const uptime = calculateUptime(s.history30d || [])}
+					{@const avgLatency = calculateAvgLatency(s.history30d || [])}
+					{@const current = getCurrentCheck(s)}
+					{@const currentStatus = current?.status ?? 'unknown'}
+					{@const currentLatency = current?.latency ?? 0}
+					{@const isOnline = currentStatus.startsWith('2') || currentStatus === 'Connected'}
+					{@const isUnknown = currentStatus === 'unknown'}
 
 					<article
 						class="group rounded-[1.75rem] border border-brand-light/10 bg-[#111f1c]/90 p-4 shadow-xl shadow-black/10 transition hover:border-brand-primary/30 sm:p-5"
@@ -824,15 +826,15 @@
 												class="shrink-0 rounded-lg p-1 transition hover:bg-brand-light/5 hover:text-brand-primary"
 												title="Open target"
 											>
-													<ExternalLink class="h-3.5 w-3.5" />
-												</a>
-											</div>
-											<p
-												class="mt-2 truncate text-xs font-medium text-brand-light/25"
-												title={currentStatus}
-											>
-												{compactStatus(currentStatus)}
-											</p>
+												<ExternalLink class="h-3.5 w-3.5" />
+											</a>
+										</div>
+										<p
+											class="mt-2 truncate text-xs font-medium text-brand-light/25"
+											title={currentStatus}
+										>
+											{compactStatus(currentStatus)}
+										</p>
 										{#if s.public && s.public_slug}
 											<a
 												href={resolve('/status/[slug]', { slug: s.public_slug })}
@@ -847,7 +849,7 @@
 
 							<div class="min-w-0">
 								<div
-									class="grid grid-cols-3 gap-3 border-y border-brand-light/10 py-4 xl:border-y-0 xl:py-0"
+									class="grid gap-3 border-y border-brand-light/10 py-4 min-[420px]:grid-cols-3 xl:border-y-0 xl:py-0"
 								>
 									<div>
 										<div class="mb-1 text-xs font-bold text-brand-light/35 uppercase">Uptime</div>

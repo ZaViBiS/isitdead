@@ -11,7 +11,7 @@ const config = {
 			assets: 'dist'
 		}),
 		prerender: {
-			handleHttpError: ({ path, referrer, message }) => {
+			handleHttpError: ({ path, message }) => {
 				if (path.startsWith('/api/')) {
 					return;
 				}

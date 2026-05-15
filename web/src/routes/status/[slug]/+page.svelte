@@ -176,7 +176,7 @@
 		></div>
 	</div>
 
-	<div class="container mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
+	<div class="container mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14">
 		{#if isLoading}
 			<div
 				class="flex min-h-[60vh] flex-col items-center justify-center gap-5 rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.025]"
@@ -297,7 +297,7 @@
 						</div>
 						<div class="min-w-0">
 							<h1
-								class="max-w-5xl text-5xl leading-[0.9] font-black tracking-[-0.07em] text-brand-light sm:text-7xl lg:text-8xl"
+								class="max-w-5xl text-4xl leading-[0.92] font-black tracking-[-0.07em] break-words text-brand-light sm:text-7xl lg:text-8xl"
 							>
 								{monitor.name} status
 							</h1>
@@ -372,7 +372,7 @@
 						</div>
 					</div>
 
-					<div class="mt-4 grid grid-cols-2 gap-3">
+					<div class="mt-4 grid gap-3 sm:grid-cols-2">
 						<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-4">
 							<div
 								class="mb-2 flex items-center gap-2 text-xs font-bold text-brand-light/35 uppercase"
@@ -446,17 +446,17 @@
 						{avgLatency}<span class="ml-1 text-sm text-brand-light/30">ms</span>
 					</div>
 				</div>
-					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
-						<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
-							<span class="text-xs font-bold uppercase">Last response</span>
-							<Activity class="h-4 w-4 text-brand-primary" />
-						</div>
-						<div class="text-3xl font-black text-brand-light/85">
-							{current ? currentLatency : 'No data'}{#if current}<span
-									class="ml-1 text-sm text-brand-light/30">ms</span
-								>{/if}
-						</div>
+				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
+					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
+						<span class="text-xs font-bold uppercase">Last response</span>
+						<Activity class="h-4 w-4 text-brand-primary" />
 					</div>
+					<div class="text-3xl font-black text-brand-light/85">
+						{current ? currentLatency : 'No data'}{#if current}<span
+								class="ml-1 text-sm text-brand-light/30">ms</span
+							>{/if}
+					</div>
+				</div>
 				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
 					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
 						<span class="text-xs font-bold uppercase">Interval</span>
@@ -521,7 +521,7 @@
 								<div class="text-xs font-black tracking-widest text-brand-light/35 uppercase">
 									Availability
 								</div>
-								<div class="mt-1 text-3xl font-black text-brand-primary">
+								<div class="mt-1 text-2xl font-black text-brand-primary sm:text-3xl">
 									{history30d.length > 0 ? `${uptime.toFixed(2)}%` : 'No data'}
 								</div>
 							</div>

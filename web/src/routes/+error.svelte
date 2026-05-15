@@ -15,7 +15,7 @@
 	{/if}
 </svelte:head>
 
-<section class="relative isolate overflow-hidden px-4 py-20 sm:px-6 lg:py-28">
+<section class="relative isolate overflow-hidden px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
 	<div class="pointer-events-none absolute inset-0 -z-10">
 		<div
 			class="absolute top-[-10rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/16 blur-[140px]"
@@ -34,7 +34,7 @@
 				{page.status}
 			</div>
 
-			<h1 class="max-w-4xl text-5xl leading-[0.9] font-black text-brand-light sm:text-7xl">
+			<h1 class="max-w-4xl text-4xl leading-[0.92] font-black text-brand-light sm:text-7xl">
 				{page.status === 404 ? 'This page is not being monitored.' : 'This check failed.'}
 			</h1>
 
@@ -88,7 +88,7 @@
 							<div class="text-xs font-black tracking-[0.26em] text-brand-light/30 uppercase">
 								Requested path
 							</div>
-							<div class="mt-3 break-all text-2xl font-black text-brand-light">
+							<div class="mt-3 text-2xl font-black break-all text-brand-light">
 								{page.url.pathname}
 							</div>
 						</div>
