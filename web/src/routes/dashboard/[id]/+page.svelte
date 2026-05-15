@@ -86,7 +86,7 @@
 	});
 </script>
 
-<div class="container mx-auto max-w-5xl px-4 py-12">
+<div class="container mx-auto max-w-5xl px-4 py-8 sm:py-12">
 	<a
 		href={resolve('/dashboard')}
 		class="group mb-12 flex w-fit items-center gap-2 text-brand-light/40 transition-all hover:text-brand-primary"
@@ -113,8 +113,8 @@
 		{@const currentLatency = current?.latency ?? 0}
 		{@const isOnline = currentStatus.startsWith('2') || currentStatus === 'Connected'}
 
-		<div class="mb-12 flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
-			<div class="flex items-start gap-6">
+		<div class="mb-8 flex flex-col justify-between gap-6 sm:mb-12 lg:flex-row lg:items-center">
+			<div class="flex items-start gap-4 sm:gap-6">
 				<div class="relative flex-shrink-0">
 					<div
 						class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[2rem] border border-brand-light/10 bg-brand-light/5 shadow-2xl"
@@ -138,28 +138,30 @@
 									parent.appendChild(icon);
 								}
 							}}
-							/>
-						</div>
-						<div
-							class="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-4 border-brand-dark"
-							style="background-color: {getStatusColor(currentStatus, currentLatency)}"
-						>
+						/>
+					</div>
+					<div
+						class="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-4 border-brand-dark"
+						style="background-color: {getStatusColor(currentStatus, currentLatency)}"
+					>
 						{#if isOnline}
 							<div class="h-2 w-2 animate-pulse rounded-full bg-brand-dark"></div>
 						{/if}
 					</div>
 				</div>
 
-				<div>
-					<div class="mb-2 flex items-center gap-3">
-						<h1 class="text-4xl font-black tracking-tight">{server.name}</h1>
+				<div class="min-w-0">
+					<div class="mb-2 flex flex-wrap items-center gap-3">
+						<h1 class="text-3xl font-black tracking-tight break-words sm:text-4xl">
+							{server.name}
+						</h1>
 						<span
 							class="rounded-lg border border-brand-light/10 bg-brand-light/5 px-2.5 py-1 text-[10px] font-black tracking-widest text-brand-light/40 uppercase"
 							>{server.check_type}</span
 						>
 					</div>
-					<div class="flex items-center gap-2 text-brand-light/30">
-						<p class="text-lg font-medium">{server.url}</p>
+					<div class="flex min-w-0 items-start gap-2 text-brand-light/30">
+						<p class="min-w-0 text-sm font-medium break-all sm:text-lg">{server.url}</p>
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 						<a
 							href={server.url}
@@ -173,9 +175,9 @@
 			</div>
 
 			<div
-				class="flex gap-8 rounded-[2rem] border border-brand-light/5 bg-brand-light/[0.02] p-6 backdrop-blur-sm"
+				class="grid gap-4 rounded-[2rem] border border-brand-light/5 bg-brand-light/[0.02] p-5 backdrop-blur-sm sm:flex sm:gap-8 sm:p-6"
 			>
-				<div class="text-right">
+				<div class="text-left sm:text-right">
 					<div
 						class="mb-1 flex items-center justify-end gap-1.5 text-[10px] font-bold tracking-widest text-brand-light/40 uppercase"
 					>
@@ -191,8 +193,8 @@
 						{uptime.toFixed(2)}%
 					</div>
 				</div>
-				<div class="h-10 w-px self-center bg-brand-light/10"></div>
-				<div class="min-w-[100px] text-right">
+				<div class="hidden h-10 w-px self-center bg-brand-light/10 sm:block"></div>
+				<div class="min-w-0 text-left sm:min-w-[100px] sm:text-right">
 					<div
 						class="mb-1 flex items-center justify-end gap-1.5 text-[10px] font-bold tracking-widest text-brand-light/40 uppercase"
 					>
@@ -210,7 +212,7 @@
 			<div
 				class="rounded-[2.5rem] border border-brand-light/10 bg-gradient-to-b from-brand-light/[0.03] to-transparent p-1 shadow-2xl"
 			>
-				<div class="rounded-[2.4rem] bg-brand-dark p-8 lg:p-10">
+				<div class="rounded-[2.4rem] bg-brand-dark p-5 sm:p-8 lg:p-10">
 					<div class="mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
 						<div>
 							<h3 class="mb-1 flex items-center gap-2 text-xl font-bold">
@@ -241,7 +243,7 @@
 					<div class="relative">
 						<StatusChart history={server.history} height={500} />
 						<div
-							class="absolute bottom-4 left-4 flex gap-4 text-[10px] font-bold tracking-widest text-brand-light/20 uppercase"
+							class="absolute bottom-4 left-4 flex flex-wrap gap-2 text-[10px] font-bold tracking-widest text-brand-light/20 uppercase sm:gap-4"
 						>
 							<span>&larr; 24 hours ago</span>
 							<span
@@ -253,8 +255,12 @@
 			</div>
 
 			<!-- Logs Card -->
-			<div class="rounded-[2.5rem] border border-brand-light/10 bg-brand-dark/40 p-8 lg:p-10">
-				<div class="mb-8 flex items-center justify-between">
+			<div
+				class="rounded-[2.5rem] border border-brand-light/10 bg-brand-dark/40 p-5 sm:p-8 lg:p-10"
+			>
+				<div
+					class="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between"
+				>
 					<h3 class="flex items-center gap-2 text-xl font-bold">
 						<History class="h-5 w-5 text-brand-primary" />
 						Incidents
@@ -268,7 +274,7 @@
 
 				<div class="overflow-hidden rounded-3xl border border-brand-light/5 bg-brand-light/[0.01]">
 					<div
-						class="grid grid-cols-12 border-b border-brand-light/10 bg-brand-light/[0.02] px-6 py-4 text-[10px] font-black tracking-widest text-brand-light/20 uppercase"
+						class="hidden grid-cols-12 border-b border-brand-light/10 bg-brand-light/[0.02] px-6 py-4 text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:grid"
 					>
 						<div class="col-span-1">Status</div>
 						<div class="col-span-5 sm:col-span-6">Timestamp</div>
@@ -279,15 +285,23 @@
 						{#if server.incidents && server.incidents.length > 0}
 							{#each server.incidents as result (result.id)}
 								<div
-									class="group grid grid-cols-12 items-center px-6 py-4 transition-colors hover:bg-brand-light/[0.02]"
+									class="group grid gap-3 px-4 py-4 transition-colors hover:bg-brand-light/[0.02] sm:grid-cols-12 sm:items-center sm:px-6"
 								>
-									<div class="col-span-1">
+									<div class="flex items-center justify-between gap-3 sm:col-span-1 sm:block">
+										<span
+											class="text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:hidden"
+											>Status</span
+										>
 										<div
 											class="h-3 w-3 rounded-full border-2 border-brand-dark shadow-sm"
 											style="background-color: {getStatusColor(result.status, result.latency)}"
 										></div>
 									</div>
-									<div class="col-span-5 sm:col-span-6">
+									<div class="flex items-center justify-between gap-3 sm:col-span-6 sm:block">
+										<span
+											class="text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:hidden"
+											>Timestamp</span
+										>
 										<span class="text-sm font-medium text-brand-light/80"
 											>{new Date(result.created_at).toLocaleString('en-US', {
 												dateStyle: 'medium',
@@ -295,14 +309,24 @@
 											})}</span
 										>
 									</div>
-									<div class="col-span-3 sm:col-span-3">
+									<div class="flex items-center justify-between gap-3 sm:col-span-3 sm:block">
+										<span
+											class="text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:hidden"
+											>Response</span
+										>
 										<span
 											class="rounded-md border border-brand-light/10 bg-brand-light/5 px-2 py-0.5 text-[10px] font-black text-brand-light/40 uppercase transition-colors group-hover:text-brand-light/60"
 										>
 											{result.status === 'Connected' ? 'Online' : result.status}
 										</span>
 									</div>
-									<div class="col-span-3 text-right sm:col-span-2">
+									<div
+										class="flex items-center justify-between gap-3 sm:col-span-2 sm:block sm:text-right"
+									>
+										<span
+											class="text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:hidden"
+											>Latency</span
+										>
 										<span
 											class="font-mono text-sm font-black tracking-tight"
 											style="color: {getStatusColor(result.status, result.latency)}"

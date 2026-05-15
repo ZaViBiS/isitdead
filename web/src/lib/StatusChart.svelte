@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { getStatusColor, formatDate, type CheckResult } from '$lib/utils';
 
-	let { history, height = 100 } = $props<{ history: CheckResult[], height?: number }>();
+	let { history, height = 100 } = $props<{ history: CheckResult[]; height?: number }>();
 
 	let hoveredResult = $state<CheckResult | null>(null);
 
 	function getChartPoints(history: CheckResult[], width: number, h: number) {
 		if (!history || history.length < 2) return [];
-		const maxLatency = Math.max(...history.map(r => r.latency), 100);
+		const maxLatency = Math.max(...history.map((r) => r.latency), 100);
 		// Add some padding at the top
 		const chartMax = maxLatency * 1.1;
 		const step = width / (history.length - 1);
@@ -18,7 +18,7 @@
 		}));
 	}
 
-	function getPathD(points: {x: number, y: number}[]) {
+	function getPathD(points: { x: number; y: number }[]) {
 		if (points.length < 2) return '';
 		return points.map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`)).join(' ');
 	}
@@ -28,18 +28,21 @@
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		const x = e.clientX - rect.left;
 		const ratio = x / rect.width;
-		const index = Math.min(Math.max(Math.round(ratio * (history.length - 1)), 0), history.length - 1);
+		const index = Math.min(
+			Math.max(Math.round(ratio * (history.length - 1)), 0),
+			history.length - 1
+		);
 		hoveredResult = history[index];
 	}
 
 	const gridLines = [0.25, 0.5, 0.75];
 </script>
 
-<div 
-	class="relative w-full bg-brand-light/[0.01] rounded-[2rem] overflow-hidden cursor-crosshair border border-brand-light/5"
-	style="height: {height}px"
+<div
+	class="status-chart relative w-full cursor-crosshair overflow-hidden rounded-[2rem] border border-brand-light/5 bg-brand-light/[0.01]"
+	style="--chart-height: {height}px"
 	onmousemove={handleMouseMove}
-	onmouseleave={() => hoveredResult = null}
+	onmouseleave={() => (hoveredResult = null)}
 	role="presentation"
 >
 	{#if history && history.length >= 2}
@@ -51,8 +54,11 @@
 					<stop offset="100%" stop-color="#73E2A7" stop-opacity="0" />
 				</linearGradient>
 				<linearGradient id="line-grad-large" x1="0%" y1="0%" x2="100%" y2="0%">
-					{#each points as p, i}
-						<stop offset="{(i / (points.length - 1)) * 100}%" stop-color={getStatusColor(p.result.status, p.result.latency)} />
+					{#each points as p, i (p.result.id)}
+						<stop
+							offset="{(i / (points.length - 1)) * 100}%"
+							stop-color={getStatusColor(p.result.status, p.result.latency)}
+						/>
 					{/each}
 				</linearGradient>
 				<filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -62,17 +68,47 @@
 			</defs>
 
 			<!-- Grid Lines -->
-			{#each gridLines as line}
-				<line x1="0" y1={300 * line} x2="1000" y2={300 * line} stroke="white" stroke-opacity="0.03" stroke-width="1" />
+			{#each gridLines as line (line)}
+				<line
+					x1="0"
+					y1={300 * line}
+					x2="1000"
+					y2={300 * line}
+					stroke="white"
+					stroke-opacity="0.03"
+					stroke-width="1"
+				/>
 			{/each}
-			
-			<path d={`M ${points[0].x},300 ` + points.map(p => `L ${p.x},${p.y}`).join(' ') + ` L ${points[points.length-1].x},300 Z`} fill="url(#grad-large)" />
-			<path d={getPathD(points)} fill="none" stroke="url(#line-grad-large)" stroke-width="3" stroke-linejoin="round" filter="url(#glow)" class="opacity-90" />
-			
+
+			<path
+				d={`M ${points[0].x},300 ` +
+					points.map((p) => `L ${p.x},${p.y}`).join(' ') +
+					` L ${points[points.length - 1].x},300 Z`}
+				fill="url(#grad-large)"
+			/>
+			<path
+				d={getPathD(points)}
+				fill="none"
+				stroke="url(#line-grad-large)"
+				stroke-width="3"
+				stroke-linejoin="round"
+				filter="url(#glow)"
+				class="opacity-90"
+			/>
+
 			{#if hoveredResult}
 				{@const hIndex = history.indexOf(hoveredResult)}
 				{@const hX = (hIndex / (history.length - 1)) * 1000}
-				<line x1={hX} y1="0" x2={hX} y2="300" stroke="#DEF4C6" stroke-width="1" stroke-dasharray="4,4" opacity="0.2" />
+				<line
+					x1={hX}
+					y1="0"
+					x2={hX}
+					y2="300"
+					stroke="#DEF4C6"
+					stroke-width="1"
+					stroke-dasharray="4,4"
+					opacity="0.2"
+				/>
 			{/if}
 		</svg>
 
@@ -81,36 +117,64 @@
 			{@const hIndex = history.indexOf(hoveredResult)}
 			{@const hX_p = (hIndex / (history.length - 1)) * 100}
 			{@const hY_p = (1 - hoveredResult.latency / maxLatency) * 100}
-			
-			<div 
-				class="absolute w-4 h-4 rounded-full border-2 border-brand-dark shadow-[0_0_15px_rgba(115,226,167,0.5)] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 transition-all duration-75"
-				style="left: {hX_p}%; top: {hY_p}%; background-color: {getStatusColor(hoveredResult.status, hoveredResult.latency)}"
+
+			<div
+				class="pointer-events-none absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-dark shadow-[0_0_15px_rgba(115,226,167,0.5)] transition-all duration-75"
+				style="left: {hX_p}%; top: {hY_p}%; background-color: {getStatusColor(
+					hoveredResult.status,
+					hoveredResult.latency
+				)}"
 			></div>
 
-			<div 
-				class="absolute bg-brand-dark/95 border border-brand-light/10 p-4 rounded-2xl shadow-2xl backdrop-blur-xl pointer-events-none z-10 min-w-[180px] flex flex-col gap-1 transition-all duration-75" 
-				style="left: {hX_p > 80 ? 'auto' : `${hX_p}%`}; right: {hX_p > 80 ? '20px' : 'auto'}; top: {hY_p > 50 ? 'auto' : `${hY_p + 5}%`}; bottom: {hY_p > 50 ? `${100 - hY_p + 5}%` : 'auto'}; margin-left: {hX_p > 80 ? '0' : '20px'}"
+			<div
+				class="pointer-events-none absolute z-10 flex min-w-[180px] flex-col gap-1 rounded-2xl border border-brand-light/10 bg-brand-dark/95 p-4 shadow-2xl backdrop-blur-xl transition-all duration-75"
+				style="left: {hX_p > 80 ? 'auto' : `${hX_p}%`}; right: {hX_p > 80
+					? '20px'
+					: 'auto'}; top: {hY_p > 50 ? 'auto' : `${hY_p + 5}%`}; bottom: {hY_p > 50
+					? `${100 - hY_p + 5}%`
+					: 'auto'}; margin-left: {hX_p > 80 ? '0' : '20px'}"
 			>
-				<div class="text-[10px] font-black text-brand-light/40 uppercase tracking-widest">{formatDate(hoveredResult.created_at)}</div>
-				<div class="flex items-end justify-between gap-4 mt-1">
-					<span class="text-2xl font-black leading-none" style="color: {getStatusColor(hoveredResult.status, hoveredResult.latency)}">
-						{hoveredResult.latency}<span class="text-xs ml-0.5 opacity-50">ms</span>
+				<div class="text-[10px] font-black tracking-widest text-brand-light/40 uppercase">
+					{formatDate(hoveredResult.created_at)}
+				</div>
+				<div class="mt-1 flex items-end justify-between gap-4">
+					<span
+						class="text-2xl leading-none font-black"
+						style="color: {getStatusColor(hoveredResult.status, hoveredResult.latency)}"
+					>
+						{hoveredResult.latency}<span class="ml-0.5 text-xs opacity-50">ms</span>
 					</span>
-					<span class="text-[10px] uppercase font-black px-2 py-0.5 rounded-md bg-brand-light/5 text-brand-light/60 border border-brand-light/10">
+					<span
+						class="rounded-md border border-brand-light/10 bg-brand-light/5 px-2 py-0.5 text-[10px] font-black text-brand-light/60 uppercase"
+					>
 						{hoveredResult.status === 'Connected' ? 'Online' : hoveredResult.status}
 					</span>
 				</div>
 				{#if hoveredResult.latency > 300}
-					<div class="mt-2 text-[9px] font-bold text-brand-soft flex items-center gap-1">
-						<div class="h-1 w-1 rounded-full bg-brand-soft animate-pulse"></div>
+					<div class="mt-2 flex items-center gap-1 text-[9px] font-bold text-brand-soft">
+						<div class="h-1 w-1 animate-pulse rounded-full bg-brand-soft"></div>
 						Latency threshold exceeded
 					</div>
 				{/if}
 			</div>
 		{/if}
 	{:else}
-		<div class="flex h-full items-center justify-center text-brand-light/20 italic font-bold uppercase tracking-widest text-xs">
+		<div
+			class="flex h-full items-center justify-center text-xs font-bold tracking-widest text-brand-light/20 uppercase italic"
+		>
 			Collecting telemetry data...
 		</div>
 	{/if}
 </div>
+
+<style>
+	.status-chart {
+		height: var(--chart-height);
+	}
+
+	@media (max-width: 640px) {
+		.status-chart {
+			height: min(var(--chart-height), 20rem);
+		}
+	}
+</style>

@@ -41,28 +41,30 @@
 	<header
 		class="sticky top-0 z-50 border-b border-brand-light/10 bg-brand-dark/80 backdrop-blur-md"
 	>
-		<nav class="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
+		<nav class="container mx-auto flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
 			<a href={resolve('/')} class="flex items-center gap-2 text-xl font-bold tracking-tight">
 				<LogoMark class="h-8 w-8" title="isitdead home" />
-				<span>isitdead</span>
+				<span class="hidden min-[360px]:inline">isitdead</span>
 			</a>
 
-			<div class="flex items-center gap-4 sm:gap-6">
+			<div class="flex items-center gap-3 sm:gap-6">
 				{#if isLoggedIn}
 					<a
 						href={resolve('/dashboard')}
 						class="flex items-center gap-2 text-sm font-medium hover:text-brand-primary"
+						aria-label="Dashboard"
 					>
 						<LayoutDashboard class="h-4 w-4" />
-						Dashboard
+						<span class="hidden sm:inline">Dashboard</span>
 					</a>
 					<div class="h-4 w-px bg-brand-light/10"></div>
 					<button
 						onclick={handleLogout}
 						class="flex items-center gap-2 text-sm font-medium text-brand-accent hover:opacity-80"
+						aria-label="Log out"
 					>
 						<LogOut class="h-4 w-4" />
-						Log out
+						<span class="hidden sm:inline">Log out</span>
 					</button>
 				{:else}
 					<a

@@ -130,7 +130,7 @@
 		></div>
 	</div>
 
-	<section class="px-4 py-20 sm:px-6 lg:py-28">
+	<section class="px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
 		<div
 			class="container mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
 		>
@@ -148,7 +148,7 @@
 				</div>
 
 				<h1
-					class="max-w-5xl text-5xl leading-[0.9] font-black tracking-[-0.07em] text-brand-light sm:text-7xl lg:text-8xl"
+					class="max-w-5xl text-4xl leading-[0.92] font-black tracking-[-0.07em] text-brand-light sm:text-7xl lg:text-8xl"
 				>
 					Know what is down before users do.
 				</h1>
@@ -174,7 +174,7 @@
 					</a>
 				</div>
 
-				<div class="mt-10 grid max-w-xl grid-cols-3 gap-3">
+				<div class="mt-10 grid max-w-xl gap-3 sm:grid-cols-3">
 					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.03] p-4">
 						<div class="text-2xl font-black text-brand-primary">HTTP</div>
 						<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
@@ -342,14 +342,14 @@
 
 	<section
 		id="features"
-		class="border-y border-brand-light/10 bg-brand-light/[0.025] px-4 py-24 sm:px-6"
+		class="border-y border-brand-light/10 bg-brand-light/[0.025] px-4 py-16 sm:px-6 sm:py-24"
 	>
 		<div class="container mx-auto max-w-7xl">
 			<div class="mb-14 max-w-3xl">
 				<p class="text-xs font-black tracking-[0.32em] text-brand-primary uppercase">
 					What is included
 				</p>
-				<h2 class="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-6xl">
+				<h2 class="mt-4 text-3xl font-black tracking-[-0.05em] sm:text-6xl">
 					The monitoring signals teams actually look at.
 				</h2>
 			</div>
@@ -373,13 +373,13 @@
 		</div>
 	</section>
 
-	<section class="px-4 py-24 sm:px-6">
+	<section class="px-4 py-16 sm:px-6 sm:py-24">
 		<div class="container mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
 			<div>
 				<p class="text-xs font-black tracking-[0.32em] text-brand-primary uppercase">
 					Incident review
 				</p>
-				<h2 class="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-6xl">
+				<h2 class="mt-4 text-3xl font-black tracking-[-0.05em] sm:text-6xl">
 					A timeline built for quick triage.
 				</h2>
 				<p class="mt-6 text-lg leading-8 text-brand-light/50">
@@ -428,7 +428,7 @@
 		</div>
 	</section>
 
-	<section id="how-it-works" class="px-4 pb-24 sm:px-6">
+	<section id="how-it-works" class="px-4 pb-16 sm:px-6 sm:pb-24">
 		<div class="container mx-auto max-w-7xl">
 			<div
 				class="overflow-hidden rounded-[3rem] border border-brand-primary/20 bg-brand-primary text-brand-dark shadow-2xl shadow-brand-primary/10"
@@ -441,7 +441,7 @@
 							<ListChecks class="h-4 w-4" />
 							How it works
 						</div>
-						<h2 class="text-4xl leading-none font-black tracking-[-0.06em] sm:text-6xl">
+						<h2 class="text-3xl leading-none font-black tracking-[-0.06em] sm:text-6xl">
 							Start watching a service in minutes.
 						</h2>
 						<p class="mt-6 max-w-xl text-lg leading-8 font-semibold text-brand-dark/70">

@@ -59,13 +59,13 @@
 	}
 </script>
 
-<div class="flex min-h-[calc(100vh-16rem)] items-center justify-center px-4 py-12">
+<div class="flex min-h-[calc(100vh-16rem)] items-center justify-center px-4 py-8 sm:py-12">
 	<div
-		class="w-full max-w-md space-y-8 rounded-3xl border border-brand-light/10 bg-brand-dark p-8 shadow-xl md:p-10"
+		class="w-full max-w-md space-y-6 rounded-3xl border border-brand-light/10 bg-brand-dark p-5 shadow-xl sm:space-y-8 sm:p-8 md:p-10"
 	>
 		<div class="text-center">
 			<LogoMark class="mx-auto h-12 w-12" title="isitdead" />
-			<h2 class="mt-6 text-3xl font-extrabold tracking-tight">Welcome back</h2>
+			<h2 class="mt-6 text-2xl font-extrabold tracking-tight sm:text-3xl">Welcome back</h2>
 			<p class="mt-2 text-sm text-brand-light/60">Sign in to manage your monitored services.</p>
 		</div>
 

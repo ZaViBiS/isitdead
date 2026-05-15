@@ -2,14 +2,18 @@
 
 @theme {
 	--color-brand-dark: #182825;
-	--color-brand-primary: #73E2A7;
-	--color-brand-light: #DEF4C6;
-	--color-brand-accent: #D62246;
-	--color-brand-soft: #E3C0D3;
+	--color-brand-primary: #73e2a7;
+	--color-brand-light: #def4c6;
+	--color-brand-accent: #d62246;
+	--color-brand-soft: #e3c0d3;
 }
 
 @layer base {
+	html {
+		overflow-x: clip;
+	}
+
 	body {
-		@apply bg-brand-dark text-brand-light antialiased;
+		@apply min-w-0 bg-brand-dark text-brand-light antialiased;
 	}
 }
