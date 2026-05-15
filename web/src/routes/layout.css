@@ -2,18 +2,103 @@
 
 @theme {
 	--color-brand-dark: #182825;
+	--color-brand-ink: #0e1715;
+	--color-brand-panel: #111f1c;
+	--color-brand-panel-soft: #152622;
 	--color-brand-primary: #73e2a7;
 	--color-brand-light: #def4c6;
 	--color-brand-accent: #d62246;
 	--color-brand-soft: #e3c0d3;
+	--color-brand-gold: #e5b181;
 }
 
 @layer base {
+	:root {
+		--font-body: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
+		--font-display: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+		--font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+	}
+
 	html {
 		overflow-x: clip;
 	}
 
 	body {
 		@apply min-w-0 bg-brand-dark text-brand-light antialiased;
+		font-family: var(--font-body);
+		background-image:
+			radial-gradient(circle at 10% -10%, rgba(115, 226, 167, 0.16), transparent 34rem),
+			radial-gradient(circle at 90% 8%, rgba(227, 192, 211, 0.12), transparent 28rem),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 18rem);
+		background-attachment: fixed;
+	}
+
+	h1,
+	h2,
+	h3 {
+		font-family: var(--font-display);
+		text-wrap: balance;
+	}
+
+	.font-mono {
+		font-family: var(--font-mono);
+	}
+
+	::selection {
+		background: rgba(115, 226, 167, 0.28);
+		color: #def4c6;
+	}
+}
+
+@layer components {
+	.app-shell {
+		@apply relative isolate;
+	}
+
+	.app-shell::before {
+		position: fixed;
+		inset: 0;
+		z-index: -2;
+		pointer-events: none;
+		content: '';
+		background-image:
+			linear-gradient(to right, rgba(222, 244, 198, 0.035) 1px, transparent 1px),
+			linear-gradient(to bottom, rgba(222, 244, 198, 0.035) 1px, transparent 1px);
+		background-size: 72px 72px;
+		mask-image: linear-gradient(to bottom, black, transparent 88%);
+	}
+
+	.glass-panel {
+		@apply border border-brand-light/10 bg-brand-panel/80 shadow-2xl shadow-black/20 backdrop-blur-xl;
+	}
+
+	.soft-panel {
+		@apply border border-brand-light/10 bg-brand-light/[0.035];
+	}
+
+	.signal-pill {
+		@apply inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-4 py-2 text-[11px] font-black tracking-[0.28em] text-brand-primary uppercase shadow-2xl shadow-brand-primary/10;
+		font-family: var(--font-mono);
+	}
+
+	.signal-kicker {
+		@apply text-[11px] font-black tracking-[0.32em] text-brand-primary uppercase;
+		font-family: var(--font-mono);
+	}
+
+	.micro-label {
+		@apply text-[10px] font-black tracking-widest text-brand-light/35 uppercase;
+		font-family: var(--font-mono);
+	}
+
+	.display-gradient {
+		background: linear-gradient(135deg, #f3ffe4 0%, #def4c6 38%, #73e2a7 100%);
+		background-clip: text;
+		-webkit-background-clip: text;
+		color: transparent;
+	}
+
+	.section-rule {
+		@apply border-y border-brand-light/10 bg-brand-light/[0.018];
 	}
 }

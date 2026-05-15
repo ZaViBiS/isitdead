@@ -7,8 +7,6 @@
 		ExternalLink,
 		RefreshCw,
 		AlertCircle,
-		Clock,
-		BarChart3,
 		Globe2,
 		ShieldCheck,
 		Settings,
@@ -18,7 +16,6 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
-		getStatusColor,
 		getHourlyBuckets,
 		getRecentHistory,
 		getCurrentCheck,
@@ -188,6 +185,10 @@
 		return servers.filter(isServerOnline).length;
 	}
 
+	function getAttentionCount() {
+		return Math.max(servers.length - getHealthyCount(), 0);
+	}
+
 	function compactStatus(status: string) {
 		const normalized = status || 'unknown';
 		return normalized.length > 28 ? `${normalized.slice(0, 25)}...` : normalized;
@@ -335,61 +336,95 @@
 	</div>
 
 	<div class="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:py-12">
-		<section class="mb-6 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-			<div class="min-w-0">
-				<div
-					class="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1.5 text-xs font-black text-brand-primary uppercase"
-				>
-					<span class="h-2 w-2 rounded-full bg-brand-primary"></span>
-					Live operations
+		<section class="glass-panel mb-6 overflow-hidden rounded-[2.5rem] p-4 sm:p-5">
+			<div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-stretch">
+				<div class="rounded-[2rem] border border-brand-light/10 bg-brand-dark/60 p-5 sm:p-6">
+					<div class="signal-pill mb-5 py-1.5">
+						<span class="relative flex h-2 w-2">
+							<span
+								class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-primary opacity-40"
+							></span>
+							<span class="relative inline-flex h-2 w-2 rounded-full bg-brand-primary"></span>
+						</span>
+						Live operations
+					</div>
+					<div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+						<div class="min-w-0">
+							<h1
+								class="display-gradient text-3xl leading-[0.95] font-black tracking-[-0.06em] sm:text-5xl"
+							>
+								Your monitors
+							</h1>
+							<p
+								class="mt-4 flex max-w-2xl items-start gap-2 text-sm leading-6 text-brand-light/55 sm:text-base"
+							>
+								<ShieldCheck class="mt-1 h-4 w-4 shrink-0 text-brand-primary" />
+								Track uptime, response time, and recent failures in one focused workspace.
+							</p>
+						</div>
+						<button
+							onclick={() => (isAdding = !isAdding)}
+							class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-3 font-black text-brand-dark shadow-2xl shadow-brand-primary/15 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0 sm:w-auto"
+						>
+							<Plus class="h-5 w-5" /> Add monitor
+						</button>
+					</div>
 				</div>
-				<h1 class="text-3xl font-black tracking-tight text-brand-light sm:text-5xl">
-					Your monitors
-				</h1>
-				<p
-					class="mt-3 flex max-w-2xl items-start gap-2 text-sm leading-6 text-brand-light/45 sm:text-base"
-				>
-					<ShieldCheck class="mt-1 h-4 w-4 shrink-0 text-brand-primary" />
-					Track uptime, response time, and recent failures in one focused workspace.
-				</p>
-			</div>
-			<button
-				onclick={() => (isAdding = !isAdding)}
-				class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-3 font-black text-brand-dark shadow-2xl shadow-brand-primary/15 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0 sm:w-auto"
-			>
-				<Plus class="h-5 w-5" /> Add monitor
-			</button>
-		</section>
 
-		{#if !isLoading && servers.length > 0}
-			<section class="mb-6 grid gap-3 sm:grid-cols-3">
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-4 sm:p-5">
-					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
-						<span class="text-xs font-bold uppercase">Healthy now</span>
-						<Activity class="h-4 w-4 text-brand-primary" />
+				<div class="grid gap-3">
+					<div
+						class="flex items-center justify-between gap-4 rounded-3xl border px-4 py-3 {getAttentionCount() >
+						0
+							? 'border-brand-accent/20 bg-brand-accent/10'
+							: 'border-brand-primary/20 bg-brand-primary/10'}"
+					>
+						<div
+							class="flex items-center gap-2 {getAttentionCount() > 0
+								? 'text-brand-accent'
+								: 'text-brand-primary'}"
+						>
+							<span
+								class="micro-label {getAttentionCount() > 0
+									? '!text-brand-accent'
+									: '!text-brand-primary'}"
+							>
+								Needs attention
+							</span>
+							<Activity class="h-4 w-4" />
+						</div>
+						<div class="flex items-center gap-2">
+							<div
+								class="text-xl font-black {getAttentionCount() > 0
+									? 'text-brand-accent'
+									: 'text-brand-primary'}"
+							>
+								{isLoading ? '--' : getAttentionCount()}
+							</div>
+							<div class="text-sm font-bold text-brand-light/45">
+								{isLoading ? 'Loading' : getAttentionCount() > 0 ? 'offline now' : 'all online'}
+							</div>
+						</div>
 					</div>
-					<div class="text-3xl font-black text-brand-primary">
-						{getHealthyCount()}<span class="text-sm text-brand-light/30">/{servers.length}</span>
+
+					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+						<div class="soft-panel rounded-[2rem] p-5">
+							<div class="micro-label mb-4">Avg uptime</div>
+							<div class="text-3xl font-black text-brand-primary">
+								{isLoading ? '--' : `${getOverallUptime().toFixed(1)}%`}
+							</div>
+						</div>
+						<div class="soft-panel rounded-[2rem] p-5">
+							<div class="micro-label mb-4">Avg response</div>
+							<div class="text-3xl font-black text-brand-light/85">
+								{isLoading ? '--' : getOverallLatency()}<span
+									class="ml-1 text-sm text-brand-light/30">{isLoading ? '' : 'ms'}</span
+								>
+							</div>
+						</div>
 					</div>
 				</div>
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-4 sm:p-5">
-					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
-						<span class="text-xs font-bold uppercase">Average uptime</span>
-						<Clock class="h-4 w-4 text-brand-primary" />
-					</div>
-					<div class="text-3xl font-black text-brand-primary">{getOverallUptime().toFixed(1)}%</div>
-				</div>
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-4 sm:p-5">
-					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
-						<span class="text-xs font-bold uppercase">Average response</span>
-						<BarChart3 class="h-4 w-4 text-brand-primary" />
-					</div>
-					<div class="text-3xl font-black text-brand-light/85">
-						{getOverallLatency()}<span class="ml-1 text-sm text-brand-light/30">ms</span>
-					</div>
-				</div>
-			</section>
-		{/if}
+			</div>
+		</section>
 
 		{#if error}
 			<div
@@ -402,7 +437,7 @@
 
 		{#if isAdding}
 			<section
-				class="animate-in zoom-in-95 mb-6 overflow-hidden rounded-[1.75rem] border border-brand-light/10 bg-[#111f1c]/90 shadow-2xl shadow-black/20 backdrop-blur duration-200"
+				class="glass-panel animate-in zoom-in-95 mb-6 overflow-hidden rounded-[1.75rem] duration-200"
 			>
 				<div class="flex items-center gap-3 border-b border-brand-light/10 px-4 py-4 sm:px-6">
 					<div class="rounded-xl bg-brand-primary/10 p-2 text-brand-primary">
@@ -555,12 +590,12 @@
 
 		{#if isEditing && editingServer}
 			<div
-				class="animate-in fade-in fixed inset-0 z-50 flex items-end justify-center bg-brand-dark/80 p-3 backdrop-blur-sm duration-200 sm:items-center sm:p-4"
+				class="animate-in fade-in fixed inset-0 z-50 flex items-start justify-center bg-brand-dark/80 backdrop-blur-sm duration-200 sm:items-center sm:p-4"
 			>
 				<div
-					class="animate-in zoom-in-95 max-h-[calc(100vh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-[1.75rem] border border-brand-light/10 bg-[#111f1c] p-4 shadow-2xl shadow-black/30 duration-200 sm:p-6 lg:p-8"
+					class="glass-panel animate-in zoom-in-95 h-dvh w-full overflow-y-auto rounded-none p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] duration-200 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl sm:rounded-[1.75rem] sm:p-6 lg:p-8"
 				>
-					<div class="mb-6 flex items-start justify-between gap-4">
+					<div class="mb-5 flex items-start justify-between gap-4 sm:mb-6">
 						<div class="flex items-center gap-3">
 							<div class="rounded-2xl bg-brand-primary/10 p-3 text-brand-primary">
 								<Settings class="h-6 w-6" />
@@ -701,7 +736,9 @@
 								</label>
 							</div>
 						</div>
-						<div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+						<div
+							class="flex flex-col-reverse gap-3 border-t border-brand-light/10 pt-4 sm:flex-row sm:justify-end"
+						>
 							<button
 								type="button"
 								onclick={() => (isEditing = false)}
@@ -721,14 +758,14 @@
 
 		{#if isLoading}
 			<div
-				class="flex min-h-80 flex-col items-center justify-center gap-4 rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.025]"
+				class="soft-panel flex min-h-80 flex-col items-center justify-center gap-4 rounded-[2rem]"
 			>
 				<RefreshCw class="h-9 w-9 animate-spin text-brand-primary" />
 				<p class="animate-pulse font-medium text-brand-light/30">Loading monitors...</p>
 			</div>
 		{:else if servers.length === 0}
 			<section
-				class="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-brand-light/10 bg-brand-light/[0.025] px-5 py-20 text-center sm:py-28"
+				class="glass-panel flex flex-col items-center justify-center rounded-[2.25rem] border-dashed px-5 py-20 text-center sm:py-28"
 			>
 				<div
 					class="mb-6 rounded-3xl border border-brand-light/10 bg-brand-light/[0.04] p-5 text-brand-primary"
@@ -748,6 +785,15 @@
 			</section>
 		{:else}
 			<section class="grid gap-4">
+				<div class="mb-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+					<div>
+						<p class="signal-kicker">Monitor fleet</p>
+						<h2 class="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Active services</h2>
+					</div>
+					<p class="max-w-xl text-sm leading-6 text-brand-light/40">
+						Current health, 24-hour pulse, and the fastest path into each monitor.
+					</p>
+				</div>
 				{#each servers as s (s.id)}
 					{@const uptime = calculateUptime(s.history30d || [])}
 					{@const avgLatency = calculateAvgLatency(s.history30d || [])}
@@ -758,129 +804,29 @@
 					{@const isUnknown = currentStatus === 'unknown'}
 
 					<article
-						class="group rounded-[1.75rem] border border-brand-light/10 bg-[#111f1c]/90 p-4 shadow-xl shadow-black/10 transition hover:border-brand-primary/30 sm:p-5"
+						class="rounded-3xl border border-brand-light/10 bg-brand-dark/70 p-4 transition hover:border-brand-primary/25"
 					>
 						<div
-							class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.72fr)_8.5rem] xl:items-center"
+							class="grid gap-4 lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)_auto] lg:items-center"
 						>
-							<div class="min-w-0">
-								<div class="flex items-start gap-4">
-									<div class="relative shrink-0">
-										<div
-											class="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-brand-light/10 bg-brand-light/[0.04] text-brand-light/35 transition group-hover:border-brand-primary/25 group-hover:text-brand-primary sm:h-14 sm:w-14"
-										>
-											{#if s.check_type === 'http'}
-												<Globe2 class="h-6 w-6" />
-											{:else}
-												<Activity class="h-6 w-6" />
-											{/if}
-											<img
-												src={getFaviconUrl(s.url)}
-												alt=""
-												class="absolute h-8 w-8 rounded-md bg-[#111f1c] object-contain"
-												onerror={(e) => {
-													const target = e.currentTarget as HTMLImageElement;
-													target.style.display = 'none';
-												}}
-											/>
-										</div>
-										<div
-											class="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border-4 border-[#111f1c]"
-											style="background-color: {getStatusColor(currentStatus, currentLatency)}"
-										>
-											{#if isOnline}
-												<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-dark"></span>
-											{/if}
-										</div>
-									</div>
-
-									<div class="min-w-0 flex-1">
-										<div class="flex flex-wrap items-center gap-2">
-											<h3 class="max-w-full min-w-0 truncate text-lg font-black sm:text-xl">
-												{s.name}
-											</h3>
-											<span
-												class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-0.5 text-[10px] font-black text-brand-light/45 uppercase"
-												>{s.check_type}</span
-											>
-											<span
-												class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold {isOnline
-													? 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary'
-													: isUnknown
-														? 'border-brand-light/10 bg-brand-light/[0.04] text-brand-light/40'
-														: 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'}"
-											>
-												<span
-													class="h-1.5 w-1.5 rounded-full"
-													style="background-color: {getStatusColor(currentStatus, currentLatency)}"
-												></span>
-												{isOnline ? 'Online' : isUnknown ? 'Unknown' : 'Down'}
-											</span>
-										</div>
-										<div class="mt-2 flex min-w-0 items-center gap-2 text-brand-light/35">
-											<p class="min-w-0 truncate text-sm font-medium">{s.url}</p>
-											<a
-												href={s.url}
-												target="_blank"
-												rel="external noreferrer"
-												class="shrink-0 rounded-lg p-1 transition hover:bg-brand-light/5 hover:text-brand-primary"
-												title="Open target"
-											>
-												<ExternalLink class="h-3.5 w-3.5" />
-											</a>
-										</div>
-										<p
-											class="mt-2 truncate text-xs font-medium text-brand-light/25"
-											title={currentStatus}
-										>
-											{compactStatus(currentStatus)}
-										</p>
-										{#if s.public && s.public_slug}
-											<a
-												href={resolve('/status/[slug]', { slug: s.public_slug })}
-												class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-brand-primary/15 bg-brand-primary/10 px-2 py-1 text-[10px] font-black text-brand-primary uppercase"
-											>
-												Public page <ExternalLink class="h-3 w-3" />
-											</a>
-										{/if}
-									</div>
-								</div>
-							</div>
-
-							<div class="min-w-0">
-								<div
-									class="grid gap-3 border-y border-brand-light/10 py-4 min-[420px]:grid-cols-3 xl:border-y-0 xl:py-0"
-								>
-									<div>
-										<div class="mb-1 text-xs font-bold text-brand-light/35 uppercase">Uptime</div>
-										<div
-											class="text-xl font-black {uptime >= 99
-												? 'text-brand-primary'
-												: uptime >= 95
-													? 'text-brand-soft'
-													: 'text-brand-accent'}"
-										>
-											{uptime.toFixed(1)}%
-										</div>
-									</div>
-									<div>
-										<div class="mb-1 text-xs font-bold text-brand-light/35 uppercase">Latency</div>
-										<div class="text-xl font-black text-brand-light/85">
-											{avgLatency}<span class="ml-0.5 text-xs font-bold text-brand-light/25"
-												>ms</span
-											>
-										</div>
-									</div>
-									<div>
-										<div class="mb-1 text-xs font-bold text-brand-light/35 uppercase">Interval</div>
-										<div class="text-xl font-black text-brand-light/85">
-											{formatInterval(s.check_interval)}
-										</div>
-									</div>
+							<div class="order-2 min-w-0 lg:order-1">
+								<div class="mb-3 flex flex-wrap items-center gap-2">
+									<span class="micro-label">24h pulse</span>
+									<span
+										class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
+									>
+										every {formatInterval(s.check_interval)}
+									</span>
+									<span
+										class="truncate rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
+										title={currentStatus}
+									>
+										{compactStatus(currentStatus)}
+									</span>
 								</div>
 
-								<div class="mt-4">
-									<div class="flex h-9 w-full items-end gap-1">
+								<div>
+									<div class="flex h-8 w-full items-end gap-1">
 										{#each getHourlyBuckets(s.history || []) as color, i (i)}
 											<div
 												class="group/item relative flex-1 cursor-help rounded-sm opacity-70 transition hover:opacity-100"
@@ -929,7 +875,112 @@
 								</div>
 							</div>
 
-							<div class="grid grid-cols-[1fr_2.75rem_2.75rem] gap-2 xl:flex xl:flex-col">
+							<div class="order-1 min-w-0 lg:order-2">
+								<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+									<div class="flex min-w-0 items-center gap-4">
+										<div
+											class="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-brand-light/10 bg-brand-light/[0.04] text-brand-primary"
+										>
+											{#if s.check_type === 'http'}
+												<Globe2 class="h-6 w-6" />
+											{:else}
+												<Activity class="h-6 w-6" />
+											{/if}
+											<img
+												src={getFaviconUrl(s.url)}
+												alt=""
+												class="absolute h-8 w-8 rounded-md bg-brand-dark object-contain"
+												onerror={(e) => {
+													const target = e.currentTarget as HTMLImageElement;
+													target.style.display = 'none';
+												}}
+											/>
+										</div>
+										<div class="min-w-0">
+											<div class="flex flex-wrap items-center gap-2">
+												<h3 class="min-w-0 truncate font-black">{s.name}</h3>
+												<span
+													class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-0.5 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
+												>
+													{s.check_type}
+												</span>
+												{#if s.public && s.public_slug}
+													<a
+														href={resolve('/status/[slug]', { slug: s.public_slug })}
+														class="inline-flex items-center gap-1.5 rounded-lg border border-brand-primary/15 bg-brand-primary/10 px-2 py-1 text-[10px] font-black tracking-widest text-brand-primary uppercase"
+													>
+														Public page <ExternalLink class="h-3 w-3" />
+													</a>
+												{/if}
+											</div>
+											<div class="mt-1 flex min-w-0 items-center gap-2">
+												<p
+													class="max-w-[16rem] truncate text-sm font-medium text-brand-light/35 sm:max-w-xs"
+												>
+													{s.url}
+												</p>
+												<a
+													href={s.url}
+													target="_blank"
+													rel="external noreferrer"
+													class="shrink-0 rounded-lg p-1 text-brand-light/25 transition hover:bg-brand-light/5 hover:text-brand-primary"
+													title="Open target"
+												>
+													<ExternalLink class="h-3.5 w-3.5" />
+												</a>
+											</div>
+										</div>
+									</div>
+
+									<div class="grid grid-cols-3 gap-3 text-right sm:min-w-64 lg:min-w-60">
+										<div>
+											<div
+												class="truncate text-sm font-black {isOnline
+													? 'text-brand-primary'
+													: isUnknown
+														? 'text-brand-light/45'
+														: 'text-brand-accent'}"
+												title={currentStatus}
+											>
+												{isOnline ? 'Online' : isUnknown ? 'Unknown' : 'Down'}
+											</div>
+											<div
+												class="text-[10px] font-bold tracking-widest text-brand-light/25 uppercase"
+											>
+												status
+											</div>
+										</div>
+										<div>
+											<div
+												class="text-sm font-black {uptime >= 99
+													? 'text-brand-primary'
+													: uptime >= 95
+														? 'text-brand-soft'
+														: 'text-brand-accent'}"
+											>
+												{uptime.toFixed(1)}%
+											</div>
+											<div
+												class="text-[10px] font-bold tracking-widest text-brand-light/25 uppercase"
+											>
+												uptime
+											</div>
+										</div>
+										<div>
+											<div class="text-sm font-black text-[#E5B181]">
+												{currentLatency || avgLatency}ms
+											</div>
+											<div
+												class="text-[10px] font-bold tracking-widest text-brand-light/25 uppercase"
+											>
+												latency
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="order-3 grid grid-cols-[1fr_2.75rem_2.75rem] gap-2 lg:min-w-56">
 								<a
 									href={resolve('/dashboard/[id]', { id: String(s.id) })}
 									class="inline-flex h-11 items-center justify-center rounded-xl bg-brand-light/[0.06] px-4 text-sm font-bold transition hover:bg-brand-light/10"
