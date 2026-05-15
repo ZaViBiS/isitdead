@@ -17,7 +17,15 @@ export interface Server {
 	history: CheckResult[];
 	history30d?: CheckResult[];
 	incidents?: CheckResult[];
+	check_count_30d?: number;
+	uptime_30d?: number;
+	avg_latency_30d?: number;
+	current_status?: string;
+	current_latency?: number;
+	hourly_buckets?: DashboardBucket[];
 }
+
+export type DashboardBucket = 'ok' | 'slow' | 'error' | 'empty';
 
 export interface NotificationPreference {
 	id?: number;
@@ -75,7 +83,22 @@ export function getLatestCheck(history?: CheckResult[]): CheckResult | null {
 }
 
 export function getCurrentCheck(server: Server): CheckResult | null {
+	if (server.current_status) {
+		return {
+			id: 0,
+			status: server.current_status,
+			latency: server.current_latency ?? 0,
+			created_at: ''
+		};
+	}
 	return getLatestCheck(server.history30d ?? server.history);
+}
+
+export function getDashboardBucketColor(bucket: DashboardBucket): string {
+	if (bucket === 'ok') return '#73E2A7';
+	if (bucket === 'slow') return '#E5B181';
+	if (bucket === 'error') return '#D62246';
+	return '#1f332f';
 }
 
 export function getRecentHistory(history: CheckResult[], hours: number): CheckResult[] {
@@ -85,29 +108,24 @@ export function getRecentHistory(history: CheckResult[], hours: number): CheckRe
 
 export function getHourlyBuckets(history: CheckResult[], nowMs = Date.now()): string[] {
 	const buckets: string[] = Array(24).fill('#1f332f');
+	const windowStart = nowMs - 24 * 60 * 60 * 1000;
+	const hourMs = 60 * 60 * 1000;
 
-	for (let i = 0; i < 24; i++) {
-		const hourStart = nowMs - (24 - i) * 60 * 60 * 1000;
-		const hourEnd = nowMs - (23 - i) * 60 * 60 * 1000;
+	for (const result of history) {
+		const createdAt = new Date(result.created_at).getTime();
+		if (createdAt < windowStart || createdAt >= nowMs) continue;
 
-		const hourResults = history.filter((h) => {
-			const d = new Date(h.created_at).getTime();
-			return d >= hourStart && d < hourEnd;
-		});
+		const bucketIndex = Math.floor((createdAt - windowStart) / hourMs);
+		const color = getStatusColor(result.status, result.latency);
+		const current = buckets[bucketIndex];
 
-		if (hourResults.length > 0) {
-			let worstColor = '#73E2A7';
-			for (const res of hourResults) {
-				const color = getStatusColor(res.status, res.latency);
-				if (color === '#D62246') {
-					worstColor = '#D62246';
-					break;
-				}
-				if (color === '#E5B181') {
-					worstColor = '#E5B181';
-				}
-			}
-			buckets[i] = worstColor;
+		if (current === '#D62246') continue;
+		if (color === '#D62246' || current === '#1f332f') {
+			buckets[bucketIndex] = color;
+			continue;
+		}
+		if (color === '#E5B181') {
+			buckets[bucketIndex] = color;
 		}
 	}
 

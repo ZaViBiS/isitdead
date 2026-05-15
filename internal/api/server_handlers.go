@@ -2,7 +2,11 @@ package api
 
 import (
 	"errors"
+	"math"
+	"strings"
+	"time"
 
+	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
@@ -14,6 +18,107 @@ func (s *Server) handleGetServers(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch servers"})
 	}
 	return c.JSON(servers)
+}
+
+func (s *Server) handleGetDashboardServers(c fiber.Ctx) error {
+	userID := c.Locals("user_id").(uint)
+	servers, err := s.DB.GetUserServers(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch servers"})
+	}
+
+	now := time.Now().UTC()
+	thirtyDaysAgo := now.Add(-720 * time.Hour)
+	lastDayAgo := now.Add(-24 * time.Hour)
+	response := make([]dashboardServerResponse, 0, len(servers))
+
+	for _, server := range servers {
+		summary, err := s.DB.GetHistorySummarySince(server.ID, thirtyDaysAgo)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch dashboard summary"})
+		}
+
+		recentHistory, err := s.DB.GetHistorySince(server.ID, lastDayAgo)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch dashboard history"})
+		}
+
+		currentStatus := "unknown"
+		var currentLatency int64
+		latest, err := s.DB.GetLatestCheckResult(server.ID)
+		if err == nil {
+			currentStatus = latest.Status
+			currentLatency = latest.Latency
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch latest result"})
+		}
+
+		var uptime30d float64
+		if summary.Total > 0 {
+			uptime30d = float64(summary.Online) / float64(summary.Total) * 100
+		}
+
+		response = append(response, dashboardServerResponse{
+			ID:             server.ID,
+			Name:           server.Name,
+			URL:            server.URL,
+			CheckType:      server.CheckType,
+			CheckInterval:  server.CheckInterval,
+			Timeout:        server.Timeout,
+			CheckCount30d:  summary.Total,
+			Uptime30d:      uptime30d,
+			AvgLatency30d:  int64(math.Round(summary.AvgLatency)),
+			CurrentStatus:  currentStatus,
+			CurrentLatency: currentLatency,
+			HourlyBuckets:  buildHourlyBuckets(recentHistory, now),
+		})
+	}
+
+	return c.JSON(response)
+}
+
+func buildHourlyBuckets(history []model.CheckResult, now time.Time) []string {
+	buckets := make([]string, 24)
+	for i := range buckets {
+		buckets[i] = "empty"
+	}
+
+	windowStart := now.Add(-24 * time.Hour)
+	for _, result := range history {
+		if result.CreatedAt.Before(windowStart) || !result.CreatedAt.Before(now) {
+			continue
+		}
+
+		index := int(result.CreatedAt.Sub(windowStart) / time.Hour)
+		if index < 0 || index >= len(buckets) {
+			continue
+		}
+
+		next := bucketStatus(result)
+		current := buckets[index]
+		if current == "error" {
+			continue
+		}
+		if next == "error" || current == "empty" {
+			buckets[index] = next
+			continue
+		}
+		if next == "slow" {
+			buckets[index] = next
+		}
+	}
+
+	return buckets
+}
+
+func bucketStatus(result model.CheckResult) string {
+	if !(strings.HasPrefix(result.Status, "2") || result.Status == "Connected") {
+		return "error"
+	}
+	if result.Latency > 300 {
+		return "slow"
+	}
+	return "ok"
 }
 
 func (s *Server) handleAddServer(c fiber.Ctx) error {

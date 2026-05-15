@@ -101,4 +101,53 @@
 	.section-rule {
 		@apply border-y border-brand-light/10 bg-brand-light/[0.018];
 	}
+
+	.ambient-glow {
+		will-change: auto;
+	}
+}
+
+@media (max-width: 767px) {
+	body {
+		/*
+		 * Fixed backgrounds and large live blurs are among the most expensive
+		 * paint operations on mobile GPUs. Keep the same visual language, but
+		 * let the background scroll normally on smaller screens.
+		 */
+		background-attachment: scroll;
+	}
+
+	.app-shell::before {
+		position: absolute;
+	}
+
+	.glass-panel {
+		/*
+		 * Preserve the glass look on phones while avoiding the heavier xl blur.
+		 * The slightly denser panel color keeps the visual result close to the
+		 * desktop treatment.
+		 */
+		@apply bg-brand-panel/90 backdrop-blur-sm;
+	}
+
+	.ambient-glow {
+		/*
+		 * Keep the decorative glow, but trim its footprint and blur radius on
+		 * smaller GPUs. The page still reads the same visually; it is simply
+		 * cheaper to composite while scrolling.
+		 */
+		filter: blur(88px);
+		opacity: 0.82;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+	}
 }

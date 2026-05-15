@@ -59,7 +59,7 @@
 
 <div class="relative flex min-h-[calc(100vh-16rem)] items-center justify-center px-4 py-8 sm:py-12">
 	<div
-		class="pointer-events-none absolute top-8 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-primary/12 blur-[110px]"
+		class="ambient-glow pointer-events-none absolute top-8 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-primary/12 blur-[110px]"
 	></div>
 	<div
 		class="glass-panel relative w-full max-w-md space-y-6 rounded-3xl p-5 sm:space-y-8 sm:p-8 md:p-10"

@@ -16,6 +16,7 @@ func (s *Server) setupRoutes() {
 	api.Use(s.authMiddleware)
 	api.Get("/me", s.handleGetMe)
 	api.Get("/servers", s.handleGetServers)
+	api.Get("/dashboard/servers", s.handleGetDashboardServers)
 	api.Post("/servers", s.handleAddServer)
 	api.Put("/servers/:id", s.handleUpdateServer)
 	api.Get("/servers/:id/notifications", s.handleGetNotificationPreferences)

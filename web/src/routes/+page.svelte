@@ -120,10 +120,10 @@
 <div class="relative isolate overflow-hidden">
 	<div class="pointer-events-none absolute inset-0 -z-10">
 		<div
-			class="absolute top-[-10rem] left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand-primary/24 blur-[150px]"
+			class="ambient-glow absolute top-[-10rem] left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand-primary/24 blur-[150px]"
 		></div>
 		<div
-			class="absolute top-[28rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-brand-soft/14 blur-[120px]"
+			class="ambient-glow absolute top-[28rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-brand-soft/14 blur-[120px]"
 		></div>
 	</div>
 
@@ -187,7 +187,7 @@
 
 			<div id="demo" class="animate-rise animate-rise-delay relative">
 				<div
-					class="absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-primary/20 via-brand-soft/10 to-transparent blur-2xl"
+					class="ambient-glow absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-primary/20 via-brand-soft/10 to-transparent blur-2xl"
 				></div>
 				<div class="glass-panel relative overflow-hidden rounded-[2.75rem] p-3">
 					<div class="rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/80">

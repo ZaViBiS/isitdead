@@ -59,7 +59,7 @@ func TestScheduler(t *testing.T) {
 		time.Sleep(1500 * time.Millisecond)
 
 		// Check if history was populated
-		history, err := storage.GetHistory(srv.ID)
+		history, err := storage.GetHistorySince(srv.ID, time.Time{})
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(history), 1)
 		assert.Equal(t, "200 OK", history[0].Status)
@@ -68,14 +68,14 @@ func TestScheduler(t *testing.T) {
 	})
 
 	t.Run("Stop Server Monitor", func(t *testing.T) {
-		historyBeforeStop, err := storage.GetHistory(srv.ID)
+		historyBeforeStop, err := storage.GetHistorySince(srv.ID, time.Time{})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, historyBeforeStop)
 
 		scheduler.StopServerMonitor(srv.ID)
 		time.Sleep(1500 * time.Millisecond)
 
-		historyAfterStop, err := storage.GetHistory(srv.ID)
+		historyAfterStop, err := storage.GetHistorySince(srv.ID, time.Time{})
 		assert.NoError(t, err)
 		assert.Len(t, historyAfterStop, len(historyBeforeStop))
 	})
