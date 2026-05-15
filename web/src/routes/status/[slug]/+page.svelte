@@ -166,10 +166,10 @@
 <div class="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden">
 	<div class="pointer-events-none absolute inset-0 -z-10">
 		<div
-			class="absolute top-[-10rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/15 blur-[140px]"
+			class="ambient-glow absolute top-[-10rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/15 blur-[140px]"
 		></div>
 		<div
-			class="absolute right-[-14rem] bottom-[12rem] h-[30rem] w-[30rem] rounded-full bg-brand-soft/10 blur-[120px]"
+			class="ambient-glow absolute right-[-14rem] bottom-[12rem] h-[30rem] w-[30rem] rounded-full bg-brand-soft/10 blur-[120px]"
 		></div>
 		<div
 			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(222,244,198,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(222,244,198,0.035)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black,transparent_86%)] bg-[size:72px_72px]"

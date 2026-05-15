@@ -36,27 +36,19 @@ func (s *Server) respondWithServerResults(c fiber.Ctx, req resultsRequest) error
 
 	if req.IncidentsOnly {
 		results, err = s.DB.GetIncidents(req.ServerID, req.Limit)
+	} else if req.Hours > 0 {
+		since := time.Now().UTC().Add(-time.Duration(req.Hours) * time.Hour)
+		results, err = s.DB.GetHistorySince(req.ServerID, since)
 	} else {
-		results, err = s.DB.GetHistory(req.ServerID)
+		limit := req.Limit
+		if limit <= 0 {
+			limit = 100
+		}
+		results, err = s.DB.GetRecentHistory(req.ServerID, limit)
 	}
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch results"})
-	}
-
-	if req.Hours > 0 && !req.IncidentsOnly {
-		since := time.Now().UTC().Add(-time.Duration(req.Hours) * time.Hour)
-		filtered := []model.CheckResult{}
-		for _, r := range results {
-			if r.CreatedAt.UTC().After(since) {
-				filtered = append(filtered, r)
-			}
-		}
-		results = filtered
-	}
-
-	if !req.IncidentsOnly && req.Limit > 0 && req.Hours == 0 && len(results) > req.Limit {
-		results = results[len(results)-req.Limit:]
 	}
 
 	return c.JSON(results)

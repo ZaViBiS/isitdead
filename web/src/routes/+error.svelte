@@ -18,7 +18,7 @@
 <section class="relative isolate overflow-hidden px-4 py-14 sm:px-6 sm:py-20 lg:py-28">
 	<div class="pointer-events-none absolute inset-0 -z-10">
 		<div
-			class="absolute top-[-10rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/16 blur-[140px]"
+			class="ambient-glow absolute top-[-10rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/16 blur-[140px]"
 		></div>
 		<div
 			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(222,244,198,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(222,244,198,0.04)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black,transparent_82%)] bg-[size:72px_72px]"
@@ -64,7 +64,7 @@
 
 		<div class="relative">
 			<div
-				class="absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-accent/18 via-brand-primary/12 to-transparent blur-2xl"
+				class="ambient-glow absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-accent/18 via-brand-primary/12 to-transparent blur-2xl"
 			></div>
 			<div class="glass-panel relative overflow-hidden rounded-[2.75rem] p-3">
 				<div class="rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/80 p-6 sm:p-8">

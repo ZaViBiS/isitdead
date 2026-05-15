@@ -16,12 +16,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
-		getHourlyBuckets,
-		getRecentHistory,
+		getDashboardBucketColor,
 		getCurrentCheck,
 		getFaviconUrl,
-		calculateUptime,
-		calculateAvgLatency,
 		type Server,
 		type NotificationPreference
 	} from '$lib/utils';
@@ -57,18 +54,13 @@
 		}
 
 		try {
-			const res = await fetch('/api/servers', {
+			const res = await fetch('/api/dashboard/servers', {
 				headers: { Authorization: `Bearer ${token}` }
 			});
 
 			if (res.ok) {
 				const data = (await res.json()) as Server[];
-				servers = data.map((s) => ({
-					...s,
-					history: [],
-					history30d: []
-				}));
-				servers.forEach((s) => fetchHistory(s));
+				servers = data.map((s) => ({ ...s, history: [] }));
 			} else if (res.status === 401) {
 				localStorage.removeItem('token');
 				goto(resolve('/login'));
@@ -77,24 +69,6 @@
 			error = 'Connection error';
 		} finally {
 			isLoading = false;
-		}
-	}
-
-	async function fetchHistory(s: Server) {
-		const token = localStorage.getItem('token');
-		const url = `/api/servers/${s.id}/results?hours=720`;
-
-		try {
-			const res = await fetch(url, {
-				headers: { Authorization: `Bearer ${token}` }
-			});
-			if (res.ok) {
-				const data = await res.json();
-				s.history30d = data;
-				s.history = getRecentHistory(data, 24);
-			}
-		} catch {
-			console.error('Failed to fetch history');
 		}
 	}
 
@@ -164,21 +138,20 @@
 	}
 
 	function getOverallUptime() {
-		const histories = servers
-			.map((server) => server.history30d || [])
-			.filter((history) => history.length > 0);
-		if (histories.length === 0) return 0;
-		const total = histories.reduce((sum, history) => sum + calculateUptime(history), 0);
-		return total / histories.length;
+		const serversWithData = servers.filter((server) => (server.check_count_30d ?? 0) > 0);
+		if (serversWithData.length === 0) return 0;
+		const total = serversWithData.reduce((sum, server) => sum + (server.uptime_30d ?? 0), 0);
+		return total / serversWithData.length;
 	}
 
 	function getOverallLatency() {
-		const histories = servers
-			.map((server) => server.history30d || [])
-			.filter((history) => history.length > 0);
-		if (histories.length === 0) return 0;
-		const total = histories.reduce((sum, history) => sum + calculateAvgLatency(history), 0);
-		return Math.round(total / histories.length);
+		const serversWithData = servers.filter((server) => (server.check_count_30d ?? 0) > 0);
+		if (serversWithData.length === 0) return 0;
+		const total = serversWithData.reduce(
+			(sum, server) => sum + (server.avg_latency_30d ?? 0),
+			0
+		);
+		return Math.round(total / serversWithData.length);
 	}
 
 	function getHealthyCount() {
@@ -211,9 +184,7 @@
 			});
 
 			if (res.ok) {
-				const newSrv = await res.json();
-				const server: Server = { ...newSrv, history: [], history30d: [] };
-				servers.push(server);
+				const server = (await res.json()) as Server;
 				await saveNotificationPreferences(server.id, newNotifyEmailDown, newNotifyEmailRecovered);
 				isAdding = false;
 				newName = '';
@@ -223,7 +194,7 @@
 				newTimeout = 10;
 				newNotifyEmailDown = true;
 				newNotifyEmailRecovered = true;
-				fetchHistory(server);
+				await fetchServers();
 			}
 		} catch {
 			error = 'Failed to add server';
@@ -795,8 +766,8 @@
 					</p>
 				</div>
 				{#each servers as s (s.id)}
-					{@const uptime = calculateUptime(s.history30d || [])}
-					{@const avgLatency = calculateAvgLatency(s.history30d || [])}
+					{@const uptime = s.uptime_30d ?? 0}
+					{@const avgLatency = s.avg_latency_30d ?? 0}
 					{@const current = getCurrentCheck(s)}
 					{@const currentStatus = current?.status ?? 'unknown'}
 					{@const currentLatency = current?.latency ?? 0}
@@ -827,7 +798,8 @@
 
 								<div>
 									<div class="flex h-8 w-full items-end gap-1">
-										{#each getHourlyBuckets(s.history || []) as color, i (i)}
+										{#each s.hourly_buckets ?? [] as bucket, i (i)}
+											{@const color = getDashboardBucketColor(bucket)}
 											<div
 												class="group/item relative flex-1 cursor-help rounded-sm opacity-70 transition hover:opacity-100"
 												style="background-color: {color}; height: {color === '#1f332f'
@@ -841,16 +813,16 @@
 														class="rounded-xl border border-brand-light/10 bg-brand-dark/95 px-3 py-2 text-[11px] whitespace-nowrap shadow-2xl ring-1 ring-white/5 backdrop-blur-xl"
 													>
 														<div class="mb-1 font-black text-brand-light/40">{23 - i}h ago</div>
-														{#if color !== '#1f332f'}
+														{#if bucket !== 'empty'}
 															<div class="flex items-center gap-2">
 																<div
 																	class="h-2 w-2 rounded-full"
 																	style="background-color: {color}"
 																></div>
 																<span class="font-bold"
-																	>{color === '#73E2A7'
+																	>{bucket === 'ok'
 																		? 'Healthy'
-																		: color === '#E5B181'
+																		: bucket === 'slow'
 																			? 'Slow response'
 																			: 'Down'}</span
 																>
