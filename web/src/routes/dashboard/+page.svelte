@@ -147,10 +147,7 @@
 	function getOverallLatency() {
 		const serversWithData = servers.filter((server) => (server.check_count_30d ?? 0) > 0);
 		if (serversWithData.length === 0) return 0;
-		const total = serversWithData.reduce(
-			(sum, server) => sum + (server.avg_latency_30d ?? 0),
-			0
-		);
+		const total = serversWithData.reduce((sum, server) => sum + (server.avg_latency_30d ?? 0), 0);
 		return Math.round(total / serversWithData.length);
 	}
 
@@ -408,19 +405,31 @@
 
 		{#if isAdding}
 			<section
-				class="glass-panel animate-in zoom-in-95 mb-6 overflow-hidden rounded-[1.75rem] duration-200"
+				class="mobile-form-panel glass-panel animate-in zoom-in-95 fixed inset-0 z-[60] flex h-dvh min-w-0 flex-col overflow-hidden rounded-none duration-200 sm:static sm:z-auto sm:mb-6 sm:h-auto sm:rounded-[1.75rem]"
 			>
-				<div class="flex items-center gap-3 border-b border-brand-light/10 px-4 py-4 sm:px-6">
-					<div class="rounded-xl bg-brand-primary/10 p-2 text-brand-primary">
-						<Activity class="h-5 w-5" />
+				<div
+					class="flex shrink-0 items-center justify-between gap-3 border-b border-brand-light/10 bg-brand-panel/95 px-4 py-4 backdrop-blur-sm sm:bg-transparent sm:px-6 sm:backdrop-blur-none"
+				>
+					<div class="flex items-center gap-3">
+						<div class="rounded-xl bg-brand-primary/10 p-2 text-brand-primary">
+							<Activity class="h-5 w-5" />
+						</div>
+						<h2 class="text-xl font-black">Add monitor</h2>
 					</div>
-					<h2 class="text-xl font-black">Add monitor</h2>
+					<button
+						type="button"
+						onclick={() => (isAdding = false)}
+						class="rounded-xl p-2 transition hover:bg-brand-light/5 sm:hidden"
+						aria-label="Close add monitor form"
+					>
+						<X class="h-5 w-5 text-brand-light/35" />
+					</button>
 				</div>
 				<form
 					onsubmit={addServer}
-					class="grid gap-4 p-4 sm:p-6 lg:grid-cols-[1fr_1.25fr_0.8fr_0.9fr_1.3fr]"
+					class="grid min-w-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto p-4 pb-4 sm:flex-none sm:overflow-visible sm:p-6 sm:pb-6 lg:grid-cols-[1fr_1.25fr_0.8fr_0.9fr_1.3fr]"
 				>
-					<div class="space-y-2">
+					<div class="min-w-0 space-y-2">
 						<label for="name" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
 							>Monitor name</label
 						>
@@ -440,6 +449,7 @@
 						<input
 							id="url"
 							type="text"
+							inputmode="url"
 							bind:value={newUrl}
 							required
 							class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
@@ -499,7 +509,7 @@
 								>{formatInterval(newInterval)}</span
 							>
 						</div>
-						<div class="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
+						<div class="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap">
 							{#each intervalPresets as preset (preset)}
 								<button
 									type="button"
@@ -515,7 +525,7 @@
 						</div>
 					</div>
 					<div
-						class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-4 sm:grid-cols-2 lg:col-span-5"
+						class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-3 sm:grid-cols-2 sm:p-4 lg:col-span-5"
 					>
 						<div class="flex items-center gap-3 sm:col-span-2">
 							<Mail class="h-4 w-4 text-brand-primary" />
@@ -542,16 +552,18 @@
 							/>
 						</label>
 					</div>
-					<div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end lg:col-span-5">
+					<div
+						class="sticky bottom-0 z-10 mt-1 flex min-w-0 flex-col-reverse gap-3 border-t border-brand-light/10 bg-brand-panel/95 pt-4 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] backdrop-blur-sm sm:static sm:mt-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:backdrop-blur-none lg:col-span-5"
+					>
 						<button
 							type="button"
 							onclick={() => (isAdding = false)}
-							class="rounded-2xl border border-brand-light/10 px-6 py-3 font-bold transition hover:bg-brand-light/5"
+							class="w-full rounded-2xl border border-brand-light/10 px-6 py-3 font-bold transition hover:bg-brand-light/5 sm:w-auto"
 							>Cancel</button
 						>
 						<button
 							type="submit"
-							class="rounded-2xl bg-brand-primary px-7 py-3 font-black text-brand-dark shadow-lg shadow-brand-primary/10 transition hover:bg-brand-primary/90"
+							class="w-full rounded-2xl bg-brand-primary px-7 py-3 font-black text-brand-dark shadow-lg shadow-brand-primary/10 transition hover:bg-brand-primary/90 sm:w-auto"
 							>Start monitoring</button
 						>
 					</div>
@@ -564,16 +576,20 @@
 				class="animate-in fade-in fixed inset-0 z-50 flex items-start justify-center bg-brand-dark/80 backdrop-blur-sm duration-200 sm:items-center sm:p-4"
 			>
 				<div
-					class="glass-panel animate-in zoom-in-95 h-dvh w-full overflow-y-auto rounded-none p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] duration-200 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl sm:rounded-[1.75rem] sm:p-6 lg:p-8"
+					class="mobile-form-panel glass-panel animate-in zoom-in-95 flex h-dvh w-full min-w-0 flex-col overflow-hidden rounded-none duration-200 sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl sm:rounded-[1.75rem] lg:p-0"
 				>
-					<div class="mb-5 flex items-start justify-between gap-4 sm:mb-6">
+					<div
+						class="flex shrink-0 items-start justify-between gap-4 border-b border-brand-light/10 bg-brand-panel/95 p-4 backdrop-blur-sm sm:border-0 sm:bg-transparent sm:p-6 sm:pb-0 sm:backdrop-blur-none lg:p-8 lg:pb-0"
+					>
 						<div class="flex items-center gap-3">
-							<div class="rounded-2xl bg-brand-primary/10 p-3 text-brand-primary">
-								<Settings class="h-6 w-6" />
+							<div class="rounded-2xl bg-brand-primary/10 p-2.5 text-brand-primary sm:p-3">
+								<Settings class="h-5 w-5 sm:h-6 sm:w-6" />
 							</div>
 							<div>
-								<h2 class="text-2xl font-black">Edit monitor</h2>
-								<p class="text-sm text-brand-light/40">Update the target and check schedule.</p>
+								<h2 class="text-xl font-black sm:text-2xl">Edit monitor</h2>
+								<p class="hidden text-sm text-brand-light/40 sm:block">
+									Update the target and check schedule.
+								</p>
 							</div>
 						</div>
 						<button
@@ -584,7 +600,10 @@
 						</button>
 					</div>
 
-					<form onsubmit={updateServer} class="grid gap-5">
+					<form
+						onsubmit={updateServer}
+						class="grid min-w-0 flex-1 gap-5 overflow-x-hidden overflow-y-auto p-4 pb-4 sm:flex-none sm:overflow-visible sm:p-6 sm:pt-5 sm:pb-6 lg:p-8 lg:pt-5"
+					>
 						<div class="grid gap-4 md:grid-cols-2">
 							<div class="space-y-2">
 								<label for="edit-name" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
@@ -605,6 +624,7 @@
 								<input
 									id="edit-url"
 									type="text"
+									inputmode="url"
 									bind:value={editUrl}
 									required
 									class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
@@ -633,7 +653,7 @@
 									<option value="links">Broken links</option>
 								</select>
 							</div>
-							<div class="space-y-2 md:col-span-2">
+							<div class="min-w-0 space-y-2 md:col-span-2">
 								<div class="ml-1 flex items-center justify-between">
 									<label for="edit-interval" class="text-xs font-bold text-brand-light/45 uppercase"
 										>Interval</label
@@ -643,7 +663,7 @@
 										>{formatInterval(editInterval)}</span
 									>
 								</div>
-								<div class="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
+								<div class="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap">
 									{#each intervalPresets as preset (preset)}
 										<button
 											type="button"
@@ -679,7 +699,7 @@
 								</select>
 							</div>
 							<div
-								class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-4 md:col-span-2 md:grid-cols-2"
+								class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-3 md:col-span-2 md:grid-cols-2 md:p-4"
 							>
 								<div class="flex items-center gap-3 md:col-span-2">
 									<Mail class="h-4 w-4 text-brand-primary" />
@@ -708,17 +728,17 @@
 							</div>
 						</div>
 						<div
-							class="flex flex-col-reverse gap-3 border-t border-brand-light/10 pt-4 sm:flex-row sm:justify-end"
+							class="sticky bottom-0 z-10 mt-1 flex min-w-0 flex-col-reverse gap-3 border-t border-brand-light/10 bg-brand-panel/95 pt-4 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] backdrop-blur-sm sm:static sm:mt-0 sm:flex-row sm:justify-end sm:bg-transparent sm:p-0 sm:pt-4 sm:backdrop-blur-none"
 						>
 							<button
 								type="button"
 								onclick={() => (isEditing = false)}
-								class="rounded-2xl border border-brand-light/10 px-7 py-3 font-bold transition hover:bg-brand-light/5"
+								class="w-full rounded-2xl border border-brand-light/10 px-7 py-3 font-bold transition hover:bg-brand-light/5 sm:w-auto"
 								>Cancel</button
 							>
 							<button
 								type="submit"
-								class="rounded-2xl bg-brand-primary px-8 py-3 font-black text-brand-dark shadow-lg shadow-brand-primary/10 transition hover:bg-brand-primary/90"
+								class="w-full rounded-2xl bg-brand-primary px-8 py-3 font-black text-brand-dark shadow-lg shadow-brand-primary/10 transition hover:bg-brand-primary/90 sm:w-auto"
 								>Save changes</button
 							>
 						</div>
@@ -1023,5 +1043,12 @@
 	}
 	.zoom-in-95 {
 		animation-name: zoom-in-95;
+	}
+
+	@media (max-width: 639px) {
+		.mobile-form-panel {
+			background-color: #182825;
+			backdrop-filter: none;
+		}
 	}
 </style>
