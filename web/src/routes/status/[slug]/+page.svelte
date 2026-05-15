@@ -179,7 +179,7 @@
 	<div class="container mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:py-14">
 		{#if isLoading}
 			<div
-				class="flex min-h-[60vh] flex-col items-center justify-center gap-5 rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.025]"
+				class="soft-panel flex min-h-[60vh] flex-col items-center justify-center gap-5 rounded-[2rem]"
 			>
 				<RefreshCw class="h-10 w-10 animate-spin text-brand-primary" />
 				<div class="text-center">
@@ -191,7 +191,7 @@
 			</div>
 		{:else if error || !monitor}
 			<section
-				class="grid min-h-[60vh] gap-8 rounded-[2.5rem] border border-brand-light/10 bg-[#111f1c]/80 p-6 shadow-2xl shadow-black/20 sm:p-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center"
+				class="glass-panel grid min-h-[60vh] gap-8 rounded-[2.5rem] p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center"
 			>
 				<div>
 					<div
@@ -330,9 +330,7 @@
 					</div>
 				</div>
 
-				<aside
-					class="animate-rise animate-rise-delay rounded-[2.25rem] border border-brand-light/10 bg-[#111f1c]/90 p-5 shadow-2xl shadow-black/20 backdrop-blur-xl"
-				>
+				<aside class="glass-panel animate-rise animate-rise-delay rounded-[2.25rem] p-5">
 					<div
 						class="rounded-[1.75rem] border p-5 {healthy
 							? 'border-brand-primary/20 bg-brand-primary/10'
@@ -373,7 +371,7 @@
 					</div>
 
 					<div class="mt-4 grid gap-3 sm:grid-cols-2">
-						<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-4">
+						<div class="soft-panel rounded-3xl p-4">
 							<div
 								class="mb-2 flex items-center gap-2 text-xs font-bold text-brand-light/35 uppercase"
 							>
@@ -382,7 +380,7 @@
 							</div>
 							<div class="text-sm font-black text-brand-light/80">{lastUpdatedLabel()}</div>
 						</div>
-						<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-4">
+						<div class="soft-panel rounded-3xl p-4">
 							<div
 								class="mb-2 flex items-center gap-2 text-xs font-bold text-brand-light/35 uppercase"
 							>
@@ -422,7 +420,7 @@
 			</section>
 
 			<section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
+				<div class="soft-panel rounded-3xl p-5">
 					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
 						<span class="text-xs font-bold uppercase">30d uptime</span>
 						<ShieldCheck class="h-4 w-4 text-brand-primary" />
@@ -437,7 +435,7 @@
 						{history30d.length > 0 ? `${uptime.toFixed(2)}%` : 'No data'}
 					</div>
 				</div>
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
+				<div class="soft-panel rounded-3xl p-5">
 					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
 						<span class="text-xs font-bold uppercase">Avg response</span>
 						<BarChart3 class="h-4 w-4 text-brand-primary" />
@@ -446,7 +444,7 @@
 						{avgLatency}<span class="ml-1 text-sm text-brand-light/30">ms</span>
 					</div>
 				</div>
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
+				<div class="soft-panel rounded-3xl p-5">
 					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
 						<span class="text-xs font-bold uppercase">Last response</span>
 						<Activity class="h-4 w-4 text-brand-primary" />
@@ -457,7 +455,7 @@
 							>{/if}
 					</div>
 				</div>
-				<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.035] p-5">
+				<div class="soft-panel rounded-3xl p-5">
 					<div class="mb-4 flex items-center justify-between gap-3 text-brand-light/35">
 						<span class="text-xs font-bold uppercase">Interval</span>
 						<Clock class="h-4 w-4 text-brand-primary" />
@@ -469,9 +467,7 @@
 			</section>
 
 			<section class="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]">
-				<div
-					class="rounded-[2.5rem] border border-brand-light/10 bg-gradient-to-b from-brand-light/[0.03] to-transparent p-1 shadow-2xl shadow-black/20"
-				>
+				<div class="glass-panel rounded-[2.5rem] p-1">
 					<div class="rounded-[2.4rem] bg-brand-dark p-5 sm:p-8 lg:p-10">
 						<div class="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
 							<div>
@@ -515,7 +511,7 @@
 				</div>
 
 				<div class="grid gap-6">
-					<section class="rounded-[2rem] border border-brand-light/10 bg-[#111f1c]/90 p-5 sm:p-6">
+					<section class="glass-panel rounded-[2rem] p-5 sm:p-6">
 						<div class="mb-5 flex items-center justify-between gap-4">
 							<div>
 								<div class="text-xs font-black tracking-widest text-brand-light/35 uppercase">
@@ -577,7 +573,7 @@
 						</div>
 					</section>
 
-					<section class="rounded-[2rem] border border-brand-light/10 bg-[#111f1c]/90 p-5 sm:p-6">
+					<section class="glass-panel rounded-[2rem] p-5 sm:p-6">
 						<div class="mb-5 flex items-center justify-between">
 							<h2 class="flex items-center gap-2 text-xl font-black">
 								<History class="h-5 w-5 text-brand-primary" />

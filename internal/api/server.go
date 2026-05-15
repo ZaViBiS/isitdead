@@ -72,6 +72,23 @@ func New(db *database.Storage, sched *checker.Scheduler, mailer VerificationMail
 	// Реєстрація API маршрутів
 	s.setupRoutes()
 
+	// Hashed build assets can be cached aggressively, but HTML must stay fresh so
+	// clients do not keep references to chunks from an older deployment.
+	app.Use(func(c fiber.Ctx) error {
+		err := c.Next()
+		path := c.Path()
+		contentType := string(c.Response().Header.ContentType())
+
+		switch {
+		case strings.HasPrefix(path, "/_app/immutable/"):
+			c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		case strings.HasPrefix(contentType, "text/html"):
+			c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		}
+
+		return err
+	})
+
 	// Обслуговування статичних файлів через middleware/static
 	app.Get("/*", static.New("", static.Config{
 		FS: distFS,
@@ -83,6 +100,9 @@ func New(db *database.Storage, sched *checker.Scheduler, mailer VerificationMail
 		path := c.Path()
 		if path == "/api" || strings.HasPrefix(path, "/api/") {
 			return c.Next()
+		}
+		if strings.HasPrefix(path, "/_app/") {
+			return c.SendStatus(fiber.StatusNotFound)
 		}
 		if !isKnownSPARoute(path) {
 			return c.Status(fiber.StatusNotFound).Type("html").SendString(s.siteNotFoundHTML(path))

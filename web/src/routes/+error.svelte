@@ -28,7 +28,7 @@
 	<div class="container mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
 		<div>
 			<div
-				class="mb-8 inline-flex items-center gap-3 rounded-full border border-brand-accent/20 bg-brand-accent/10 px-4 py-2 text-xs font-black tracking-[0.28em] text-brand-accent uppercase"
+				class="mb-8 inline-flex items-center gap-3 rounded-full border border-brand-accent/20 bg-brand-accent/10 px-4 py-2 text-[11px] font-black tracking-[0.28em] text-brand-accent uppercase"
 			>
 				<SearchX class="h-4 w-4" />
 				{page.status}
@@ -66,9 +66,7 @@
 			<div
 				class="absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-accent/18 via-brand-primary/12 to-transparent blur-2xl"
 			></div>
-			<div
-				class="relative overflow-hidden rounded-[2.75rem] border border-brand-light/10 bg-[#111f1c]/90 p-3 shadow-2xl backdrop-blur-xl"
-			>
+			<div class="glass-panel relative overflow-hidden rounded-[2.75rem] p-3">
 				<div class="rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/80 p-6 sm:p-8">
 					<div class="mb-8 flex items-center justify-between">
 						<div class="flex items-center gap-2">

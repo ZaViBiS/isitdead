@@ -36,12 +36,12 @@
 	}
 </script>
 
-<div class="flex min-h-screen flex-col bg-brand-dark text-brand-light transition-colors">
+<div class="app-shell flex min-h-screen flex-col text-brand-light transition-colors">
 	<!-- Navbar -->
-	<header
-		class="sticky top-0 z-50 border-b border-brand-light/10 bg-brand-dark/80 backdrop-blur-md"
-	>
-		<nav class="container mx-auto flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
+	<header class="sticky top-0 z-50 px-3 pt-3 sm:px-4">
+		<nav
+			class="container mx-auto flex h-16 items-center justify-between gap-3 rounded-full border border-brand-light/10 bg-brand-panel/80 px-4 shadow-2xl shadow-black/15 backdrop-blur-xl sm:px-6"
+		>
 			<a href={resolve('/')} class="flex items-center gap-2 text-xl font-bold tracking-tight">
 				<LogoMark class="h-8 w-8" title="isitdead home" />
 				<span class="hidden min-[360px]:inline">isitdead</span>
@@ -106,9 +106,11 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="border-t border-brand-light/10 py-12">
+	<footer class="mt-8 border-t border-brand-light/10 py-10 sm:py-12">
 		<div class="container mx-auto px-4 sm:px-6">
-			<div class="flex flex-col items-center justify-between gap-6 md:flex-row">
+			<div
+				class="glass-panel flex flex-col items-center justify-between gap-6 rounded-[2rem] px-5 py-6 md:flex-row md:px-7"
+			>
 				<div class="flex items-center gap-2">
 					<LogoMark class="h-7 w-7" title="isitdead" />
 					<span class="font-bold">isitdead</span>

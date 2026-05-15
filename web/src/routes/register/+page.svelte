@@ -57,12 +57,16 @@
 	}
 </script>
 
-<div class="flex min-h-[calc(100vh-16rem)] items-center justify-center px-4 py-8 sm:py-12">
+<div class="relative flex min-h-[calc(100vh-16rem)] items-center justify-center px-4 py-8 sm:py-12">
 	<div
-		class="w-full max-w-md space-y-6 rounded-3xl border border-brand-light/10 bg-brand-dark p-5 shadow-xl sm:space-y-8 sm:p-8 md:p-10"
+		class="pointer-events-none absolute top-8 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-primary/12 blur-[110px]"
+	></div>
+	<div
+		class="glass-panel relative w-full max-w-md space-y-6 rounded-3xl p-5 sm:space-y-8 sm:p-8 md:p-10"
 	>
 		<div class="text-center">
 			<LogoMark class="mx-auto h-12 w-12" title="isitdead" />
+			<div class="signal-kicker mt-5">Create monitor flow</div>
 			<h2 class="mt-6 text-2xl font-extrabold tracking-tight sm:text-3xl">Create your account</h2>
 			<p class="mt-2 text-sm text-brand-light/60">
 				Start monitoring your services in less than a minute.

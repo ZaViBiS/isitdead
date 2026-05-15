@@ -174,9 +174,7 @@
 				</div>
 			</div>
 
-			<div
-				class="grid gap-4 rounded-[2rem] border border-brand-light/5 bg-brand-light/[0.02] p-5 backdrop-blur-sm sm:flex sm:gap-8 sm:p-6"
-			>
+			<div class="glass-panel grid gap-4 rounded-[2rem] p-5 sm:flex sm:gap-8 sm:p-6">
 				<div class="text-left sm:text-right">
 					<div
 						class="mb-1 flex items-center justify-end gap-1.5 text-[10px] font-bold tracking-widest text-brand-light/40 uppercase"
@@ -209,9 +207,7 @@
 
 		<div class="grid gap-8">
 			<!-- Chart Card -->
-			<div
-				class="rounded-[2.5rem] border border-brand-light/10 bg-gradient-to-b from-brand-light/[0.03] to-transparent p-1 shadow-2xl"
-			>
+			<div class="glass-panel rounded-[2.5rem] p-1">
 				<div class="rounded-[2.4rem] bg-brand-dark p-5 sm:p-8 lg:p-10">
 					<div class="mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
 						<div>
@@ -255,9 +251,7 @@
 			</div>
 
 			<!-- Logs Card -->
-			<div
-				class="rounded-[2.5rem] border border-brand-light/10 bg-brand-dark/40 p-5 sm:p-8 lg:p-10"
-			>
+			<div class="glass-panel rounded-[2.5rem] p-5 sm:p-8 lg:p-10">
 				<div
 					class="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between"
 				>

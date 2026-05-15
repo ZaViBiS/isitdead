@@ -120,13 +120,10 @@
 <div class="relative isolate overflow-hidden">
 	<div class="pointer-events-none absolute inset-0 -z-10">
 		<div
-			class="absolute top-[-8rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/20 blur-[140px]"
+			class="absolute top-[-10rem] left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand-primary/24 blur-[150px]"
 		></div>
 		<div
-			class="absolute top-[34rem] right-[-12rem] h-[28rem] w-[28rem] rounded-full bg-brand-soft/10 blur-[120px]"
-		></div>
-		<div
-			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(222,244,198,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(222,244,198,0.04)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black,transparent_82%)] bg-[size:72px_72px]"
+			class="absolute top-[28rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-brand-soft/14 blur-[120px]"
 		></div>
 	</div>
 
@@ -135,9 +132,7 @@
 			class="container mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
 		>
 			<div class="animate-rise">
-				<div
-					class="mb-8 inline-flex items-center gap-3 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-4 py-2 text-xs font-black tracking-[0.28em] text-brand-primary uppercase shadow-2xl shadow-brand-primary/10"
-				>
+				<div class="signal-pill mb-8 gap-3">
 					<span class="relative flex h-2.5 w-2.5">
 						<span
 							class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-primary opacity-40"
@@ -148,12 +143,12 @@
 				</div>
 
 				<h1
-					class="max-w-5xl text-4xl leading-[0.92] font-black tracking-[-0.07em] text-brand-light sm:text-7xl lg:text-8xl"
+					class="display-gradient max-w-5xl text-4xl leading-[0.92] font-black tracking-[-0.07em] sm:text-7xl lg:text-8xl"
 				>
 					Know what is down before users do.
 				</h1>
 
-				<p class="mt-8 max-w-2xl text-lg leading-8 font-medium text-brand-light/55 sm:text-xl">
+				<p class="mt-8 max-w-2xl text-lg leading-8 font-medium text-brand-light/62 sm:text-xl">
 					isitdead watches your websites, APIs, and critical ports, then turns uptime, latency, and
 					failed checks into a dashboard your team can understand quickly.
 				</p>
@@ -167,31 +162,25 @@
 						<ArrowRight class="ml-2 h-5 w-5 transition group-hover:translate-x-1" />
 					</a>
 					<a
-						href={resolve('/#demo')}
+						href={resolve('/#features')}
 						class="inline-flex items-center justify-center rounded-2xl border border-brand-light/10 bg-brand-light/[0.03] px-8 py-4 text-base font-black text-brand-light/75 backdrop-blur transition hover:border-brand-primary/30 hover:text-brand-light"
 					>
-						View product preview
+						Explore features
 					</a>
 				</div>
 
 				<div class="mt-10 grid max-w-xl gap-3 sm:grid-cols-3">
-					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.03] p-4">
+					<div class="soft-panel rounded-3xl p-4">
 						<div class="text-2xl font-black text-brand-primary">HTTP</div>
-						<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
-							checks
-						</div>
+						<div class="micro-label mt-1">checks</div>
 					</div>
-					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.03] p-4">
+					<div class="soft-panel rounded-3xl p-4">
 						<div class="text-2xl font-black text-brand-primary">TCP</div>
-						<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
-							ports
-						</div>
+						<div class="micro-label mt-1">ports</div>
 					</div>
-					<div class="rounded-3xl border border-brand-light/10 bg-brand-light/[0.03] p-4">
+					<div class="soft-panel rounded-3xl p-4">
 						<div class="text-2xl font-black text-brand-primary">30d</div>
-						<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
-							history
-						</div>
+						<div class="micro-label mt-1">history</div>
 					</div>
 				</div>
 			</div>
@@ -200,9 +189,7 @@
 				<div
 					class="absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-primary/20 via-brand-soft/10 to-transparent blur-2xl"
 				></div>
-				<div
-					class="relative overflow-hidden rounded-[2.75rem] border border-brand-light/10 bg-[#111f1c]/90 p-3 shadow-2xl backdrop-blur-xl"
-				>
+				<div class="glass-panel relative overflow-hidden rounded-[2.75rem] p-3">
 					<div class="rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/80">
 						<div class="flex items-center justify-between border-b border-brand-light/10 px-5 py-4">
 							<div class="flex items-center gap-2">
@@ -219,12 +206,10 @@
 
 						<div class="p-5 sm:p-7">
 							<div class="grid gap-5 lg:grid-cols-[1fr_13rem]">
-								<div class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5">
+								<div class="soft-panel rounded-[2rem] p-5">
 									<div class="mb-6 flex items-start justify-between gap-4">
 										<div>
-											<p class="text-xs font-black tracking-[0.26em] text-brand-light/30 uppercase">
-												Infrastructure health
-											</p>
+											<p class="micro-label">Infrastructure health</p>
 											<h2 class="mt-2 text-2xl font-black tracking-tight">
 												All systems operational
 											</h2>
@@ -259,9 +244,7 @@
 										</div>
 										<div class="mt-3 text-4xl font-black text-brand-primary">99.98%</div>
 									</div>
-									<div
-										class="rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.03] p-5"
-									>
+									<div class="soft-panel rounded-[2rem] p-5">
 										<div
 											class="flex items-center gap-2 text-xs font-black tracking-widest text-brand-light/35 uppercase"
 										>
@@ -340,15 +323,10 @@
 		</div>
 	</section>
 
-	<section
-		id="features"
-		class="border-y border-brand-light/10 bg-brand-light/[0.025] px-4 py-16 sm:px-6 sm:py-24"
-	>
+	<section id="features" class="section-rule px-4 py-16 sm:px-6 sm:py-24">
 		<div class="container mx-auto max-w-7xl">
 			<div class="mb-14 max-w-3xl">
-				<p class="text-xs font-black tracking-[0.32em] text-brand-primary uppercase">
-					What is included
-				</p>
+				<p class="signal-kicker">What is included</p>
 				<h2 class="mt-4 text-3xl font-black tracking-[-0.05em] sm:text-6xl">
 					The monitoring signals teams actually look at.
 				</h2>
@@ -358,7 +336,7 @@
 				{#each features as feature (feature.title)}
 					{@const Icon = feature.icon}
 					<article
-						class="group rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/70 p-7 transition hover:-translate-y-1 hover:border-brand-primary/30 hover:bg-brand-dark"
+						class="glass-panel group rounded-[2.25rem] p-7 transition hover:-translate-y-1 hover:border-brand-primary/30 hover:bg-brand-panel-soft"
 					>
 						<div
 							class="mb-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary group-hover:text-brand-dark"
@@ -376,9 +354,7 @@
 	<section class="px-4 py-16 sm:px-6 sm:py-24">
 		<div class="container mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
 			<div>
-				<p class="text-xs font-black tracking-[0.32em] text-brand-primary uppercase">
-					Incident review
-				</p>
+				<p class="signal-kicker">Incident review</p>
 				<h2 class="mt-4 text-3xl font-black tracking-[-0.05em] sm:text-6xl">
 					A timeline built for quick triage.
 				</h2>
@@ -388,7 +364,7 @@
 				</p>
 			</div>
 
-			<div class="rounded-[2.5rem] border border-brand-light/10 bg-brand-dark/80 p-5 shadow-2xl">
+			<div class="glass-panel rounded-[2.5rem] p-5">
 				<div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div class="flex items-center gap-3">
 						<div class="rounded-2xl bg-brand-accent/10 p-3 text-brand-accent">
@@ -409,7 +385,7 @@
 				<div class="overflow-hidden rounded-[1.75rem] border border-brand-light/10">
 					{#each incidents as incident (incident.status)}
 						<div
-							class="grid gap-3 border-b border-brand-light/10 bg-brand-light/[0.015] p-4 last:border-b-0 sm:grid-cols-[1fr_7rem_6rem] sm:items-center"
+							class="relative grid gap-3 border-b border-brand-light/10 bg-brand-light/[0.015] p-4 pl-8 before:absolute before:top-0 before:bottom-0 before:left-4 before:w-px before:bg-brand-light/10 after:absolute after:top-6 after:left-[0.875rem] after:h-2 after:w-2 after:rounded-full after:bg-brand-accent last:border-b-0 sm:grid-cols-[1fr_7rem_6rem] sm:items-center"
 						>
 							<div>
 								<div class="text-sm font-black text-brand-light">{incident.status}</div>
@@ -431,7 +407,7 @@
 	<section id="how-it-works" class="px-4 pb-16 sm:px-6 sm:pb-24">
 		<div class="container mx-auto max-w-7xl">
 			<div
-				class="overflow-hidden rounded-[3rem] border border-brand-primary/20 bg-brand-primary text-brand-dark shadow-2xl shadow-brand-primary/10"
+				class="overflow-hidden rounded-[3rem] border border-brand-primary/20 bg-[linear-gradient(135deg,#73e2a7_0%,#b8f0bf_55%,#def4c6_100%)] text-brand-dark shadow-2xl shadow-brand-primary/10"
 			>
 				<div class="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
 					<div class="p-8 sm:p-12 lg:p-14">
