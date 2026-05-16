@@ -43,43 +43,66 @@ func Check(checkType, target string, timeoutSeconds int) (status string, latency
 		return TCPPing(target, timeout)
 	case "links":
 		return LinkCheck(target, timeout)
-	case "ssl":
-		return SSLCheck(target, timeout)
 	default:
 		return HttpCheck(target, timeout)
 	}
 }
 
-// SSLCheck validates the TLS certificate chain and reports the certificate expiry date.
-func SSLCheck(target string, timeout time.Duration) (status string, latency int64) {
-	return sslCheck(target, timeout, nil)
+type SSLCertificateInfo struct {
+	Valid         bool
+	SelfSigned    bool
+	ExpiresAt     *time.Time
+	DaysRemaining int
+	Issuer        string
+	Error         string
 }
 
-func sslCheck(target string, timeout time.Duration, roots *x509.CertPool) (status string, latency int64) {
-	start := time.Now()
-
+func InspectSSLCertificate(target string, timeout time.Duration) SSLCertificateInfo {
 	address, serverName, err := parseTLSTarget(target)
 	if err != nil {
-		return err.Error(), time.Since(start).Milliseconds()
+		return SSLCertificateInfo{Error: err.Error()}
 	}
 
 	dialer := &net.Dialer{Timeout: timeout}
 	conn, err := tls.DialWithDialer(dialer, "tcp", address, &tls.Config{
-		ServerName: serverName,
-		RootCAs:    roots,
+		ServerName:         serverName,
+		InsecureSkipVerify: true, // We verify manually so we can still inspect invalid/self-signed certs.
 	})
-	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
-		return fmt.Sprintf("SSL Certificate Error: %v", err), elapsed
+		return SSLCertificateInfo{Error: err.Error()}
 	}
 	defer conn.Close()
 
 	state := conn.ConnectionState()
 	if len(state.PeerCertificates) == 0 {
-		return "SSL Certificate Error: server returned no certificates", elapsed
+		return SSLCertificateInfo{Error: "server returned no certificates"}
 	}
 
-	return fmt.Sprintf("200 OK; SSL expires %s", state.PeerCertificates[0].NotAfter.UTC().Format("2006-01-02")), elapsed
+	cert := state.PeerCertificates[0]
+	expiresAt := cert.NotAfter.UTC()
+	daysRemaining := int(time.Until(expiresAt).Hours() / 24)
+	selfSigned := cert.CheckSignatureFrom(cert) == nil
+
+	opts := x509.VerifyOptions{
+		DNSName:       serverName,
+		Intermediates: x509.NewCertPool(),
+	}
+	for _, intermediate := range state.PeerCertificates[1:] {
+		opts.Intermediates.AddCert(intermediate)
+	}
+	_, verifyErr := cert.Verify(opts)
+
+	info := SSLCertificateInfo{
+		Valid:         verifyErr == nil,
+		SelfSigned:    selfSigned,
+		ExpiresAt:     &expiresAt,
+		DaysRemaining: daysRemaining,
+		Issuer:        cert.Issuer.String(),
+	}
+	if verifyErr != nil {
+		info.Error = verifyErr.Error()
+	}
+	return info
 }
 
 func parseTLSTarget(target string) (address string, serverName string, err error) {

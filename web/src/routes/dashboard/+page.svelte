@@ -13,7 +13,9 @@
 		Mail,
 		X,
 		Link2,
-		LockKeyhole
+		LockKeyhole,
+		CircleHelp,
+		ShieldAlert
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -38,6 +40,7 @@
 	let newInterval = $state(300);
 	let newTimeout = $state(10);
 	let newSlowThreshold = $state(300);
+	let newSSLEnabled = $state(false);
 	let newNotifyEmailDown = $state(true);
 	let newNotifyEmailRecovered = $state(true);
 
@@ -48,6 +51,7 @@
 	let editInterval = $state(300);
 	let editTimeout = $state(10);
 	let editSlowThreshold = $state(300);
+	let editSSLEnabled = $state(false);
 	let editNotifyEmailDown = $state(true);
 	let editNotifyEmailRecovered = $state(true);
 
@@ -69,12 +73,6 @@
 			label: 'Links',
 			description: 'Broken link scans',
 			icon: Link2
-		},
-		{
-			value: 'ssl',
-			label: 'SSL',
-			description: 'Certificate validity',
-			icon: LockKeyhole
 		}
 	];
 
@@ -106,7 +104,7 @@
 
 	function normalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
-		if (!['http', 'links', 'ssl'].includes(checkType) || trimmed === '') return trimmed;
+		if (!['http', 'links'].includes(checkType) || trimmed === '') return trimmed;
 		if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
 		return `https://${trimmed}`;
 	}
@@ -114,7 +112,7 @@
 	function willNormalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
 		return (
-			['http', 'links', 'ssl'].includes(checkType) &&
+			['http', 'links'].includes(checkType) &&
 			trimmed !== '' &&
 			!trimmed.startsWith('http://') &&
 			!trimmed.startsWith('https://')
@@ -124,8 +122,17 @@
 	function getTargetPlaceholder(checkType: string) {
 		if (checkType === 'ping') return 'example.com:80';
 		if (checkType === 'links') return 'example.com or https://example.com';
-		if (checkType === 'ssl') return 'example.com or https://example.com';
 		return 'example.com or http://example.com';
+	}
+
+	function selectNewType(checkType: string) {
+		newType = checkType;
+		if (checkType !== 'http' && checkType !== 'links') newSSLEnabled = false;
+	}
+
+	function selectEditType(checkType: string) {
+		editType = checkType;
+		if (checkType !== 'http' && checkType !== 'links') editSSLEnabled = false;
 	}
 
 	function notificationPayload(
@@ -197,6 +204,27 @@
 		return normalized.length > 28 ? `${normalized.slice(0, 25)}...` : normalized;
 	}
 
+	function getSSLLabel(server: Server) {
+		const status = server.ssl_status;
+		if (!status) return 'SSL';
+		if (status.self_signed) return 'SSL self-signed';
+		if (!status.valid) return 'SSL invalid';
+		return `SSL ${status.days_remaining}d`;
+	}
+
+	function getSSLBadgeClass(server: Server) {
+		const status = server.ssl_status;
+		if (!status) return 'border-brand-light/10 bg-brand-light/[0.04] text-brand-light/35';
+		if (status.self_signed) return 'border-brand-soft/20 bg-brand-soft/10 text-brand-soft';
+		if (!status.valid || status.days_remaining < 7) {
+			return 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent';
+		}
+		if (status.days_remaining <= 14) return 'border-brand-gold/20 bg-brand-gold/10 text-brand-gold';
+		if (status.days_remaining <= 30)
+			return 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary';
+		return 'border-brand-light/15 bg-brand-light/[0.05] text-brand-light';
+	}
+
 	async function addServer(e: SubmitEvent) {
 		e.preventDefault();
 		const token = localStorage.getItem('token');
@@ -210,7 +238,8 @@
 					check_type: newType,
 					check_interval: Number(newInterval),
 					timeout: Number(newTimeout),
-					slow_threshold: Number(newSlowThreshold)
+					slow_threshold: Number(newSlowThreshold),
+					ssl_enabled: newSSLEnabled
 				})
 			});
 
@@ -224,6 +253,7 @@
 				newInterval = 300;
 				newTimeout = 10;
 				newSlowThreshold = 300;
+				newSSLEnabled = false;
 				newNotifyEmailDown = true;
 				newNotifyEmailRecovered = true;
 				await fetchServers();
@@ -241,6 +271,7 @@
 		editInterval = server.check_interval;
 		editTimeout = server.timeout;
 		editSlowThreshold = server.slow_threshold;
+		editSSLEnabled = server.ssl_enabled;
 		editNotifyEmailDown = true;
 		editNotifyEmailRecovered = true;
 		isEditing = true;
@@ -268,7 +299,8 @@
 					check_type: editType,
 					check_interval: Number(editInterval),
 					timeout: Number(editTimeout),
-					slow_threshold: Number(editSlowThreshold)
+					slow_threshold: Number(editSlowThreshold),
+					ssl_enabled: editSSLEnabled
 				})
 			});
 
@@ -520,12 +552,12 @@
 							</div>
 							<div class="space-y-2 md:col-span-2">
 								<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">Check type</div>
-								<div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+								<div class="grid gap-2 sm:grid-cols-3">
 									{#each checkTypeOptions as option (option.value)}
 										{@const TypeIcon = option.icon}
 										<button
 											type="button"
-											onclick={() => (newType = option.value)}
+											onclick={() => selectNewType(option.value)}
 											class="group rounded-2xl border p-3 text-left transition {newType ===
 											option.value
 												? 'border-brand-primary/35 bg-brand-primary/10 shadow-lg shadow-brand-primary/10'
@@ -551,6 +583,23 @@
 									{/each}
 								</div>
 							</div>
+							{#if newType === 'http' || newType === 'links'}
+								<label
+									class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 md:col-span-2"
+								>
+									<span>
+										<span class="block text-sm font-black">Monitor SSL certificate</span>
+										<span class="mt-1 block text-xs text-brand-light/40">
+											Daily certificate check with reminders 30, 14, and 7 days before expiry.
+										</span>
+									</span>
+									<input
+										type="checkbox"
+										bind:checked={newSSLEnabled}
+										class="h-5 w-5 accent-brand-primary"
+									/>
+								</label>
+							{/if}
 						</div>
 					</div>
 
@@ -770,12 +819,12 @@
 										<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">
 											Check type
 										</div>
-										<div class="grid gap-2 sm:grid-cols-2">
+										<div class="grid gap-2 sm:grid-cols-3">
 											{#each checkTypeOptions as option (option.value)}
 												{@const TypeIcon = option.icon}
 												<button
 													type="button"
-													onclick={() => (editType = option.value)}
+													onclick={() => selectEditType(option.value)}
 													class="group rounded-2xl border p-3 text-left transition {editType ===
 													option.value
 														? 'border-brand-primary/35 bg-brand-primary/10 shadow-lg shadow-brand-primary/10'
@@ -801,6 +850,23 @@
 											{/each}
 										</div>
 									</div>
+									{#if editType === 'http' || editType === 'links'}
+										<label
+											class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 md:col-span-2"
+										>
+											<span>
+												<span class="block text-sm font-black">Monitor SSL certificate</span>
+												<span class="mt-1 block text-xs text-brand-light/40">
+													Daily certificate check with reminders 30, 14, and 7 days before expiry.
+												</span>
+											</span>
+											<input
+												type="checkbox"
+												bind:checked={editSSLEnabled}
+												class="h-5 w-5 accent-brand-primary"
+											/>
+										</label>
+									{/if}
 								</div>
 							</div>
 
@@ -1005,6 +1071,43 @@
 												class="rounded-lg border border-brand-gold/15 bg-brand-gold/10 px-2 py-1 text-[10px] font-black tracking-widest whitespace-nowrap text-brand-gold uppercase"
 											>
 												slow &gt; {s.slow_threshold}ms
+											</span>
+										{/if}
+										{#if s.ssl_enabled}
+											<span class="group/ssl relative">
+												<button
+													type="button"
+													class="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-black tracking-widest whitespace-nowrap uppercase {getSSLBadgeClass(
+														s
+													)}"
+												>
+													{#if s.ssl_status?.self_signed}
+														<ShieldAlert class="h-3 w-3" />
+													{:else}
+														<LockKeyhole class="h-3 w-3" />
+													{/if}
+													{getSSLLabel(s)}
+													<CircleHelp class="h-3 w-3 opacity-60" />
+												</button>
+												<div
+													class="pointer-events-none absolute bottom-full left-0 z-40 mb-2 hidden w-64 rounded-2xl border border-brand-light/10 bg-brand-dark/95 p-4 text-left text-xs leading-5 text-brand-light/60 shadow-2xl group-focus-within/ssl:block group-hover/ssl:block"
+												>
+													<div class="mb-2 font-black text-brand-light/85">
+														SSL certificate status
+													</div>
+													<div>Green: more than 30 days left</div>
+													<div>Mint: 30 days or less</div>
+													<div>Gold: 14 days or less</div>
+													<div>Red: under 7 days, expired, or invalid</div>
+													<div class="text-brand-soft">Pink: self-signed certificate</div>
+													{#if s.ssl_status?.expires_at}
+														<div class="mt-2 border-t border-brand-light/10 pt-2">
+															Expires: {new Date(s.ssl_status.expires_at).toLocaleDateString(
+																'en-US'
+															)}
+														</div>
+													{/if}
+												</div>
 											</span>
 										{/if}
 									</div>

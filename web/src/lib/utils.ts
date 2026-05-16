@@ -15,6 +15,8 @@ export interface Server {
 	check_interval: number;
 	timeout: number;
 	slow_threshold: number;
+	ssl_enabled: boolean;
+	ssl_status?: SSLCertificateStatus;
 	history: CheckResult[];
 	history30d?: CheckResult[];
 	incidents?: CheckResult[];
@@ -24,6 +26,16 @@ export interface Server {
 	current_status?: string;
 	current_latency?: number;
 	hourly_buckets?: DashboardBucket[];
+}
+
+export interface SSLCertificateStatus {
+	valid: boolean;
+	self_signed: boolean;
+	expires_at: string;
+	days_remaining: number;
+	issuer: string;
+	last_error: string;
+	last_checked_at: string;
 }
 
 export type DashboardBucket = 'ok' | 'slow' | 'error' | 'empty';

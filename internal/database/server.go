@@ -6,7 +6,7 @@ import (
 )
 
 // AddServer додає новий сервер для моніторингу
-func (s *Storage) AddServer(userID uint, name string, url string, checkType string, checkInterval int, timeout int, slowThreshold int) (*model.Server, error) {
+func (s *Storage) AddServer(userID uint, name string, url string, checkType string, checkInterval int, timeout int, slowThreshold int, sslEnabled bool) (*model.Server, error) {
 	server := &model.Server{
 		UserID:        userID,
 		Name:          name,
@@ -15,6 +15,7 @@ func (s *Storage) AddServer(userID uint, name string, url string, checkType stri
 		CheckInterval: checkInterval,
 		Timeout:       timeout,
 		SlowThreshold: slowThreshold,
+		SSLEnabled:    sslEnabled,
 	}
 
 	if err := s.executeWrite(func(db *gorm.DB) error {
@@ -54,7 +55,7 @@ func (s *Storage) GetServerByID(serverID uint) (*model.Server, error) {
 }
 
 // UpdateServer оновлює дані сервера
-func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType string, interval int, timeout int, slowThreshold int) (*model.Server, error) {
+func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType string, interval int, timeout int, slowThreshold int, sslEnabled bool) (*model.Server, error) {
 	var server model.Server
 	// Перевіряємо, що сервер належить саме цьому користувачу
 	if err := s.DB.Where("id = ? AND user_id = ?", serverID, userID).First(&server).Error; err != nil {
@@ -67,6 +68,7 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType strin
 	server.CheckInterval = interval
 	server.Timeout = timeout
 	server.SlowThreshold = slowThreshold
+	server.SSLEnabled = sslEnabled
 
 	if err := s.executeWrite(func(db *gorm.DB) error {
 		return db.Save(&server).Error
@@ -92,6 +94,9 @@ func (s *Storage) DeleteServer(userID, serverID uint) error {
 	return s.executeWrite(func(db *gorm.DB) error {
 		return db.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Where("id = ? AND user_id = ?", serverID, userID).Delete(&model.Server{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("server_id = ?", serverID).Delete(&model.SSLCertificateStatus{}).Error; err != nil {
 				return err
 			}
 			return tx.Where("server_id = ? AND user_id = ?", serverID, userID).Delete(&model.NotificationPreference{}).Error
