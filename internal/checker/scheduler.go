@@ -103,10 +103,7 @@ func (s *Scheduler) runSSLChecks() {
 func (s *Scheduler) RunSSLCheck(server model.Server) {
 	previous, _ := s.storage.GetSSLCertificateStatus(server.ID)
 	info := InspectSSLCertificate(server.URL, connectionTimeout(server.Timeout))
-	lastNotifiedThreshold := 0
-	if previous != nil {
-		lastNotifiedThreshold = previous.LastNotifiedThreshold
-	}
+	lastNotifiedThreshold := retainedSSLNotificationThreshold(previous, info)
 	status := model.SSLCertificateStatus{
 		ServerID:              server.ID,
 		Valid:                 info.Valid,
@@ -114,6 +111,7 @@ func (s *Scheduler) RunSSLCheck(server model.Server) {
 		ExpiresAt:             info.ExpiresAt,
 		DaysRemaining:         info.DaysRemaining,
 		Issuer:                info.Issuer,
+		Fingerprint:           info.Fingerprint,
 		LastError:             info.Error,
 		LastNotifiedThreshold: lastNotifiedThreshold,
 		LastCheckedAt:         time.Now().UTC(),
@@ -137,6 +135,16 @@ func (s *Scheduler) RunSSLCheck(server model.Server) {
 	if err := s.storage.UpsertSSLCertificateStatus(status); err != nil {
 		log.Error().Err(err).Uint("server_id", server.ID).Msg("Failed to save SSL notification threshold")
 	}
+}
+
+func retainedSSLNotificationThreshold(previous *model.SSLCertificateStatus, current SSLCertificateInfo) int {
+	if previous == nil || previous.ExpiresAt == nil || current.ExpiresAt == nil {
+		return 0
+	}
+	if previous.Fingerprint != current.Fingerprint || !previous.ExpiresAt.Equal(*current.ExpiresAt) {
+		return 0
+	}
+	return previous.LastNotifiedThreshold
 }
 
 func sslReminder(daysRemaining, lastNotifiedThreshold int) (event string, threshold int, ok bool) {

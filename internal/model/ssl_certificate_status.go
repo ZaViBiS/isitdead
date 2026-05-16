@@ -10,6 +10,7 @@ type SSLCertificateStatus struct {
 	ExpiresAt             *time.Time `json:"expires_at"`
 	DaysRemaining         int        `json:"days_remaining"`
 	Issuer                string     `json:"issuer"`
+	Fingerprint           string     `json:"fingerprint"`
 	LastError             string     `json:"last_error"`
 	LastNotifiedThreshold int        `json:"last_notified_threshold"`
 	LastCheckedAt         time.Time  `json:"last_checked_at"`

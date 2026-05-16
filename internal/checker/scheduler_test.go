@@ -106,3 +106,27 @@ func TestSSLReminder(t *testing.T) {
 		})
 	}
 }
+
+func TestRetainedSSLNotificationThreshold(t *testing.T) {
+	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
+	previous := &model.SSLCertificateStatus{
+		ExpiresAt:             &expiresAt,
+		Fingerprint:           "same-cert",
+		LastNotifiedThreshold: 30,
+	}
+
+	assert.Equal(t, 30, retainedSSLNotificationThreshold(previous, SSLCertificateInfo{
+		ExpiresAt:   &expiresAt,
+		Fingerprint: "same-cert",
+	}))
+	assert.Equal(t, 0, retainedSSLNotificationThreshold(previous, SSLCertificateInfo{
+		ExpiresAt:   &expiresAt,
+		Fingerprint: "new-cert",
+	}))
+
+	renewedExpiry := expiresAt.Add(90 * 24 * time.Hour)
+	assert.Equal(t, 0, retainedSSLNotificationThreshold(previous, SSLCertificateInfo{
+		ExpiresAt:   &renewedExpiry,
+		Fingerprint: "same-cert",
+	}))
+}

@@ -21,6 +21,7 @@ func (s *Storage) UpsertSSLCertificateStatus(status model.SSLCertificateStatus) 
 			"expires_at":              status.ExpiresAt,
 			"days_remaining":          status.DaysRemaining,
 			"issuer":                  status.Issuer,
+			"fingerprint":             status.Fingerprint,
 			"last_error":              status.LastError,
 			"last_notified_threshold": status.LastNotifiedThreshold,
 			"last_checked_at":         status.LastCheckedAt,
