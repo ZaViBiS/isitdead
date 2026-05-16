@@ -14,6 +14,7 @@ export interface Server {
 	public_slug: string;
 	check_interval: number;
 	timeout: number;
+	slow_threshold: number;
 	history: CheckResult[];
 	history30d?: CheckResult[];
 	incidents?: CheckResult[];
@@ -37,10 +38,10 @@ export interface NotificationPreference {
 	destination?: string;
 }
 
-export function getStatusColor(status: string, latency: number): string {
+export function getStatusColor(status: string, latency: number, slowThreshold = 300): string {
 	if (!status) return '#D62246';
 	if (!(status.startsWith('2') || status === 'Connected')) return '#D62246';
-	if (latency > 300) return '#E5B181';
+	if (latency > slowThreshold) return '#E5B181';
 	return '#73E2A7';
 }
 
@@ -106,7 +107,11 @@ export function getRecentHistory(history: CheckResult[], hours: number): CheckRe
 	return history.filter((result) => new Date(result.created_at).getTime() >= since);
 }
 
-export function getHourlyBuckets(history: CheckResult[], nowMs = Date.now()): string[] {
+export function getHourlyBuckets(
+	history: CheckResult[],
+	nowMs = Date.now(),
+	slowThreshold = 300
+): string[] {
 	const buckets: string[] = Array(24).fill('#1f332f');
 	const windowStart = nowMs - 24 * 60 * 60 * 1000;
 	const hourMs = 60 * 60 * 1000;
@@ -116,7 +121,7 @@ export function getHourlyBuckets(history: CheckResult[], nowMs = Date.now()): st
 		if (createdAt < windowStart || createdAt >= nowMs) continue;
 
 		const bucketIndex = Math.floor((createdAt - windowStart) / hourMs);
-		const color = getStatusColor(result.status, result.latency);
+		const color = getStatusColor(result.status, result.latency, slowThreshold);
 		const current = buckets[bucketIndex];
 
 		if (current === '#D62246') continue;

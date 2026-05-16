@@ -142,7 +142,11 @@
 					</div>
 					<div
 						class="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-4 border-brand-dark"
-						style="background-color: {getStatusColor(currentStatus, currentLatency)}"
+						style="background-color: {getStatusColor(
+							currentStatus,
+							currentLatency,
+							server.slow_threshold
+						)}"
 					>
 						{#if isOnline}
 							<div class="h-2 w-2 animate-pulse rounded-full bg-brand-dark"></div>
@@ -228,7 +232,8 @@
 								></span> Healthy</span
 							>
 							<span class="flex items-center gap-1.5"
-								><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow</span
+								><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
+								{server.slow_threshold}ms</span
 							>
 							<span class="flex items-center gap-1.5"
 								><span class="h-2 w-2 rounded-full bg-brand-accent"></span> Down</span
@@ -237,7 +242,7 @@
 					</div>
 
 					<div class="relative">
-						<StatusChart history={server.history} height={500} />
+						<StatusChart history={server.history} height={500} slowThreshold={server.slow_threshold} />
 						<div
 							class="absolute bottom-4 left-4 flex flex-wrap gap-2 text-[10px] font-bold tracking-widest text-brand-light/20 uppercase sm:gap-4"
 						>
@@ -288,7 +293,11 @@
 										>
 										<div
 											class="h-3 w-3 rounded-full border-2 border-brand-dark shadow-sm"
-											style="background-color: {getStatusColor(result.status, result.latency)}"
+											style="background-color: {getStatusColor(
+												result.status,
+												result.latency,
+												server.slow_threshold
+											)}"
 										></div>
 									</div>
 									<div class="flex items-center justify-between gap-3 sm:col-span-6 sm:block">
@@ -323,7 +332,11 @@
 										>
 										<span
 											class="font-mono text-sm font-black tracking-tight"
-											style="color: {getStatusColor(result.status, result.latency)}"
+											style="color: {getStatusColor(
+												result.status,
+												result.latency,
+												server.slow_threshold
+											)}"
 										>
 											{result.latency}<span class="ml-0.5 text-[10px] opacity-40">ms</span>
 										</span>

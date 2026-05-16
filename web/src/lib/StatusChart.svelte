@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { getStatusColor, formatDate, type CheckResult } from '$lib/utils';
 
-	let { history, height = 100 } = $props<{ history: CheckResult[]; height?: number }>();
+	let {
+		history,
+		height = 100,
+		slowThreshold = 300
+	} = $props<{ history: CheckResult[]; height?: number; slowThreshold?: number }>();
 
 	let hoveredResult = $state<CheckResult | null>(null);
 
@@ -57,7 +61,7 @@
 					{#each points as p, i (p.result.id)}
 						<stop
 							offset="{(i / (points.length - 1)) * 100}%"
-							stop-color={getStatusColor(p.result.status, p.result.latency)}
+							stop-color={getStatusColor(p.result.status, p.result.latency, slowThreshold)}
 						/>
 					{/each}
 				</linearGradient>
@@ -122,7 +126,8 @@
 				class="pointer-events-none absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-dark shadow-[0_0_15px_rgba(115,226,167,0.5)] transition-all duration-75"
 				style="left: {hX_p}%; top: {hY_p}%; background-color: {getStatusColor(
 					hoveredResult.status,
-					hoveredResult.latency
+					hoveredResult.latency,
+					slowThreshold
 				)}"
 			></div>
 
@@ -140,7 +145,11 @@
 				<div class="mt-1 flex items-end justify-between gap-4">
 					<span
 						class="text-2xl leading-none font-black"
-						style="color: {getStatusColor(hoveredResult.status, hoveredResult.latency)}"
+						style="color: {getStatusColor(
+							hoveredResult.status,
+							hoveredResult.latency,
+							slowThreshold
+						)}"
 					>
 						{hoveredResult.latency}<span class="ml-0.5 text-xs opacity-50">ms</span>
 					</span>
@@ -150,7 +159,7 @@
 						{hoveredResult.status === 'Connected' ? 'Online' : hoveredResult.status}
 					</span>
 				</div>
-				{#if hoveredResult.latency > 300}
+				{#if hoveredResult.latency > slowThreshold}
 					<div class="mt-2 flex items-center gap-1 text-[9px] font-bold text-brand-soft">
 						<div class="h-1 w-1 animate-pulse rounded-full bg-brand-soft"></div>
 						Latency threshold exceeded

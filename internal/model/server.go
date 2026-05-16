@@ -14,6 +14,7 @@ type Server struct {
 	CheckType     string         `gorm:"not null;default:'http'" json:"check_type"` // 'http', 'ping', or 'links'
 	CheckInterval int            `gorm:"not null" json:"check_interval"`
 	Timeout       int            `gorm:"not null" json:"timeout"`
+	SlowThreshold int            `gorm:"not null;default:300" json:"slow_threshold"`
 	UserID        uint           `gorm:"not null" json:"user_id"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`

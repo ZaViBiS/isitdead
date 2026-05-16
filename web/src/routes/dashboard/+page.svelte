@@ -34,6 +34,7 @@
 	let newType = $state('http');
 	let newInterval = $state(300);
 	let newTimeout = $state(10);
+	let newSlowThreshold = $state(300);
 	let newNotifyEmailDown = $state(true);
 	let newNotifyEmailRecovered = $state(true);
 
@@ -43,6 +44,7 @@
 	let editType = $state('http');
 	let editInterval = $state(300);
 	let editTimeout = $state(10);
+	let editSlowThreshold = $state(300);
 	let editNotifyEmailDown = $state(true);
 	let editNotifyEmailRecovered = $state(true);
 
@@ -176,7 +178,8 @@
 					url: normalizeMonitorUrl(newUrl, newType),
 					check_type: newType,
 					check_interval: Number(newInterval),
-					timeout: Number(newTimeout)
+					timeout: Number(newTimeout),
+					slow_threshold: Number(newSlowThreshold)
 				})
 			});
 
@@ -189,6 +192,7 @@
 				newType = 'http';
 				newInterval = 300;
 				newTimeout = 10;
+				newSlowThreshold = 300;
 				newNotifyEmailDown = true;
 				newNotifyEmailRecovered = true;
 				await fetchServers();
@@ -205,6 +209,7 @@
 		editType = server.check_type;
 		editInterval = server.check_interval;
 		editTimeout = server.timeout;
+		editSlowThreshold = server.slow_threshold;
 		editNotifyEmailDown = true;
 		editNotifyEmailRecovered = true;
 		isEditing = true;
@@ -231,7 +236,8 @@
 					url: normalizeMonitorUrl(editUrl, editType),
 					check_type: editType,
 					check_interval: Number(editInterval),
-					timeout: Number(editTimeout)
+					timeout: Number(editTimeout),
+					slow_threshold: Number(editSlowThreshold)
 				})
 			});
 
@@ -408,13 +414,16 @@
 				class="mobile-form-panel glass-panel animate-in zoom-in-95 fixed inset-0 z-[60] flex h-dvh min-w-0 flex-col overflow-hidden rounded-none duration-200 sm:static sm:z-auto sm:mb-6 sm:h-auto sm:rounded-[1.75rem]"
 			>
 				<div
-					class="flex shrink-0 items-center justify-between gap-3 border-b border-brand-light/10 bg-brand-panel/95 px-4 py-4 backdrop-blur-sm sm:bg-transparent sm:px-6 sm:backdrop-blur-none"
+					class="flex shrink-0 items-center justify-between gap-3 border-b border-brand-light/10 bg-brand-panel/95 px-4 py-4 backdrop-blur-sm sm:bg-transparent sm:px-6 sm:py-5 sm:backdrop-blur-none"
 				>
 					<div class="flex items-center gap-3">
-						<div class="rounded-xl bg-brand-primary/10 p-2 text-brand-primary">
-							<Activity class="h-5 w-5" />
+						<div class="rounded-2xl bg-brand-primary/10 p-2.5 text-brand-primary">
+							<Activity class="h-5 w-5 sm:h-6 sm:w-6" />
 						</div>
-						<h2 class="text-xl font-black">Add monitor</h2>
+						<div>
+							<div class="signal-kicker mb-1">Monitor composer</div>
+							<h2 class="text-xl font-black sm:text-2xl">Add monitor</h2>
+						</div>
 					</div>
 					<button
 						type="button"
@@ -427,109 +436,156 @@
 				</div>
 				<form
 					onsubmit={addServer}
-					class="grid min-w-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto p-4 pb-4 sm:flex-none sm:overflow-visible sm:p-6 sm:pb-6 lg:grid-cols-[1fr_1.25fr_0.8fr_0.9fr_1.3fr]"
+					class="grid min-w-0 flex-1 gap-4 overflow-x-hidden overflow-y-auto p-4 pb-4 sm:flex-none sm:overflow-visible sm:p-6 sm:pb-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(21rem,0.8fr)]"
 				>
-					<div class="min-w-0 space-y-2">
-						<label for="name" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-							>Monitor name</label
-						>
-						<input
-							id="name"
-							type="text"
-							bind:value={newName}
-							required
-							class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-							placeholder="Production API"
-						/>
-					</div>
-					<div class="space-y-2">
-						<label for="url" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-							>URL or host</label
-						>
-						<input
-							id="url"
-							type="text"
-							inputmode="url"
-							bind:value={newUrl}
-							required
-							class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-							placeholder={getTargetPlaceholder(newType)}
-						/>
-						{#if willNormalizeMonitorUrl(newUrl, newType)}
-							<p
-								class="rounded-2xl border border-brand-primary/20 bg-brand-primary/10 px-4 py-3 text-sm font-medium text-brand-primary"
+					<div class="soft-panel min-w-0 rounded-[2rem] p-4 sm:p-5">
+						<div class="mb-5 flex items-start justify-between gap-4">
+							<div>
+								<div class="micro-label mb-2">Target</div>
+								<h3 class="text-lg font-black">What should be monitored</h3>
+							</div>
+							<div
+								class="rounded-2xl bg-brand-primary/10 px-3 py-2 text-xs font-black text-brand-primary"
 							>
-								We will save this as <span class="font-black"
-									>{normalizeMonitorUrl(newUrl, newType)}</span
-								>.
-							</p>
-						{/if}
-					</div>
-					<div class="space-y-2">
-						<label for="type" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-							>Check type</label
-						>
-						<select
-							id="type"
-							bind:value={newType}
-							class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-						>
-							<option value="http">HTTP (GET)</option>
-							<option value="ping">TCP port</option>
-							<option value="links">Broken links</option>
-						</select>
-					</div>
-					<div class="space-y-2">
-						<div class="ml-1 flex items-center justify-between">
-							<label for="timeout" class="text-xs font-bold text-brand-light/45 uppercase"
-								>Timeout</label
-							>
-							<span
-								class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
-								>{newTimeout}s</span
-							>
+								{newType === 'ping' ? 'TCP' : newType.toUpperCase()}
+							</div>
 						</div>
-						<select
-							id="timeout"
-							bind:value={newTimeout}
-							class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-						>
-							{#each timeoutPresets as preset (preset)}
-								<option value={preset}>{preset}s</option>
-							{/each}
-						</select>
-					</div>
-					<div class="space-y-2">
-						<div class="ml-1 flex items-center justify-between">
-							<label for="interval" class="text-xs font-bold text-brand-light/45 uppercase"
-								>Interval</label
-							>
-							<span
-								class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
-								>{formatInterval(newInterval)}</span
-							>
-						</div>
-						<div class="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap">
-							{#each intervalPresets as preset (preset)}
-								<button
-									type="button"
-									onclick={() => (newInterval = preset)}
-									class="min-w-14 rounded-xl border px-3 py-2 text-xs font-bold whitespace-nowrap transition {newInterval ===
-									preset
-										? 'border-brand-primary bg-brand-primary text-brand-dark shadow-lg shadow-brand-primary/20'
-										: 'border-brand-light/10 bg-brand-light/5 text-brand-light/45 hover:border-brand-light/20'}"
+						<div class="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
+							<div class="min-w-0 space-y-2">
+								<label for="name" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
+									>Monitor name</label
 								>
-									{formatInterval(preset)}
-								</button>
-							{/each}
+								<input
+									id="name"
+									type="text"
+									bind:value={newName}
+									required
+									class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+									placeholder="Production API"
+								/>
+							</div>
+							<div class="space-y-2">
+								<label for="url" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
+									>URL or host</label
+								>
+								<input
+									id="url"
+									type="text"
+									inputmode="url"
+									bind:value={newUrl}
+									required
+									class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+									placeholder={getTargetPlaceholder(newType)}
+								/>
+								{#if willNormalizeMonitorUrl(newUrl, newType)}
+									<p
+										class="rounded-2xl border border-brand-primary/20 bg-brand-primary/10 px-4 py-3 text-sm font-medium text-brand-primary"
+									>
+										We will save this as <span class="font-black"
+											>{normalizeMonitorUrl(newUrl, newType)}</span
+										>.
+									</p>
+								{/if}
+							</div>
+							<div class="space-y-2 md:col-span-2">
+								<label for="type" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
+									>Check type</label
+								>
+								<select
+									id="type"
+									bind:value={newType}
+									class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+								>
+									<option value="http">HTTP (GET)</option>
+									<option value="ping">TCP port</option>
+									<option value="links">Broken links</option>
+								</select>
+							</div>
 						</div>
 					</div>
-					<div
-						class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-3 sm:grid-cols-2 sm:p-4 lg:col-span-5"
-					>
+
+					<div class="soft-panel min-w-0 rounded-[2rem] p-4 sm:p-5">
+						<div class="mb-5">
+							<div class="micro-label mb-2">Rules</div>
+							<h3 class="text-lg font-black">When should it alert</h3>
+						</div>
+						<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+							<div class="space-y-2">
+								<div class="ml-1 flex items-center justify-between">
+									<label for="timeout" class="text-xs font-bold text-brand-light/45 uppercase"
+										>Timeout</label
+									>
+									<span
+										class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+										>{newTimeout}s</span
+									>
+								</div>
+								<select
+									id="timeout"
+									bind:value={newTimeout}
+									class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+								>
+									{#each timeoutPresets as preset (preset)}
+										<option value={preset}>{preset}s</option>
+									{/each}
+								</select>
+							</div>
+							<div class="space-y-2">
+								<div class="ml-1 flex items-center justify-between">
+									<label
+										for="slow-threshold"
+										class="text-xs font-bold text-brand-light/45 uppercase">Slow threshold</label
+									>
+									<span
+										class="rounded-full bg-brand-gold/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-gold"
+										>{newSlowThreshold}ms</span
+									>
+								</div>
+								<input
+									id="slow-threshold"
+									type="number"
+									min="1"
+									bind:value={newSlowThreshold}
+									required
+									class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+								/>
+							</div>
+							<div class="min-w-0 space-y-2 sm:col-span-2 lg:col-span-1 xl:col-span-2">
+								<div class="ml-1 flex items-center justify-between">
+									<label for="interval" class="text-xs font-bold text-brand-light/45 uppercase"
+										>Interval</label
+									>
+									<span
+										class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+										>{formatInterval(newInterval)}</span
+									>
+								</div>
+								<div class="grid grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5">
+									{#each intervalPresets as preset (preset)}
+										<button
+											type="button"
+											onclick={() => (newInterval = preset)}
+											class="rounded-xl border px-3 py-2 text-xs font-bold whitespace-nowrap transition {newInterval ===
+											preset
+												? 'border-brand-primary bg-brand-primary text-brand-dark shadow-lg shadow-brand-primary/20'
+												: 'border-brand-light/10 bg-brand-light/5 text-brand-light/45 hover:border-brand-light/20'}"
+										>
+											{formatInterval(preset)}
+										</button>
+									{/each}
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="soft-panel grid gap-3 rounded-[2rem] p-4 sm:grid-cols-2 sm:p-5 lg:col-span-2">
 						<div class="flex items-center gap-3 sm:col-span-2">
 							<Mail class="h-4 w-4 text-brand-primary" />
-							<div class="text-xs font-bold text-brand-light/45 uppercase">Notifications</div>
+							<div>
+								<div class="micro-label">Notifications</div>
+								<div class="mt-1 text-sm font-bold text-brand-light/75">
+									Choose what deserves an email
+								</div>
+							</div>
 						</div>
 						<label
 							class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3"
@@ -553,7 +609,7 @@
 						</label>
 					</div>
 					<div
-						class="sticky bottom-0 z-10 mt-1 flex min-w-0 flex-col-reverse gap-3 border-t border-brand-light/10 bg-brand-panel/95 pt-4 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] backdrop-blur-sm sm:static sm:mt-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:backdrop-blur-none lg:col-span-5"
+						class="sticky bottom-0 z-10 mt-1 flex min-w-0 flex-col-reverse gap-3 border-t border-brand-light/10 bg-brand-panel/95 pt-4 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] backdrop-blur-sm sm:static sm:mt-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:backdrop-blur-none lg:col-span-2"
 					>
 						<button
 							type="button"
@@ -604,106 +660,161 @@
 						onsubmit={updateServer}
 						class="grid min-w-0 flex-1 gap-5 overflow-x-hidden overflow-y-auto p-4 pb-4 sm:flex-none sm:overflow-visible sm:p-6 sm:pt-5 sm:pb-6 lg:p-8 lg:pt-5"
 					>
-						<div class="grid gap-4 md:grid-cols-2">
-							<div class="space-y-2">
-								<label for="edit-name" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-									>Monitor name</label
-								>
-								<input
-									id="edit-name"
-									type="text"
-									bind:value={editName}
-									required
-									class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-								/>
-							</div>
-							<div class="space-y-2">
-								<label for="edit-url" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-									>URL or host</label
-								>
-								<input
-									id="edit-url"
-									type="text"
-									inputmode="url"
-									bind:value={editUrl}
-									required
-									class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-								/>
-								{#if willNormalizeMonitorUrl(editUrl, editType)}
-									<p
-										class="rounded-2xl border border-brand-primary/20 bg-brand-primary/10 px-4 py-3 text-sm font-medium text-brand-primary"
+						<div class="grid gap-4">
+							<div class="soft-panel rounded-[2rem] p-4 sm:p-5">
+								<div class="mb-5 flex items-start justify-between gap-4">
+									<div>
+										<div class="micro-label mb-2">Target</div>
+										<h3 class="text-lg font-black">What is monitored</h3>
+									</div>
+									<div
+										class="rounded-2xl bg-brand-primary/10 px-3 py-2 text-xs font-black text-brand-primary"
 									>
-										We will save this as <span class="font-black"
-											>{normalizeMonitorUrl(editUrl, editType)}</span
-										>.
-									</p>
-								{/if}
-							</div>
-							<div class="space-y-2">
-								<label for="edit-type" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-									>Check type</label
-								>
-								<select
-									id="edit-type"
-									bind:value={editType}
-									class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-								>
-									<option value="http">HTTP (GET)</option>
-									<option value="ping">TCP port</option>
-									<option value="links">Broken links</option>
-								</select>
-							</div>
-							<div class="min-w-0 space-y-2 md:col-span-2">
-								<div class="ml-1 flex items-center justify-between">
-									<label for="edit-interval" class="text-xs font-bold text-brand-light/45 uppercase"
-										>Interval</label
-									>
-									<span
-										class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
-										>{formatInterval(editInterval)}</span
-									>
+										{editType === 'ping' ? 'TCP' : editType.toUpperCase()}
+									</div>
 								</div>
-								<div class="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap">
-									{#each intervalPresets as preset (preset)}
-										<button
-											type="button"
-											onclick={() => (editInterval = preset)}
-											class="min-w-14 rounded-xl border px-3 py-2 text-xs font-bold whitespace-nowrap transition {editInterval ===
-											preset
-												? 'border-brand-primary bg-brand-primary text-brand-dark shadow-lg shadow-brand-primary/20'
-												: 'border-brand-light/10 bg-brand-light/5 text-brand-light/45 hover:border-brand-light/20'}"
+								<div class="grid gap-4 md:grid-cols-2">
+									<div class="space-y-2">
+										<label
+											for="edit-name"
+											class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
+											>Monitor name</label
 										>
-											{formatInterval(preset)}
-										</button>
-									{/each}
+										<input
+											id="edit-name"
+											type="text"
+											bind:value={editName}
+											required
+											class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+										/>
+									</div>
+									<div class="space-y-2">
+										<label
+											for="edit-url"
+											class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
+											>URL or host</label
+										>
+										<input
+											id="edit-url"
+											type="text"
+											inputmode="url"
+											bind:value={editUrl}
+											required
+											class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+										/>
+										{#if willNormalizeMonitorUrl(editUrl, editType)}
+											<p
+												class="rounded-2xl border border-brand-primary/20 bg-brand-primary/10 px-4 py-3 text-sm font-medium text-brand-primary"
+											>
+												We will save this as <span class="font-black"
+													>{normalizeMonitorUrl(editUrl, editType)}</span
+												>.
+											</p>
+										{/if}
+									</div>
+									<div class="space-y-2 md:col-span-2">
+										<label
+											for="edit-type"
+											class="ml-1 text-xs font-bold text-brand-light/45 uppercase">Check type</label
+										>
+										<select
+											id="edit-type"
+											bind:value={editType}
+											class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+										>
+											<option value="http">HTTP (GET)</option>
+											<option value="ping">TCP port</option>
+											<option value="links">Broken links</option>
+										</select>
+									</div>
 								</div>
 							</div>
-							<div class="space-y-2 md:col-span-2">
-								<div class="ml-1 flex items-center justify-between">
-									<label for="edit-timeout" class="text-xs font-bold text-brand-light/45 uppercase"
-										>Timeout</label
-									>
-									<span
-										class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
-										>{editTimeout}s</span
-									>
+
+							<div class="soft-panel rounded-[2rem] p-4 sm:p-5">
+								<div class="mb-5">
+									<div class="micro-label mb-2">Rules</div>
+									<h3 class="text-lg font-black">When it should alert</h3>
 								</div>
-								<select
-									id="edit-timeout"
-									bind:value={editTimeout}
-									class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-								>
-									{#each timeoutPresets as preset (preset)}
-										<option value={preset}>{preset}s</option>
-									{/each}
-								</select>
+								<div class="grid gap-4 md:grid-cols-2">
+									<div class="min-w-0 space-y-2 md:col-span-2">
+										<div class="ml-1 flex items-center justify-between">
+											<label
+												for="edit-interval"
+												class="text-xs font-bold text-brand-light/45 uppercase">Interval</label
+											>
+											<span
+												class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+												>{formatInterval(editInterval)}</span
+											>
+										</div>
+										<div class="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap">
+											{#each intervalPresets as preset (preset)}
+												<button
+													type="button"
+													onclick={() => (editInterval = preset)}
+													class="min-w-14 rounded-xl border px-3 py-2 text-xs font-bold whitespace-nowrap transition {editInterval ===
+													preset
+														? 'border-brand-primary bg-brand-primary text-brand-dark shadow-lg shadow-brand-primary/20'
+														: 'border-brand-light/10 bg-brand-light/5 text-brand-light/45 hover:border-brand-light/20'}"
+												>
+													{formatInterval(preset)}
+												</button>
+											{/each}
+										</div>
+									</div>
+									<div class="space-y-2">
+										<div class="ml-1 flex items-center justify-between">
+											<label
+												for="edit-timeout"
+												class="text-xs font-bold text-brand-light/45 uppercase">Timeout</label
+											>
+											<span
+												class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+												>{editTimeout}s</span
+											>
+										</div>
+										<select
+											id="edit-timeout"
+											bind:value={editTimeout}
+											class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+										>
+											{#each timeoutPresets as preset (preset)}
+												<option value={preset}>{preset}s</option>
+											{/each}
+										</select>
+									</div>
+									<div class="space-y-2">
+										<div class="ml-1 flex items-center justify-between">
+											<label
+												for="edit-slow-threshold"
+												class="text-xs font-bold text-brand-light/45 uppercase"
+												>Slow threshold</label
+											>
+											<span
+												class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+												>{editSlowThreshold}ms</span
+											>
+										</div>
+										<input
+											id="edit-slow-threshold"
+											type="number"
+											min="1"
+											bind:value={editSlowThreshold}
+											required
+											class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+										/>
+									</div>
+								</div>
 							</div>
-							<div
-								class="grid gap-3 rounded-2xl border border-brand-light/10 bg-brand-light/[0.025] p-3 md:col-span-2 md:grid-cols-2 md:p-4"
-							>
+							<div class="soft-panel grid gap-3 rounded-[2rem] p-4 md:grid-cols-2 md:p-5">
 								<div class="flex items-center gap-3 md:col-span-2">
 									<Mail class="h-4 w-4 text-brand-primary" />
-									<div class="text-xs font-bold text-brand-light/45 uppercase">Notifications</div>
+									<div>
+										<div class="micro-label">Notifications</div>
+										<div class="mt-1 text-sm font-bold text-brand-light/75">
+											Choose what deserves an email
+										</div>
+									</div>
 								</div>
 								<label
 									class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3"

@@ -70,14 +70,15 @@ func (s *Server) handleGetDashboardServers(c fiber.Ctx) error {
 			AvgLatency30d:  int64(math.Round(summary.AvgLatency)),
 			CurrentStatus:  currentStatus,
 			CurrentLatency: currentLatency,
-			HourlyBuckets:  buildHourlyBuckets(recentHistory, now),
+			HourlyBuckets:  buildHourlyBuckets(recentHistory, now, server.SlowThreshold),
+			SlowThreshold:  server.SlowThreshold,
 		})
 	}
 
 	return c.JSON(response)
 }
 
-func buildHourlyBuckets(history []model.CheckResult, now time.Time) []string {
+func buildHourlyBuckets(history []model.CheckResult, now time.Time, slowThreshold int) []string {
 	buckets := make([]string, 24)
 	for i := range buckets {
 		buckets[i] = "empty"
@@ -94,7 +95,7 @@ func buildHourlyBuckets(history []model.CheckResult, now time.Time) []string {
 			continue
 		}
 
-		next := bucketStatus(result)
+		next := bucketStatus(result, slowThreshold)
 		current := buckets[index]
 		if current == "error" {
 			continue
@@ -111,11 +112,11 @@ func buildHourlyBuckets(history []model.CheckResult, now time.Time) []string {
 	return buckets
 }
 
-func bucketStatus(result model.CheckResult) string {
+func bucketStatus(result model.CheckResult, slowThreshold int) string {
 	if !(strings.HasPrefix(result.Status, "2") || result.Status == "Connected") {
 		return "error"
 	}
-	if result.Latency > 300 {
+	if result.Latency > int64(slowThreshold) {
 		return "slow"
 	}
 	return "ok"
@@ -139,8 +140,11 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	if serverRequest.Timeout <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Timeout is required"})
 	}
+	if serverRequest.SlowThreshold <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
+	}
 
-	server, err := s.DB.AddServer(userID, serverRequest.Name, serverRequest.URL, serverRequest.CheckType, serverRequest.CheckInterval, serverRequest.Timeout)
+	server, err := s.DB.AddServer(userID, serverRequest.Name, serverRequest.URL, serverRequest.CheckType, serverRequest.CheckInterval, serverRequest.Timeout, serverRequest.SlowThreshold)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
@@ -171,8 +175,11 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 	if req.Timeout <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Timeout is required"})
 	}
+	if req.SlowThreshold <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
+	}
 
-	server, err := s.DB.UpdateServer(userID, serverID, req.Name, req.URL, req.CheckType, req.CheckInterval, req.Timeout)
+	server, err := s.DB.UpdateServer(userID, serverID, req.Name, req.URL, req.CheckType, req.CheckInterval, req.Timeout, req.SlowThreshold)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})

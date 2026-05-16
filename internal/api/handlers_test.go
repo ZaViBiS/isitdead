@@ -10,11 +10,23 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/checker"
 	"github.com/ZaViBiS/isitdead/internal/database"
+	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestBuildHourlyBucketsUsesMonitorSlowThreshold(t *testing.T) {
+	now := time.Date(2026, time.May, 16, 12, 0, 0, 0, time.UTC)
+	history := []model.CheckResult{
+		{Status: "200 OK", Latency: 350, CreatedAt: now.Add(-30 * time.Minute)},
+	}
+
+	assert.Equal(t, "slow", buildHourlyBuckets(history, now, 300)[23])
+	assert.Equal(t, "ok", buildHourlyBuckets(history, now, 400)[23])
+}
 
 type stubMailer struct {
 	lastTo    string
@@ -174,6 +186,7 @@ func TestAPI(t *testing.T) {
 			"url":            "http://example.com",
 			"check_interval": 300,
 			"timeout":        10,
+			"slow_threshold": 300,
 		}
 		body, _ = json.Marshal(srvPayload)
 		req = httptest.NewRequest("POST", "/api/servers", bytes.NewReader(body))
@@ -202,6 +215,7 @@ func TestAPI(t *testing.T) {
 			"check_interval": 300,
 			"check_type":     "http",
 			"timeout":        10,
+			"slow_threshold": 300,
 			"public":         true,
 			"public_slug":    "test-server",
 		}
@@ -275,6 +289,7 @@ func TestAPI(t *testing.T) {
 			"check_interval": 120,
 			"check_type":     "http",
 			"timeout":        15,
+			"slow_threshold": 450,
 		}
 		body, _ = json.Marshal(updatePayload)
 		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
