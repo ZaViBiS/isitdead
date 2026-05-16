@@ -11,7 +11,8 @@
 		ShieldCheck,
 		Settings,
 		Mail,
-		X
+		X,
+		Link2
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -47,6 +48,27 @@
 	let editSlowThreshold = $state(300);
 	let editNotifyEmailDown = $state(true);
 	let editNotifyEmailRecovered = $state(true);
+
+	const checkTypeOptions = [
+		{
+			value: 'http',
+			label: 'HTTP',
+			description: 'Websites and API endpoints',
+			icon: Globe2
+		},
+		{
+			value: 'ping',
+			label: 'TCP',
+			description: 'Ports and service sockets',
+			icon: Activity
+		},
+		{
+			value: 'links',
+			label: 'Links',
+			description: 'Broken link scans',
+			icon: Link2
+		}
+	];
 
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
@@ -488,18 +510,37 @@
 								{/if}
 							</div>
 							<div class="space-y-2 md:col-span-2">
-								<label for="type" class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-									>Check type</label
-								>
-								<select
-									id="type"
-									bind:value={newType}
-									class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-								>
-									<option value="http">HTTP (GET)</option>
-									<option value="ping">TCP port</option>
-									<option value="links">Broken links</option>
-								</select>
+								<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">Check type</div>
+								<div class="grid gap-2 sm:grid-cols-3">
+									{#each checkTypeOptions as option (option.value)}
+										{@const TypeIcon = option.icon}
+										<button
+											type="button"
+											onclick={() => (newType = option.value)}
+											class="group rounded-2xl border p-3 text-left transition {newType ===
+											option.value
+												? 'border-brand-primary/35 bg-brand-primary/10 shadow-lg shadow-brand-primary/10'
+												: 'border-brand-light/10 bg-brand-dark/40 hover:border-brand-light/20 hover:bg-brand-light/[0.035]'}"
+										>
+											<div class="mb-3 flex items-center justify-between gap-3">
+												<span
+													class="rounded-xl p-2 {newType === option.value
+														? 'bg-brand-primary text-brand-dark'
+														: 'bg-brand-light/5 text-brand-light/45 group-hover:text-brand-light/70'}"
+												>
+													<TypeIcon class="h-4 w-4" />
+												</span>
+												{#if newType === option.value}
+													<span class="h-2 w-2 rounded-full bg-brand-primary"></span>
+												{/if}
+											</div>
+											<div class="text-sm font-black">{option.label}</div>
+											<div class="mt-1 text-xs leading-5 text-brand-light/40">
+												{option.description}
+											</div>
+										</button>
+									{/each}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -713,19 +754,39 @@
 										{/if}
 									</div>
 									<div class="space-y-2 md:col-span-2">
-										<label
-											for="edit-type"
-											class="ml-1 text-xs font-bold text-brand-light/45 uppercase">Check type</label
-										>
-										<select
-											id="edit-type"
-											bind:value={editType}
-											class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-										>
-											<option value="http">HTTP (GET)</option>
-											<option value="ping">TCP port</option>
-											<option value="links">Broken links</option>
-										</select>
+										<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">
+											Check type
+										</div>
+										<div class="grid gap-2 sm:grid-cols-3">
+											{#each checkTypeOptions as option (option.value)}
+												{@const TypeIcon = option.icon}
+												<button
+													type="button"
+													onclick={() => (editType = option.value)}
+													class="group rounded-2xl border p-3 text-left transition {editType ===
+													option.value
+														? 'border-brand-primary/35 bg-brand-primary/10 shadow-lg shadow-brand-primary/10'
+														: 'border-brand-light/10 bg-brand-dark/40 hover:border-brand-light/20 hover:bg-brand-light/[0.035]'}"
+												>
+													<div class="mb-3 flex items-center justify-between gap-3">
+														<span
+															class="rounded-xl p-2 {editType === option.value
+																? 'bg-brand-primary text-brand-dark'
+																: 'bg-brand-light/5 text-brand-light/45 group-hover:text-brand-light/70'}"
+														>
+															<TypeIcon class="h-4 w-4" />
+														</span>
+														{#if editType === option.value}
+															<span class="h-2 w-2 rounded-full bg-brand-primary"></span>
+														{/if}
+													</div>
+													<div class="text-sm font-black">{option.label}</div>
+													<div class="mt-1 text-xs leading-5 text-brand-light/40">
+														{option.description}
+													</div>
+												</button>
+											{/each}
+										</div>
 									</div>
 								</div>
 							</div>
