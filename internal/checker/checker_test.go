@@ -173,7 +173,7 @@ func TestLinkCheck(t *testing.T) {
 	})
 }
 
-func TestSSLCheck(t *testing.T) {
+func TestParseTLSTarget(t *testing.T) {
 	t.Run("parses bare host and explicit port", func(t *testing.T) {
 		address, serverName, err := parseTLSTarget("example.com:8443")
 

@@ -33,6 +33,7 @@ type lastResult struct {
 
 type TransitionNotifier interface {
 	Notify(ctx context.Context, server model.Server, previousState, currentState string, latency int64) error
+	NotifySSL(ctx context.Context, server model.Server, status model.SSLCertificateStatus, event string) error
 }
 
 // NewScheduler створює новий екземпляр планувальника
@@ -66,7 +67,89 @@ func (s *Scheduler) Start() error {
 		s.RunServerMonitor(server)
 	}
 
+	s.wg.Add(1)
+	go s.runSSLScheduler()
+
 	return nil
+}
+
+func (s *Scheduler) runSSLScheduler() {
+	defer s.wg.Done()
+	s.runSSLChecks()
+
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-ticker.C:
+			s.runSSLChecks()
+		}
+	}
+}
+
+func (s *Scheduler) runSSLChecks() {
+	servers, err := s.storage.GetSSLEnabledServers()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to load SSL-enabled servers")
+		return
+	}
+	for _, server := range servers {
+		s.RunSSLCheck(server)
+	}
+}
+
+func (s *Scheduler) RunSSLCheck(server model.Server) {
+	previous, _ := s.storage.GetSSLCertificateStatus(server.ID)
+	info := InspectSSLCertificate(server.URL, connectionTimeout(server.Timeout))
+	lastNotifiedThreshold := 0
+	if previous != nil {
+		lastNotifiedThreshold = previous.LastNotifiedThreshold
+	}
+	status := model.SSLCertificateStatus{
+		ServerID:              server.ID,
+		Valid:                 info.Valid,
+		SelfSigned:            info.SelfSigned,
+		ExpiresAt:             info.ExpiresAt,
+		DaysRemaining:         info.DaysRemaining,
+		Issuer:                info.Issuer,
+		LastError:             info.Error,
+		LastNotifiedThreshold: lastNotifiedThreshold,
+		LastCheckedAt:         time.Now().UTC(),
+	}
+	if err := s.storage.UpsertSSLCertificateStatus(status); err != nil {
+		log.Error().Err(err).Uint("server_id", server.ID).Msg("Failed to save SSL certificate status")
+		return
+	}
+	if s.notifier == nil || !status.Valid || status.ExpiresAt == nil {
+		return
+	}
+	event, threshold, ok := sslReminder(status.DaysRemaining, status.LastNotifiedThreshold)
+	if !ok {
+		return
+	}
+	if err := s.notifier.NotifySSL(s.ctx, server, status, event); err != nil {
+		log.Error().Err(err).Uint("server_id", server.ID).Msg("Failed to process SSL notification")
+		return
+	}
+	status.LastNotifiedThreshold = threshold
+	if err := s.storage.UpsertSSLCertificateStatus(status); err != nil {
+		log.Error().Err(err).Uint("server_id", server.ID).Msg("Failed to save SSL notification threshold")
+	}
+}
+
+func sslReminder(daysRemaining, lastNotifiedThreshold int) (event string, threshold int, ok bool) {
+	switch {
+	case daysRemaining <= 7 && lastNotifiedThreshold != 7:
+		return model.NotificationEventSSL7d, 7, true
+	case daysRemaining <= 14 && daysRemaining > 7 && lastNotifiedThreshold != 14:
+		return model.NotificationEventSSL14d, 14, true
+	case daysRemaining <= 30 && daysRemaining > 14 && lastNotifiedThreshold != 30:
+		return model.NotificationEventSSL30d, 30, true
+	default:
+		return "", 0, false
+	}
 }
 
 // Stop зупиняє всі процеси моніторингу

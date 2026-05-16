@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/database"
+	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +46,7 @@ func TestScheduler(t *testing.T) {
 	stubHTTP200Transport(t)
 
 	// Add server to DB
-	srv, err := storage.AddServer(user.ID, "Test Server", "http://example.test", "http", 1, 10, 300) // 1 second interval
+	srv, err := storage.AddServer(user.ID, "Test Server", "http://example.test", "http", 1, 10, 300, false) // 1 second interval
 	assert.NoError(t, err)
 
 	scheduler := NewScheduler(storage)
@@ -79,4 +80,29 @@ func TestScheduler(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, historyAfterStop, len(historyBeforeStop))
 	})
+}
+
+func TestSSLReminder(t *testing.T) {
+	tests := []struct {
+		name          string
+		daysRemaining int
+		lastThreshold int
+		wantEvent     string
+		wantThreshold int
+		wantOK        bool
+	}{
+		{name: "thirty day reminder", daysRemaining: 29, wantEvent: model.NotificationEventSSL30d, wantThreshold: 30, wantOK: true},
+		{name: "fourteen day reminder", daysRemaining: 14, lastThreshold: 30, wantEvent: model.NotificationEventSSL14d, wantThreshold: 14, wantOK: true},
+		{name: "seven day reminder", daysRemaining: 6, lastThreshold: 14, wantEvent: model.NotificationEventSSL7d, wantThreshold: 7, wantOK: true},
+		{name: "deduplicates current reminder", daysRemaining: 6, lastThreshold: 7, wantOK: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event, threshold, ok := sslReminder(tt.daysRemaining, tt.lastThreshold)
+			assert.Equal(t, tt.wantEvent, event)
+			assert.Equal(t, tt.wantThreshold, threshold)
+			assert.Equal(t, tt.wantOK, ok)
+		})
+	}
 }

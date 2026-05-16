@@ -26,7 +26,6 @@ func TestBuildHourlyBucketsUsesMonitorSlowThreshold(t *testing.T) {
 
 	assert.Equal(t, "slow", buildHourlyBuckets(history, now, "http", 300)[23])
 	assert.Equal(t, "ok", buildHourlyBuckets(history, now, "http", 400)[23])
-	assert.Equal(t, "ok", buildHourlyBuckets(history, now, "ssl", 300)[23])
 }
 
 type stubMailer struct {
@@ -269,7 +268,7 @@ func TestAPI(t *testing.T) {
 			Enabled bool   `json:"enabled"`
 		}
 		json.NewDecoder(resp.Body).Decode(&prefs)
-		assert.Len(t, prefs, 2)
+		assert.Len(t, prefs, 5)
 
 		updatePrefsPayload := []map[string]interface{}{
 			{"channel": "email", "event": "down", "enabled": false},

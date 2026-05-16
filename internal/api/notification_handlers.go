@@ -79,5 +79,9 @@ func isAllowedNotificationPreference(channel, event string) bool {
 	if channel != model.NotificationChannelEmail {
 		return false
 	}
-	return event == model.NotificationEventDown || event == model.NotificationEventUp
+	return event == model.NotificationEventDown ||
+		event == model.NotificationEventUp ||
+		event == model.NotificationEventSSL30d ||
+		event == model.NotificationEventSSL14d ||
+		event == model.NotificationEventSSL7d
 }

@@ -28,6 +28,45 @@ type Message struct {
 	CurrentState  string
 	Latency       int64
 	CheckedAt     time.Time
+	SSLStatus     *model.SSLCertificateStatus
+}
+
+func (s *Service) NotifySSL(ctx context.Context, server model.Server, status model.SSLCertificateStatus, event string) error {
+	return s.send(ctx, server, event, func(user model.User, pref model.NotificationPreference) Message {
+		return Message{
+			Event:      event,
+			Server:     server,
+			User:       user,
+			Preference: pref,
+			CheckedAt:  time.Now().UTC(),
+			SSLStatus:  &status,
+		}
+	})
+}
+
+type messageBuilder func(user model.User, pref model.NotificationPreference) Message
+
+func (s *Service) send(ctx context.Context, server model.Server, event string, build messageBuilder) error {
+	prefs, err := s.store.GetEnabledNotificationPreferences(server.ID, event)
+	if err != nil {
+		return err
+	}
+	for _, pref := range prefs {
+		sender, ok := s.senders[pref.Channel]
+		if !ok {
+			log.Warn().Str("channel", pref.Channel).Uint("server_id", server.ID).Msg("notification sender is not configured")
+			continue
+		}
+		user, err := s.store.GetUserByID(pref.UserID)
+		if err != nil {
+			log.Error().Err(err).Uint("user_id", pref.UserID).Uint("server_id", server.ID).Msg("failed to load notification recipient")
+			continue
+		}
+		if err := sender.Send(ctx, build(*user, pref)); err != nil {
+			log.Error().Err(err).Str("channel", pref.Channel).Uint("server_id", server.ID).Msg("failed to send notification")
+		}
+	}
+	return nil
 }
 
 type Service struct {
@@ -52,42 +91,18 @@ func (s *Service) Notify(ctx context.Context, server model.Server, previousState
 		return nil
 	}
 
-	prefs, err := s.store.GetEnabledNotificationPreferences(server.ID, event)
-	if err != nil {
-		return err
-	}
-
-	for _, pref := range prefs {
-		sender, ok := s.senders[pref.Channel]
-		if !ok {
-			log.Warn().Str("channel", pref.Channel).Uint("server_id", server.ID).Msg("notification sender is not configured")
-			continue
-		}
-
-		user, err := s.store.GetUserByID(pref.UserID)
-		if err != nil {
-			log.Error().Err(err).Uint("user_id", pref.UserID).Uint("server_id", server.ID).Msg("failed to load notification recipient")
-			continue
-		}
-
-		message := Message{
+	return s.send(ctx, server, event, func(user model.User, pref model.NotificationPreference) Message {
+		return Message{
 			Event:         event,
 			Server:        server,
-			User:          *user,
+			User:          user,
 			Preference:    pref,
 			PreviousState: previousState,
 			CurrentState:  currentState,
 			Latency:       latency,
 			CheckedAt:     time.Now().UTC(),
 		}
-
-		if err := sender.Send(ctx, message); err != nil {
-			log.Error().Err(err).Str("channel", pref.Channel).Uint("server_id", server.ID).Msg("failed to send notification")
-			continue
-		}
-	}
-
-	return nil
+	})
 }
 
 func transitionEvent(previousState, currentState string) (string, bool) {

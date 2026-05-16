@@ -31,6 +31,16 @@ func (s *Server) handleGetDashboardServers(c fiber.Ctx) error {
 	thirtyDaysAgo := now.Add(-720 * time.Hour)
 	lastDayAgo := now.Add(-24 * time.Hour)
 	response := make([]dashboardServerResponse, 0, len(servers))
+	sslServerIDs := make([]uint, 0)
+	for _, server := range servers {
+		if server.SSLEnabled {
+			sslServerIDs = append(sslServerIDs, server.ID)
+		}
+	}
+	sslStatuses, err := s.DB.GetSSLCertificateStatuses(sslServerIDs)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch SSL statuses"})
+	}
 
 	for _, server := range servers {
 		summary, err := s.DB.GetHistorySummarySince(server.ID, thirtyDaysAgo)
@@ -72,7 +82,25 @@ func (s *Server) handleGetDashboardServers(c fiber.Ctx) error {
 			CurrentLatency: currentLatency,
 			HourlyBuckets:  buildHourlyBuckets(recentHistory, now, server.CheckType, server.SlowThreshold),
 			SlowThreshold:  server.SlowThreshold,
+			SSLEnabled:     server.SSLEnabled,
 		})
+		if server.SSLEnabled {
+			if sslStatus, ok := sslStatuses[server.ID]; ok {
+				expiresAt := ""
+				if sslStatus.ExpiresAt != nil {
+					expiresAt = sslStatus.ExpiresAt.UTC().Format(time.RFC3339)
+				}
+				response[len(response)-1].SSLStatus = &sslCertificateStatusResponse{
+					Valid:         sslStatus.Valid,
+					SelfSigned:    sslStatus.SelfSigned,
+					ExpiresAt:     expiresAt,
+					DaysRemaining: sslStatus.DaysRemaining,
+					Issuer:        sslStatus.Issuer,
+					LastError:     sslStatus.LastError,
+					LastCheckedAt: sslStatus.LastCheckedAt.UTC().Format(time.RFC3339),
+				}
+			}
+		}
 	}
 
 	return c.JSON(response)
@@ -116,9 +144,6 @@ func bucketStatus(result model.CheckResult, checkType string, slowThreshold int)
 	if !(strings.HasPrefix(result.Status, "2") || result.Status == "Connected") {
 		return "error"
 	}
-	if checkType == "ssl" {
-		return "ok"
-	}
 	if result.Latency > int64(slowThreshold) {
 		return "slow"
 	}
@@ -147,7 +172,11 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
 	}
 
-	server, err := s.DB.AddServer(userID, serverRequest.Name, serverRequest.URL, serverRequest.CheckType, serverRequest.CheckInterval, serverRequest.Timeout, serverRequest.SlowThreshold)
+	if serverRequest.SSLEnabled && !supportsSSLMonitoring(serverRequest.CheckType) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "SSL monitoring is only supported for HTTP and link monitors"})
+	}
+
+	server, err := s.DB.AddServer(userID, serverRequest.Name, serverRequest.URL, serverRequest.CheckType, serverRequest.CheckInterval, serverRequest.Timeout, serverRequest.SlowThreshold, serverRequest.SSLEnabled)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
@@ -158,6 +187,9 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	// Запускаємо моніторинг для нового сервера негайно
 	if s.Scheduler != nil {
 		s.Scheduler.RunServerMonitor(*server)
+		if server.SSLEnabled {
+			go s.Scheduler.RunSSLCheck(*server)
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(server)
@@ -182,7 +214,11 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
 	}
 
-	server, err := s.DB.UpdateServer(userID, serverID, req.Name, req.URL, req.CheckType, req.CheckInterval, req.Timeout, req.SlowThreshold)
+	if req.SSLEnabled && !supportsSSLMonitoring(req.CheckType) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "SSL monitoring is only supported for HTTP and link monitors"})
+	}
+
+	server, err := s.DB.UpdateServer(userID, serverID, req.Name, req.URL, req.CheckType, req.CheckInterval, req.Timeout, req.SlowThreshold, req.SSLEnabled)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Public slug is already used"})
@@ -193,9 +229,16 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 	// Оновлюємо планувальник, якщо він активний
 	if s.Scheduler != nil {
 		s.Scheduler.RunServerMonitor(*server)
+		if server.SSLEnabled {
+			go s.Scheduler.RunSSLCheck(*server)
+		}
 	}
 
 	return c.JSON(server)
+}
+
+func supportsSSLMonitoring(checkType string) bool {
+	return checkType == "http" || checkType == "links"
 }
 
 func (s *Server) handleDeleteServer(c fiber.Ctx) error {
