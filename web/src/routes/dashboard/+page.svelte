@@ -986,6 +986,11 @@
 									>
 										{compactStatus(currentStatus)}
 									</span>
+									<span
+										class="rounded-lg border border-brand-gold/15 bg-brand-gold/10 px-2 py-1 text-[10px] font-black tracking-widest text-brand-gold uppercase"
+									>
+										slow &gt; {s.slow_threshold}ms
+									</span>
 								</div>
 
 								<div>
