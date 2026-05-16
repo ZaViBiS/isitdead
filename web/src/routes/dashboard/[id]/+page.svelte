@@ -17,6 +17,7 @@
 		getFaviconUrl,
 		getCurrentCheck,
 		getEffectiveSlowThreshold,
+		formatDateTime,
 		supportsSlowThreshold,
 		sampleChartHistory,
 		type Server,
@@ -319,10 +320,7 @@
 											>Timestamp</span
 										>
 										<span class="text-sm font-medium text-brand-light/80"
-											>{new Date(result.created_at).toLocaleString('en-US', {
-												dateStyle: 'medium',
-												timeStyle: 'short'
-											})}</span
+											>{formatDateTime(result.created_at)}</span
 										>
 									</div>
 									<div class="flex items-center justify-between gap-3 sm:col-span-3 sm:block">

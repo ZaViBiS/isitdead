@@ -27,6 +27,7 @@
 		getRecentHistory,
 		getStatusColor,
 		getEffectiveSlowThreshold,
+		formatDateTime,
 		supportsSlowThreshold,
 		type CheckResult
 	} from '$lib/utils';
@@ -120,13 +121,6 @@
 		if (isUnknownStatus(status)) return 'Unknown';
 		if (status === 'Connected') return 'Connected';
 		return status.length > 34 ? `${status.slice(0, 31)}...` : status;
-	}
-
-	function formatDateTime(value: string) {
-		return new Date(value).toLocaleString('en-US', {
-			dateStyle: 'medium',
-			timeStyle: 'short'
-		});
 	}
 
 	function formatInterval(seconds: number) {
