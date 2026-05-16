@@ -15,10 +15,8 @@
 	import {
 		getStatusColor,
 		getFaviconUrl,
-		getRecentHistory,
 		getCurrentCheck,
-		calculateUptime,
-		calculateAvgLatency,
+		sampleChartHistory,
 		type Server,
 		type CheckResult
 	} from '$lib/utils';
@@ -39,7 +37,7 @@
 		}
 
 		try {
-			const res = await fetch(`/api/servers`, {
+			const res = await fetch(`/api/dashboard/servers`, {
 				headers: { Authorization: `Bearer ${token}` }
 			});
 
@@ -49,16 +47,14 @@
 
 				if (found) {
 					server = { ...found, history: [], history30d: [], incidents: [] };
-					// Fetch 30 days for metrics
-					const resHist = await fetch(`/api/servers/${id}/results?hours=720`, {
+					const resHist = await fetch(`/api/servers/${id}/results?hours=72`, {
 						headers: { Authorization: `Bearer ${token}` }
 					});
 					if (resHist.ok) {
-						const dataHist = await resHist.json();
+						const dataHist = (await resHist.json()) as CheckResult[];
 						const s = server;
 						if (s) {
-							s.history30d = dataHist;
-							s.history = getRecentHistory(dataHist, 24);
+							s.history = sampleChartHistory(dataHist, s.slow_threshold);
 						}
 					}
 
@@ -106,8 +102,8 @@
 			</div>
 		</div>
 	{:else if server}
-		{@const uptime = calculateUptime(server.history30d || [])}
-		{@const avgLatency = calculateAvgLatency(server.history30d || [])}
+		{@const uptime = server.uptime_30d ?? 0}
+		{@const avgLatency = server.avg_latency_30d ?? 0}
 		{@const current = getCurrentCheck(server)}
 		{@const currentStatus = current?.status ?? 'unknown'}
 		{@const currentLatency = current?.latency ?? 0}
@@ -220,7 +216,7 @@
 								Response time
 							</h3>
 							<p class="text-sm text-brand-light/30">
-								Latency and availability over the last 24 hours.
+								Latency and availability over the last 3 days.
 							</p>
 						</div>
 						<div
@@ -242,11 +238,15 @@
 					</div>
 
 					<div class="relative">
-						<StatusChart history={server.history} height={500} slowThreshold={server.slow_threshold} />
+						<StatusChart
+							history={server.history}
+							height={500}
+							slowThreshold={server.slow_threshold}
+						/>
 						<div
 							class="absolute bottom-4 left-4 flex flex-wrap gap-2 text-[10px] font-bold tracking-widest text-brand-light/20 uppercase sm:gap-4"
 						>
-							<span>&larr; 24 hours ago</span>
+							<span>&larr; 3 days ago</span>
 							<span
 								>Peak: {Math.max(...server.history.map((r: CheckResult) => r.latency), 0)}ms</span
 							>

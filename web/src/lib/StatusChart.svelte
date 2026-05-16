@@ -12,11 +12,12 @@
 	function getChartPoints(history: CheckResult[], width: number, h: number) {
 		if (!history || history.length < 2) return [];
 		const maxLatency = Math.max(...history.map((r) => r.latency), 100);
-		// Add some padding at the top
 		const chartMax = maxLatency * 1.1;
-		const step = width / (history.length - 1);
-		return history.map((r, i) => ({
-			x: i * step,
+		const startTime = new Date(history[0].created_at).getTime();
+		const endTime = new Date(history[history.length - 1].created_at).getTime();
+		const duration = Math.max(endTime - startTime, 1);
+		return history.map((r) => ({
+			x: ((new Date(r.created_at).getTime() - startTime) / duration) * width,
 			y: h - (r.latency / chartMax) * h,
 			result: r
 		}));
@@ -32,11 +33,15 @@
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		const x = e.clientX - rect.left;
 		const ratio = x / rect.width;
-		const index = Math.min(
-			Math.max(Math.round(ratio * (history.length - 1)), 0),
-			history.length - 1
-		);
-		hoveredResult = history[index];
+		const startTime = new Date(history[0].created_at).getTime();
+		const endTime = new Date(history[history.length - 1].created_at).getTime();
+		const targetTime = startTime + ratio * (endTime - startTime);
+
+		hoveredResult = history.reduce((closest: CheckResult, result: CheckResult) => {
+			const closestDistance = Math.abs(new Date(closest.created_at).getTime() - targetTime);
+			const nextDistance = Math.abs(new Date(result.created_at).getTime() - targetTime);
+			return nextDistance < closestDistance ? result : closest;
+		});
 	}
 
 	const gridLines = [0.25, 0.5, 0.75];
@@ -101,8 +106,12 @@
 			/>
 
 			{#if hoveredResult}
-				{@const hIndex = history.indexOf(hoveredResult)}
-				{@const hX = (hIndex / (history.length - 1)) * 1000}
+				{@const startTime = new Date(history[0].created_at).getTime()}
+				{@const endTime = new Date(history[history.length - 1].created_at).getTime()}
+				{@const hX =
+					((new Date(hoveredResult.created_at).getTime() - startTime) /
+						Math.max(endTime - startTime, 1)) *
+					1000}
 				<line
 					x1={hX}
 					y1="0"
@@ -118,8 +127,12 @@
 
 		{#if hoveredResult}
 			{@const maxLatency = Math.max(...history.map((r: CheckResult) => r.latency), 100) * 1.1}
-			{@const hIndex = history.indexOf(hoveredResult)}
-			{@const hX_p = (hIndex / (history.length - 1)) * 100}
+			{@const startTime = new Date(history[0].created_at).getTime()}
+			{@const endTime = new Date(history[history.length - 1].created_at).getTime()}
+			{@const hX_p =
+				((new Date(hoveredResult.created_at).getTime() - startTime) /
+					Math.max(endTime - startTime, 1)) *
+				100}
 			{@const hY_p = (1 - hoveredResult.latency / maxLatency) * 100}
 
 			<div
