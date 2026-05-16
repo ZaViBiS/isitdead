@@ -172,3 +172,21 @@ func TestLinkCheck(t *testing.T) {
 		assert.Contains(t, status, "404 Not Found "+baseURL+"/gone from "+baseURL+"/child")
 	})
 }
+
+func TestSSLCheck(t *testing.T) {
+	t.Run("parses bare host and explicit port", func(t *testing.T) {
+		address, serverName, err := parseTLSTarget("example.com:8443")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "example.com:8443", address)
+		assert.Equal(t, "example.com", serverName)
+	})
+
+	t.Run("uses default HTTPS port for URLs", func(t *testing.T) {
+		address, serverName, err := parseTLSTarget("https://example.com/path")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "example.com:443", address)
+		assert.Equal(t, "example.com", serverName)
+	})
+}
