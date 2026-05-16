@@ -34,6 +34,7 @@
 		url: string;
 		check_type: string;
 		check_interval: number;
+		slow_threshold: number;
 		public_slug: string;
 		created_at: string;
 		updated_at: string;
@@ -100,7 +101,7 @@
 
 	function publicStatusColor(status: string, latency: number) {
 		if (isUnknownStatus(status)) return '#1f332f';
-		return getStatusColor(status, latency);
+		return getStatusColor(status, latency, monitor?.slow_threshold ?? 300);
 	}
 
 	function currentLabel(status: string) {
@@ -490,7 +491,7 @@
 								</span>
 								<span class="flex items-center gap-1.5">
 									<span class="h-2 w-2 rounded-full bg-[#E5B181]"></span>
-									Slow
+									Slow &gt; {monitor.slow_threshold}ms
 								</span>
 								<span class="flex items-center gap-1.5">
 									<span class="h-2 w-2 rounded-full bg-brand-accent"></span>
@@ -500,7 +501,11 @@
 						</div>
 
 						<div class="relative">
-							<StatusChart history={history24h} height={430} />
+							<StatusChart
+								history={history24h}
+								height={430}
+								slowThreshold={monitor.slow_threshold}
+							/>
 							<div
 								class="pointer-events-none absolute right-5 bottom-5 rounded-full border border-brand-light/10 bg-brand-dark/70 px-3 py-1 text-[10px] font-black tracking-widest text-brand-light/30 uppercase backdrop-blur"
 							>
@@ -526,7 +531,11 @@
 							</div>
 						</div>
 						<div class="flex h-12 w-full items-end gap-1">
-							{#each getHourlyBuckets(history24h) as bucketColor, index (index)}
+							{#each getHourlyBuckets(
+								history24h,
+								Date.now(),
+								monitor.slow_threshold
+							) as bucketColor, index (index)}
 								<div
 									class="group relative flex-1 cursor-help rounded-sm opacity-80 transition hover:opacity-100"
 									style="background-color: {bucketColor}; height: {bucketColor === '#1f332f'

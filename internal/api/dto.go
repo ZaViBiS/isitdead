@@ -18,6 +18,7 @@ type serverRequest struct {
 	CheckType     string `json:"check_type"`
 	CheckInterval int    `json:"check_interval"`
 	Timeout       int    `json:"timeout"`
+	SlowThreshold int    `json:"slow_threshold"`
 }
 
 type dashboardServerResponse struct {
@@ -27,6 +28,7 @@ type dashboardServerResponse struct {
 	CheckType      string   `json:"check_type"`
 	CheckInterval  int      `json:"check_interval"`
 	Timeout        int      `json:"timeout"`
+	SlowThreshold  int      `json:"slow_threshold"`
 	CheckCount30d  int64    `json:"check_count_30d"`
 	Uptime30d      float64  `json:"uptime_30d"`
 	AvgLatency30d  int64    `json:"avg_latency_30d"`

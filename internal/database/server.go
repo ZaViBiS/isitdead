@@ -6,7 +6,7 @@ import (
 )
 
 // AddServer додає новий сервер для моніторингу
-func (s *Storage) AddServer(userID uint, name string, url string, checkType string, checkInterval int, timeout int) (*model.Server, error) {
+func (s *Storage) AddServer(userID uint, name string, url string, checkType string, checkInterval int, timeout int, slowThreshold int) (*model.Server, error) {
 	server := &model.Server{
 		UserID:        userID,
 		Name:          name,
@@ -14,6 +14,7 @@ func (s *Storage) AddServer(userID uint, name string, url string, checkType stri
 		CheckType:     checkType,
 		CheckInterval: checkInterval,
 		Timeout:       timeout,
+		SlowThreshold: slowThreshold,
 	}
 
 	if err := s.executeWrite(func(db *gorm.DB) error {
@@ -53,7 +54,7 @@ func (s *Storage) GetServerByID(serverID uint) (*model.Server, error) {
 }
 
 // UpdateServer оновлює дані сервера
-func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType string, interval int, timeout int) (*model.Server, error) {
+func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType string, interval int, timeout int, slowThreshold int) (*model.Server, error) {
 	var server model.Server
 	// Перевіряємо, що сервер належить саме цьому користувачу
 	if err := s.DB.Where("id = ? AND user_id = ?", serverID, userID).First(&server).Error; err != nil {
@@ -65,6 +66,7 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType strin
 	server.CheckType = checkType
 	server.CheckInterval = interval
 	server.Timeout = timeout
+	server.SlowThreshold = slowThreshold
 
 	if err := s.executeWrite(func(db *gorm.DB) error {
 		return db.Save(&server).Error
