@@ -2,8 +2,10 @@
 package checker
 
 import (
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -54,6 +56,7 @@ type SSLCertificateInfo struct {
 	ExpiresAt     *time.Time
 	DaysRemaining int
 	Issuer        string
+	Fingerprint   string
 	Error         string
 }
 
@@ -98,11 +101,17 @@ func InspectSSLCertificate(target string, timeout time.Duration) SSLCertificateI
 		ExpiresAt:     &expiresAt,
 		DaysRemaining: daysRemaining,
 		Issuer:        cert.Issuer.String(),
+		Fingerprint:   certificateFingerprint(cert.Raw),
 	}
 	if verifyErr != nil {
 		info.Error = verifyErr.Error()
 	}
 	return info
+}
+
+func certificateFingerprint(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }
 
 func parseTLSTarget(target string) (address string, serverName string, err error) {
