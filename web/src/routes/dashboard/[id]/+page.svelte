@@ -16,6 +16,8 @@
 		getStatusColor,
 		getFaviconUrl,
 		getCurrentCheck,
+		getEffectiveSlowThreshold,
+		supportsSlowThreshold,
 		sampleChartHistory,
 		type Server,
 		type CheckResult
@@ -54,7 +56,10 @@
 						const dataHist = (await resHist.json()) as CheckResult[];
 						const s = server;
 						if (s) {
-							s.history = sampleChartHistory(dataHist, s.slow_threshold);
+							s.history = sampleChartHistory(
+								dataHist,
+								getEffectiveSlowThreshold(s.check_type, s.slow_threshold)
+							);
 						}
 					}
 
@@ -108,6 +113,10 @@
 		{@const currentStatus = current?.status ?? 'unknown'}
 		{@const currentLatency = current?.latency ?? 0}
 		{@const isOnline = currentStatus.startsWith('2') || currentStatus === 'Connected'}
+		{@const effectiveSlowThreshold = getEffectiveSlowThreshold(
+			server.check_type,
+			server.slow_threshold
+		)}
 
 		<div class="mb-8 flex flex-col justify-between gap-6 sm:mb-12 lg:flex-row lg:items-center">
 			<div class="flex items-start gap-4 sm:gap-6">
@@ -143,7 +152,7 @@
 						style="background-color: {getStatusColor(
 							currentStatus,
 							currentLatency,
-							server.slow_threshold
+							effectiveSlowThreshold
 						)}"
 					>
 						{#if isOnline}
@@ -229,10 +238,12 @@
 									class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"
 								></span> Healthy</span
 							>
-							<span class="flex items-center gap-1.5"
-								><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
-								{server.slow_threshold}ms</span
-							>
+							{#if supportsSlowThreshold(server.check_type)}
+								<span class="flex items-center gap-1.5"
+									><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
+									{server.slow_threshold}ms</span
+								>
+							{/if}
 							<span class="flex items-center gap-1.5"
 								><span class="h-2 w-2 rounded-full bg-brand-accent"></span> Down</span
 							>
@@ -243,7 +254,7 @@
 						<StatusChart
 							history={server.history}
 							height={500}
-							slowThreshold={server.slow_threshold}
+							slowThreshold={effectiveSlowThreshold}
 						/>
 						<div
 							class="absolute bottom-4 left-4 flex flex-wrap gap-2 text-[10px] font-bold tracking-widest text-brand-light/20 uppercase sm:gap-4"
@@ -298,7 +309,7 @@
 											style="background-color: {getStatusColor(
 												result.status,
 												result.latency,
-												server.slow_threshold
+												effectiveSlowThreshold
 											)}"
 										></div>
 									</div>
@@ -337,7 +348,7 @@
 											style="color: {getStatusColor(
 												result.status,
 												result.latency,
-												server.slow_threshold
+												effectiveSlowThreshold
 											)}"
 										>
 											{result.latency}<span class="ml-0.5 text-[10px] opacity-40">ms</span>

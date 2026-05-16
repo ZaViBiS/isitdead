@@ -20,6 +20,7 @@
 	import {
 		getDashboardBucketColor,
 		getCurrentCheck,
+		supportsSlowThreshold,
 		getFaviconUrl,
 		type Server,
 		type NotificationPreference
@@ -559,46 +560,48 @@
 							<h3 class="text-lg font-black">When should it alert</h3>
 						</div>
 						<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-							<div class="space-y-2">
-								<div class="ml-1 flex items-center justify-between">
-									<label for="timeout" class="text-xs font-bold text-brand-light/45 uppercase"
-										>Timeout</label
+							{#if supportsSlowThreshold(newType)}
+								<div class="space-y-2">
+									<div class="ml-1 flex items-center justify-between">
+										<label for="timeout" class="text-xs font-bold text-brand-light/45 uppercase"
+											>Timeout</label
+										>
+										<span
+											class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
+											>{newTimeout}s</span
+										>
+									</div>
+									<select
+										id="timeout"
+										bind:value={newTimeout}
+										class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
 									>
-									<span
-										class="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-primary"
-										>{newTimeout}s</span
-									>
+										{#each timeoutPresets as preset (preset)}
+											<option value={preset}>{preset}s</option>
+										{/each}
+									</select>
 								</div>
-								<select
-									id="timeout"
-									bind:value={newTimeout}
-									class="w-full cursor-pointer rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-								>
-									{#each timeoutPresets as preset (preset)}
-										<option value={preset}>{preset}s</option>
-									{/each}
-								</select>
-							</div>
-							<div class="space-y-2">
-								<div class="ml-1 flex items-center justify-between">
-									<label
-										for="slow-threshold"
-										class="text-xs font-bold text-brand-light/45 uppercase">Slow threshold</label
-									>
-									<span
-										class="rounded-full bg-brand-gold/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-gold"
-										>{newSlowThreshold}ms</span
-									>
+								<div class="space-y-2">
+									<div class="ml-1 flex items-center justify-between">
+										<label
+											for="slow-threshold"
+											class="text-xs font-bold text-brand-light/45 uppercase">Slow threshold</label
+										>
+										<span
+											class="rounded-full bg-brand-gold/10 px-2.5 py-1 text-xs font-black whitespace-nowrap text-brand-gold"
+											>{newSlowThreshold}ms</span
+										>
+									</div>
+									<input
+										id="slow-threshold"
+										type="number"
+										min="1"
+										bind:value={newSlowThreshold}
+										required
+										class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+									/>
 								</div>
-								<input
-									id="slow-threshold"
-									type="number"
-									min="1"
-									bind:value={newSlowThreshold}
-									required
-									class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-								/>
-							</div>
+							{/if}
 							<div class="min-w-0 space-y-2 sm:col-span-2 lg:col-span-1 xl:col-span-2">
 								<div class="ml-1 flex items-center justify-between">
 									<label for="interval" class="text-xs font-bold text-brand-light/45 uppercase"
@@ -723,20 +726,22 @@
 									</div>
 								</div>
 								<div class="grid gap-4 md:grid-cols-2">
-									<div class="space-y-2">
-										<label
-											for="edit-name"
-											class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
-											>Monitor name</label
-										>
-										<input
-											id="edit-name"
-											type="text"
-											bind:value={editName}
-											required
-											class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-										/>
-									</div>
+									{#if supportsSlowThreshold(editType)}
+										<div class="space-y-2">
+											<label
+												for="edit-name"
+												class="ml-1 text-xs font-bold text-brand-light/45 uppercase"
+												>Monitor name</label
+											>
+											<input
+												id="edit-name"
+												type="text"
+												bind:value={editName}
+												required
+												class="w-full rounded-2xl border border-brand-light/10 bg-brand-dark/60 px-4 py-3 transition outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+											/>
+										</div>
+									{/if}
 									<div class="space-y-2">
 										<label
 											for="edit-url"
@@ -995,11 +1000,13 @@
 										>
 											{compactStatus(currentStatus)}
 										</span>
-										<span
-											class="rounded-lg border border-brand-gold/15 bg-brand-gold/10 px-2 py-1 text-[10px] font-black tracking-widest whitespace-nowrap text-brand-gold uppercase"
-										>
-											slow &gt; {s.slow_threshold}ms
-										</span>
+										{#if supportsSlowThreshold(s.check_type)}
+											<span
+												class="rounded-lg border border-brand-gold/15 bg-brand-gold/10 px-2 py-1 text-[10px] font-black tracking-widest whitespace-nowrap text-brand-gold uppercase"
+											>
+												slow &gt; {s.slow_threshold}ms
+											</span>
+										{/if}
 									</div>
 								</div>
 
