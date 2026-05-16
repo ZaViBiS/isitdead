@@ -14,7 +14,8 @@
 		History,
 		RefreshCw,
 		ShieldCheck,
-		WifiOff
+		WifiOff,
+		LockKeyhole
 	} from 'lucide-svelte';
 	import StatusChart from '$lib/StatusChart.svelte';
 	import {
@@ -276,7 +277,9 @@
 							<div
 								class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[2rem] border border-brand-light/10 bg-brand-light/[0.04] text-brand-primary/70 shadow-2xl"
 							>
-								{#if monitor.check_type === 'http' || monitor.check_type === 'links'}
+								{#if monitor.check_type === 'ssl'}
+									<LockKeyhole class="h-10 w-10" />
+								{:else if monitor.check_type === 'http' || monitor.check_type === 'links'}
 									<Globe2 class="h-10 w-10" />
 									<img
 										src={getFaviconUrl(monitor.url)}
@@ -531,11 +534,7 @@
 							</div>
 						</div>
 						<div class="flex h-12 w-full items-end gap-1">
-							{#each getHourlyBuckets(
-								history24h,
-								Date.now(),
-								monitor.slow_threshold
-							) as bucketColor, index (index)}
+							{#each getHourlyBuckets(history24h, Date.now(), monitor.slow_threshold) as bucketColor, index (index)}
 								<div
 									class="group relative flex-1 cursor-help rounded-sm opacity-80 transition hover:opacity-100"
 									style="background-color: {bucketColor}; height: {bucketColor === '#1f332f'

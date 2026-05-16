@@ -12,7 +12,8 @@
 		Settings,
 		Mail,
 		X,
-		Link2
+		Link2,
+		LockKeyhole
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -67,6 +68,12 @@
 			label: 'Links',
 			description: 'Broken link scans',
 			icon: Link2
+		},
+		{
+			value: 'ssl',
+			label: 'SSL',
+			description: 'Certificate validity',
+			icon: LockKeyhole
 		}
 	];
 
@@ -98,7 +105,7 @@
 
 	function normalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
-		if (!['http', 'links'].includes(checkType) || trimmed === '') return trimmed;
+		if (!['http', 'links', 'ssl'].includes(checkType) || trimmed === '') return trimmed;
 		if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
 		return `https://${trimmed}`;
 	}
@@ -106,7 +113,7 @@
 	function willNormalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
 		return (
-			['http', 'links'].includes(checkType) &&
+			['http', 'links', 'ssl'].includes(checkType) &&
 			trimmed !== '' &&
 			!trimmed.startsWith('http://') &&
 			!trimmed.startsWith('https://')
@@ -116,6 +123,7 @@
 	function getTargetPlaceholder(checkType: string) {
 		if (checkType === 'ping') return 'example.com:80';
 		if (checkType === 'links') return 'example.com or https://example.com';
+		if (checkType === 'ssl') return 'example.com or https://example.com';
 		return 'example.com or http://example.com';
 	}
 
@@ -511,7 +519,7 @@
 							</div>
 							<div class="space-y-2 md:col-span-2">
 								<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">Check type</div>
-								<div class="grid gap-2 sm:grid-cols-3">
+								<div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
 									{#each checkTypeOptions as option (option.value)}
 										{@const TypeIcon = option.icon}
 										<button
@@ -757,7 +765,7 @@
 										<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">
 											Check type
 										</div>
-										<div class="grid gap-2 sm:grid-cols-3">
+										<div class="grid gap-2 sm:grid-cols-2">
 											{#each checkTypeOptions as option (option.value)}
 												{@const TypeIcon = option.icon}
 												<button
@@ -973,24 +981,26 @@
 							class="grid gap-4 lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)_auto] lg:items-center"
 						>
 							<div class="order-2 min-w-0 lg:order-1">
-								<div class="mb-3 flex flex-wrap items-center gap-2">
-									<span class="micro-label">24h pulse</span>
-									<span
-										class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
-									>
-										every {formatInterval(s.check_interval)}
-									</span>
-									<span
-										class="truncate rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
-										title={currentStatus}
-									>
-										{compactStatus(currentStatus)}
-									</span>
-									<span
-										class="rounded-lg border border-brand-gold/15 bg-brand-gold/10 px-2 py-1 text-[10px] font-black tracking-widest text-brand-gold uppercase"
-									>
-										slow &gt; {s.slow_threshold}ms
-									</span>
+								<div class="mb-3 flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
+									<span class="micro-label shrink-0">24h pulse</span>
+									<div class="flex shrink-0 items-center gap-2">
+										<span
+											class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest whitespace-nowrap text-brand-light/35 uppercase"
+										>
+											every {formatInterval(s.check_interval)}
+										</span>
+										<span
+											class="max-w-32 truncate rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
+											title={currentStatus}
+										>
+											{compactStatus(currentStatus)}
+										</span>
+										<span
+											class="rounded-lg border border-brand-gold/15 bg-brand-gold/10 px-2 py-1 text-[10px] font-black tracking-widest whitespace-nowrap text-brand-gold uppercase"
+										>
+											slow &gt; {s.slow_threshold}ms
+										</span>
+									</div>
 								</div>
 
 								<div>
@@ -1050,7 +1060,9 @@
 										<div
 											class="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-brand-light/10 bg-brand-light/[0.04] text-brand-primary"
 										>
-											{#if s.check_type === 'http'}
+											{#if s.check_type === 'ssl'}
+												<LockKeyhole class="h-6 w-6" />
+											{:else if s.check_type === 'http' || s.check_type === 'links'}
 												<Globe2 class="h-6 w-6" />
 											{:else}
 												<Activity class="h-6 w-6" />

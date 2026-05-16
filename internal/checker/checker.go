@@ -2,6 +2,8 @@
 package checker
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net"
@@ -41,9 +43,69 @@ func Check(checkType, target string, timeoutSeconds int) (status string, latency
 		return TCPPing(target, timeout)
 	case "links":
 		return LinkCheck(target, timeout)
+	case "ssl":
+		return SSLCheck(target, timeout)
 	default:
 		return HttpCheck(target, timeout)
 	}
+}
+
+// SSLCheck validates the TLS certificate chain and reports the certificate expiry date.
+func SSLCheck(target string, timeout time.Duration) (status string, latency int64) {
+	return sslCheck(target, timeout, nil)
+}
+
+func sslCheck(target string, timeout time.Duration, roots *x509.CertPool) (status string, latency int64) {
+	start := time.Now()
+
+	address, serverName, err := parseTLSTarget(target)
+	if err != nil {
+		return err.Error(), time.Since(start).Milliseconds()
+	}
+
+	dialer := &net.Dialer{Timeout: timeout}
+	conn, err := tls.DialWithDialer(dialer, "tcp", address, &tls.Config{
+		ServerName: serverName,
+		RootCAs:    roots,
+	})
+	elapsed := time.Since(start).Milliseconds()
+	if err != nil {
+		return fmt.Sprintf("SSL Certificate Error: %v", err), elapsed
+	}
+	defer conn.Close()
+
+	state := conn.ConnectionState()
+	if len(state.PeerCertificates) == 0 {
+		return "SSL Certificate Error: server returned no certificates", elapsed
+	}
+
+	return fmt.Sprintf("200 OK; SSL expires %s", state.PeerCertificates[0].NotAfter.UTC().Format("2006-01-02")), elapsed
+}
+
+func parseTLSTarget(target string) (address string, serverName string, err error) {
+	rawTarget := strings.TrimSpace(target)
+	if rawTarget == "" {
+		return "", "", fmt.Errorf("missing TLS target")
+	}
+
+	if !strings.Contains(rawTarget, "://") {
+		rawTarget = "https://" + rawTarget
+	}
+
+	parsed, err := url.Parse(rawTarget)
+	if err != nil {
+		return "", "", err
+	}
+	if parsed.Hostname() == "" {
+		return "", "", fmt.Errorf("missing TLS host")
+	}
+
+	port := parsed.Port()
+	if port == "" {
+		port = "443"
+	}
+
+	return net.JoinHostPort(parsed.Hostname(), port), parsed.Hostname(), nil
 }
 
 // HttpCheck виконує запит до URL і повертає статус та затримку
