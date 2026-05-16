@@ -14,7 +14,6 @@
 		X,
 		Link2,
 		LockKeyhole,
-		CircleHelp,
 		ShieldAlert
 	} from 'lucide-svelte';
 	import { goto } from '$app/navigation';
@@ -24,6 +23,7 @@
 		getCurrentCheck,
 		supportsSlowThreshold,
 		getFaviconUrl,
+		formatDateOnly,
 		type Server,
 		type NotificationPreference
 	} from '$lib/utils';
@@ -199,11 +199,6 @@
 		return Math.max(servers.length - getHealthyCount(), 0);
 	}
 
-	function compactStatus(status: string) {
-		const normalized = status || 'unknown';
-		return normalized.length > 28 ? `${normalized.slice(0, 25)}...` : normalized;
-	}
-
 	function getSSLLabel(server: Server) {
 		const status = server.ssl_status;
 		if (!status) return 'SSL';
@@ -222,7 +217,7 @@
 		if (status.days_remaining <= 14) return 'border-brand-gold/20 bg-brand-gold/10 text-brand-gold';
 		if (status.days_remaining <= 30)
 			return 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary';
-		return 'border-brand-light/15 bg-brand-light/[0.05] text-brand-light';
+		return 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary';
 	}
 
 	async function addServer(e: SubmitEvent) {
@@ -1052,19 +1047,12 @@
 							class="grid gap-4 lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)_auto] lg:items-center"
 						>
 							<div class="order-2 min-w-0 lg:order-1">
-								<div class="mb-3 flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
-									<span class="micro-label shrink-0">24h pulse</span>
-									<div class="flex shrink-0 items-center gap-2">
+								<div class="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+									<div class="flex min-w-0 flex-wrap items-center gap-2">
 										<span
 											class="rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest whitespace-nowrap text-brand-light/35 uppercase"
 										>
 											every {formatInterval(s.check_interval)}
-										</span>
-										<span
-											class="max-w-32 truncate rounded-lg border border-brand-light/10 bg-brand-light/[0.04] px-2 py-1 text-[10px] font-black tracking-widest text-brand-light/35 uppercase"
-											title={currentStatus}
-										>
-											{compactStatus(currentStatus)}
 										</span>
 										{#if supportsSlowThreshold(s.check_type)}
 											<span
@@ -1087,7 +1075,6 @@
 														<LockKeyhole class="h-3 w-3" />
 													{/if}
 													{getSSLLabel(s)}
-													<CircleHelp class="h-3 w-3 opacity-60" />
 												</button>
 												<div
 													class="pointer-events-none absolute bottom-full left-0 z-40 mb-2 hidden w-64 rounded-2xl border border-brand-light/10 bg-brand-dark/95 p-4 text-left text-xs leading-5 text-brand-light/60 shadow-2xl group-focus-within/ssl:block group-hover/ssl:block"
@@ -1102,9 +1089,7 @@
 													<div class="text-brand-soft">Pink: self-signed certificate</div>
 													{#if s.ssl_status?.expires_at}
 														<div class="mt-2 border-t border-brand-light/10 pt-2">
-															Expires: {new Date(s.ssl_status.expires_at).toLocaleDateString(
-																'en-US'
-															)}
+															Expires: {formatDateOnly(s.ssl_status.expires_at)}
 														</div>
 													{/if}
 												</div>

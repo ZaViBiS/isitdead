@@ -76,7 +76,7 @@ export function getFaviconUrl(url: string): string {
 
 export function formatDate(dateStr: string): string {
 	const date = new Date(dateStr);
-	return new Intl.DateTimeFormat('en-US', {
+	return new Intl.DateTimeFormat('en-GB', {
 		day: '2-digit',
 		month: '2-digit',
 		year: 'numeric',
@@ -85,6 +85,22 @@ export function formatDate(dateStr: string): string {
 		second: '2-digit',
 		hour12: false
 	}).format(date);
+}
+
+export function formatDateTime(dateStr: string): string {
+	return new Intl.DateTimeFormat('en-GB', {
+		dateStyle: 'medium',
+		timeStyle: 'short',
+		hour12: false
+	}).format(new Date(dateStr));
+}
+
+export function formatDateOnly(dateStr: string): string {
+	return new Intl.DateTimeFormat('en-GB', {
+		day: '2-digit',
+		month: '2-digit',
+		year: 'numeric'
+	}).format(new Date(dateStr));
 }
 
 export function calculateUptime(history: CheckResult[]) {
