@@ -26,6 +26,8 @@
 		getLatestCheck,
 		getRecentHistory,
 		getStatusColor,
+		getEffectiveSlowThreshold,
+		supportsSlowThreshold,
 		type CheckResult
 	} from '$lib/utils';
 
@@ -102,7 +104,11 @@
 
 	function publicStatusColor(status: string, latency: number) {
 		if (isUnknownStatus(status)) return '#1f332f';
-		return getStatusColor(status, latency, monitor?.slow_threshold ?? 300);
+		return getStatusColor(
+			status,
+			latency,
+			monitor ? getEffectiveSlowThreshold(monitor.check_type, monitor.slow_threshold) : 300
+		);
 	}
 
 	function currentLabel(status: string) {
@@ -247,6 +253,10 @@
 			{@const unknown = isUnknownStatus(currentStatus)}
 			{@const statusLabel = currentLabel(currentStatus)}
 			{@const color = publicStatusColor(currentStatus, currentLatency)}
+			{@const effectiveSlowThreshold = getEffectiveSlowThreshold(
+				monitor.check_type,
+				monitor.slow_threshold
+			)}
 			{@const href = targetHref(monitor.url, monitor.check_type)}
 
 			<section class="mb-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-start">
@@ -492,10 +502,12 @@
 									></span>
 									Healthy
 								</span>
-								<span class="flex items-center gap-1.5">
-									<span class="h-2 w-2 rounded-full bg-[#E5B181]"></span>
-									Slow &gt; {monitor.slow_threshold}ms
-								</span>
+								{#if supportsSlowThreshold(monitor.check_type)}
+									<span class="flex items-center gap-1.5">
+										<span class="h-2 w-2 rounded-full bg-[#E5B181]"></span>
+										Slow &gt; {monitor.slow_threshold}ms
+									</span>
+								{/if}
 								<span class="flex items-center gap-1.5">
 									<span class="h-2 w-2 rounded-full bg-brand-accent"></span>
 									Down
@@ -507,7 +519,7 @@
 							<StatusChart
 								history={history24h}
 								height={430}
-								slowThreshold={monitor.slow_threshold}
+								slowThreshold={effectiveSlowThreshold}
 							/>
 							<div
 								class="pointer-events-none absolute right-5 bottom-5 rounded-full border border-brand-light/10 bg-brand-dark/70 px-3 py-1 text-[10px] font-black tracking-widest text-brand-light/30 uppercase backdrop-blur"
@@ -534,7 +546,7 @@
 							</div>
 						</div>
 						<div class="flex h-12 w-full items-end gap-1">
-							{#each getHourlyBuckets(history24h, Date.now(), monitor.slow_threshold) as bucketColor, index (index)}
+							{#each getHourlyBuckets(history24h, Date.now(), effectiveSlowThreshold) as bucketColor, index (index)}
 								<div
 									class="group relative flex-1 cursor-help rounded-sm opacity-80 transition hover:opacity-100"
 									style="background-color: {bucketColor}; height: {bucketColor === '#1f332f'

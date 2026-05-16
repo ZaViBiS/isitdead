@@ -70,7 +70,7 @@ func (s *Server) handleGetDashboardServers(c fiber.Ctx) error {
 			AvgLatency30d:  int64(math.Round(summary.AvgLatency)),
 			CurrentStatus:  currentStatus,
 			CurrentLatency: currentLatency,
-			HourlyBuckets:  buildHourlyBuckets(recentHistory, now, server.SlowThreshold),
+			HourlyBuckets:  buildHourlyBuckets(recentHistory, now, server.CheckType, server.SlowThreshold),
 			SlowThreshold:  server.SlowThreshold,
 		})
 	}
@@ -78,7 +78,7 @@ func (s *Server) handleGetDashboardServers(c fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-func buildHourlyBuckets(history []model.CheckResult, now time.Time, slowThreshold int) []string {
+func buildHourlyBuckets(history []model.CheckResult, now time.Time, checkType string, slowThreshold int) []string {
 	buckets := make([]string, 24)
 	for i := range buckets {
 		buckets[i] = "empty"
@@ -95,7 +95,7 @@ func buildHourlyBuckets(history []model.CheckResult, now time.Time, slowThreshol
 			continue
 		}
 
-		next := bucketStatus(result, slowThreshold)
+		next := bucketStatus(result, checkType, slowThreshold)
 		current := buckets[index]
 		if current == "error" {
 			continue
@@ -112,9 +112,12 @@ func buildHourlyBuckets(history []model.CheckResult, now time.Time, slowThreshol
 	return buckets
 }
 
-func bucketStatus(result model.CheckResult, slowThreshold int) string {
+func bucketStatus(result model.CheckResult, checkType string, slowThreshold int) string {
 	if !(strings.HasPrefix(result.Status, "2") || result.Status == "Connected") {
 		return "error"
+	}
+	if checkType == "ssl" {
+		return "ok"
 	}
 	if result.Latency > int64(slowThreshold) {
 		return "slow"

@@ -24,8 +24,9 @@ func TestBuildHourlyBucketsUsesMonitorSlowThreshold(t *testing.T) {
 		{Status: "200 OK", Latency: 350, CreatedAt: now.Add(-30 * time.Minute)},
 	}
 
-	assert.Equal(t, "slow", buildHourlyBuckets(history, now, 300)[23])
-	assert.Equal(t, "ok", buildHourlyBuckets(history, now, 400)[23])
+	assert.Equal(t, "slow", buildHourlyBuckets(history, now, "http", 300)[23])
+	assert.Equal(t, "ok", buildHourlyBuckets(history, now, "http", 400)[23])
+	assert.Equal(t, "ok", buildHourlyBuckets(history, now, "ssl", 300)[23])
 }
 
 type stubMailer struct {

@@ -45,6 +45,14 @@ export function getStatusColor(status: string, latency: number, slowThreshold = 
 	return '#73E2A7';
 }
 
+export function supportsSlowThreshold(checkType: string) {
+	return checkType !== 'ssl';
+}
+
+export function getEffectiveSlowThreshold(checkType: string, slowThreshold: number) {
+	return supportsSlowThreshold(checkType) ? slowThreshold : Number.POSITIVE_INFINITY;
+}
+
 export function getFaviconUrl(url: string): string {
 	try {
 		const domain = new URL(url.startsWith('http') ? url : `http://${url}`).hostname;
