@@ -2,20 +2,37 @@ package mail
 
 import (
 	"bytes"
-	"crypto/tls"
+	"encoding/json"
 	"fmt"
-	"net/smtp"
+	"io"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/config"
 )
 
+const resendEmailsEndpoint = "https://api.resend.com/emails"
+
 type Mailer struct {
-	cfg *config.Config
+	cfg      *config.Config
+	client   *http.Client
+	endpoint string
+}
+
+type sendEmailRequest struct {
+	From    string   `json:"from"`
+	To      []string `json:"to"`
+	Subject string   `json:"subject"`
+	HTML    string   `json:"html"`
 }
 
 func New(cfg *config.Config) *Mailer {
-	return &Mailer{cfg: cfg}
+	return &Mailer{
+		cfg:      cfg,
+		client:   &http.Client{Timeout: 10 * time.Second},
+		endpoint: resendEmailsEndpoint,
+	}
 }
 
 func (m *Mailer) SendVerificationEmail(to, token string) error {
@@ -30,71 +47,41 @@ func (m *Mailer) SendVerificationEmail(to, token string) error {
 }
 
 func (m *Mailer) SendHTML(to, subject, body string) error {
-	msg := buildMessage(m.cfg.SMTPFrom, to, subject, body)
-	addr := fmt.Sprintf("%s:%s", m.cfg.SMTPHost, m.cfg.SMTPPort)
-
-	auth := smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPass, m.cfg.SMTPHost)
-	if m.cfg.SMTPPort == "465" {
-		return sendMailImplicitTLS(addr, m.cfg.SMTPHost, auth, m.cfg.SMTPFrom, to, msg)
+	if strings.TrimSpace(m.cfg.ResendAPIKey) == "" {
+		return fmt.Errorf("resend api key is empty")
+	}
+	if strings.TrimSpace(m.cfg.ResendFrom) == "" {
+		return fmt.Errorf("resend from address is empty")
 	}
 
-	return smtp.SendMail(addr, auth, m.cfg.SMTPFrom, []string{to}, msg)
-}
-
-func buildVerificationMessage(from, to, body string) []byte {
-	return buildMessage(from, to, "Confirm your email for isitdead.cc", body)
-}
-
-func buildMessage(from, to, subject, body string) []byte {
-	var msg bytes.Buffer
-	msg.WriteString(fmt.Sprintf("From: %s\r\n", from))
-	msg.WriteString(fmt.Sprintf("To: %s\r\n", to))
-	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
-	msg.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
-	msg.WriteString("MIME-Version: 1.0\r\n")
-	msg.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
-	msg.WriteString("\r\n")
-	msg.WriteString(body)
-	return msg.Bytes()
-}
-
-func sendMailImplicitTLS(addr, host string, auth smtp.Auth, from, to string, msg []byte) error {
-	conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12})
+	payload, err := json.Marshal(sendEmailRequest{
+		From:    m.cfg.ResendFrom,
+		To:      []string{to},
+		Subject: subject,
+		HTML:    body,
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal resend payload: %w", err)
 	}
-	defer conn.Close()
 
-	client, err := smtp.NewClient(conn, host)
+	req, err := http.NewRequest(http.MethodPost, m.endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return err
+		return fmt.Errorf("build resend request: %w", err)
 	}
-	defer client.Close()
+	req.Header.Set("Authorization", "Bearer "+m.cfg.ResendAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "isitdead/1.0")
 
-	if auth != nil {
-		if err := client.Auth(auth); err != nil {
-			return err
-		}
-	}
-
-	if err := client.Mail(from); err != nil {
-		return err
-	}
-	if err := client.Rcpt(to); err != nil {
-		return err
-	}
-
-	w, err := client.Data()
+	resp, err := m.client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("send email via resend: %w", err)
 	}
-	if _, err := w.Write(msg); err != nil {
-		_ = w.Close()
-		return err
-	}
-	if err := w.Close(); err != nil {
-		return err
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
+		return fmt.Errorf("resend returned %s: %s", resp.Status, strings.TrimSpace(string(body)))
 	}
 
-	return client.Quit()
+	return nil
 }

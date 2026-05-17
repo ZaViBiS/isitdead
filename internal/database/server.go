@@ -79,16 +79,6 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType strin
 	return &server, nil
 }
 
-// UpdateServerStatus оновлює тільки статус та затримку
-func (s *Storage) UpdateServerStatus(serverID uint, status string, latency int64) error {
-	return s.executeWrite(func(db *gorm.DB) error {
-		return db.Model(&model.Server{}).Where("id = ?", serverID).Updates(map[string]any{
-			"status":  status,
-			"latency": latency,
-		}).Error
-	})
-}
-
 // DeleteServer видаляє сервер з бази даних
 func (s *Storage) DeleteServer(userID, serverID uint) error {
 	return s.executeWrite(func(db *gorm.DB) error {

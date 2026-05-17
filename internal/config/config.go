@@ -8,11 +8,8 @@ type Config struct {
 	Port         string
 	Domain       string
 	DBPath       string
-	SMTPHost     string
-	SMTPPort     string
-	SMTPUser     string
-	SMTPPass     string
-	SMTPFrom     string
+	ResendAPIKey string
+	ResendFrom   string
 	ClientID     string
 	ClientSecret string
 	JWTSecret    string
@@ -25,11 +22,8 @@ func Load() *Config {
 		Port:         getEnv("PORT", "8080"),
 		Domain:       getEnv("DOMAIN", "localhost"),
 		DBPath:       getEnv("DB_PATH", "/tmp/isitdead.db"),
-		SMTPHost:     getEnv("SMTP_HOST", "localhost"),
-		SMTPPort:     getEnv("SMTP_PORT", "465"),
-		SMTPUser:     getEnv("SMTP_USER", ""),
-		SMTPPass:     getEnv("SMTP_PASS", ""),
-		SMTPFrom:     getEnv("SMTP_FROM", "no-reply@localhost"),
+		ResendAPIKey: getEnv("RESEND_API_KEY", ""),
+		ResendFrom:   getEnv("RESEND_FROM", "no-reply@localhost"),
 		ClientID:     getEnv("CLIENT_ID", ""),
 		ClientSecret: getEnv("CLIENT_SECRET", ""),
 		JWTSecret:    getEnv("JWT_SECRET", "dev-secret-change-me"),
