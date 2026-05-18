@@ -42,7 +42,7 @@ func New(staticFiles embed.FS) (*App, error) {
 	notifier := notify.NewService(
 		db,
 		notify.NewEmailSender(mailer),
-		notify.NewTelegramSender(cfg.TelegramToken),
+		notify.NewTelegramSender(cfg.TelegramToken, cfg.BotAPIURL),
 	)
 	sched.SetNotifier(notifier)
 

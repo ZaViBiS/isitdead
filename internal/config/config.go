@@ -15,6 +15,7 @@ type Config struct {
 	JWTSecret    string
 	AdminEmails  string
 	TelegramToken string
+	BotAPIURL     string
 }
 
 func Load() *Config {
@@ -29,6 +30,7 @@ func Load() *Config {
 		ClientSecret:  getEnv("CLIENT_SECRET", ""),
 		JWTSecret:     getEnv("JWT_SECRET", "dev-secret-change-me"),
 		TelegramToken: getEnv("TELEGRAM_TOKEN", ""),
+		BotAPIURL:     getEnv("BOT_API_URL", ""),
 	}
 }
 

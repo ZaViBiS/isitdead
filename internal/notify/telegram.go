@@ -11,14 +11,16 @@ import (
 )
 
 type TelegramSender struct {
-	token string
-	client *http.Client
+	token     string
+	botAPIURL string
+	client    *http.Client
 }
 
-func NewTelegramSender(token string) *TelegramSender {
+func NewTelegramSender(token, botAPIURL string) *TelegramSender {
 	return &TelegramSender{
-		token: token,
-		client: &http.Client{
+		token:     token,
+		botAPIURL: botAPIURL,
+		client:    &http.Client{
 			Timeout: 10 * time.Second,
 		},
 	}
@@ -88,6 +90,9 @@ func (s *TelegramSender) Send(ctx context.Context, message Message) error {
 	}
 
 	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", s.token)
+	if s.botAPIURL != "" {
+		apiURL = fmt.Sprintf("%s/sendMessage", s.botAPIURL)
+	}
 	payload := url.Values{}
 	payload.Set("chat_id", chatID)
 	payload.Set("text", text)
