@@ -3,12 +3,13 @@ package model
 import "time"
 
 const (
-	NotificationChannelEmail = "email"
-	NotificationEventDown    = "down"
-	NotificationEventUp      = "recovered"
-	NotificationEventSSL30d  = "ssl_30d"
-	NotificationEventSSL14d  = "ssl_14d"
-	NotificationEventSSL7d   = "ssl_7d"
+	NotificationChannelEmail   = "email"
+	NotificationChannelTelegram = "telegram"
+	NotificationEventDown      = "down"
+	NotificationEventUp        = "recovered"
+	NotificationEventSSL30d    = "ssl_30d"
+	NotificationEventSSL14d    = "ssl_14d"
+	NotificationEventSSL7d     = "ssl_7d"
 )
 
 type NotificationPreference struct {

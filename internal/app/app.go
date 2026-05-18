@@ -39,7 +39,11 @@ func New(staticFiles embed.FS) (*App, error) {
 	mailer := mail.New(cfg)
 
 	// сервіс нотифікацій
-	notifier := notify.NewService(db, notify.NewEmailSender(mailer))
+	notifier := notify.NewService(
+		db,
+		notify.NewEmailSender(mailer),
+		notify.NewTelegramSender(cfg.TelegramToken),
+	)
 	sched.SetNotifier(notifier)
 
 	// Backend + Frontend (embed)
