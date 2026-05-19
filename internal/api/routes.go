@@ -23,4 +23,8 @@ func (s *Server) setupRoutes() {
 	api.Put("/servers/:id/notifications", s.handleUpdateNotificationPreferences)
 	api.Delete("/servers/:id", s.handleDeleteServer)
 	api.Get("/servers/:id/results", s.handleGetServerResults)
+
+	// telegram
+	tg := s.App.Group("/api/telegram")
+	tg.Get("/new_user/:id/:token", s.handleTelegramNewUser)
 }
