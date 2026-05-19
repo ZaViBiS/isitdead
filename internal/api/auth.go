@@ -14,7 +14,7 @@ func (s *Server) authMiddleware(c fiber.Ctx) error {
 	}
 
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return []byte(s.Config.JWTSecret), nil
 	})
 
