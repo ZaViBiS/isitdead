@@ -1,7 +1,21 @@
 // Package config завантажує конфігурацію з змінних середовища.
 package config
 
-import "os"
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+const (
+	RoleMain  = "main"
+	RoleProbe = "probe"
+)
+
+type ProbeRegion struct {
+	Name string
+	URL  string
+}
 
 type Config struct {
 	Env               string // "dev" / "prod"
@@ -17,9 +31,16 @@ type Config struct {
 	TelegramBotName   string
 	TelegramAPIURL    string
 	TelegramAPISecret string
+	InstanceRole      string
+	Region            string
+	ProbeSecret       string
+	ProbeRegions      []ProbeRegion
 }
 
 func Load() *Config {
+	role := strings.ToLower(strings.TrimSpace(getEnv("INSTANCE_ROLE", getEnv("NODE_ROLE", RoleMain))))
+	region := strings.TrimSpace(getEnv("REGION", "main"))
+
 	return &Config{
 		Env:               getEnv("ENV", "dev"),
 		Port:              getEnv("PORT", "8080"),
@@ -34,6 +55,10 @@ func Load() *Config {
 		TelegramBotName:   getEnv("TELEGRAM_BOT_NAME", ""),
 		TelegramAPIURL:    getEnv("TELEGRAM_API_URL", ""),
 		TelegramAPISecret: getEnv("TELEGRAM_API_SECRET", ""),
+		InstanceRole:      role,
+		Region:            region,
+		ProbeSecret:       getEnv("PROBE_SECRET", ""),
+		ProbeRegions:      parseProbeRegions(getEnv("PROBE_REGIONS", "")),
 	}
 }
 
@@ -42,4 +67,34 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func parseProbeRegions(raw string) []ProbeRegion {
+	parts := strings.Split(raw, ",")
+	regions := make([]ProbeRegion, 0, len(parts))
+	for i, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		name := ""
+		url := part
+		if before, after, ok := strings.Cut(part, "="); ok {
+			name = strings.TrimSpace(before)
+			url = strings.TrimSpace(after)
+		}
+		if name == "" {
+			name = fmt.Sprintf("probe-%d", i+1)
+		}
+		if url == "" {
+			continue
+		}
+
+		regions = append(regions, ProbeRegion{
+			Name: name,
+			URL:  strings.TrimRight(url, "/"),
+		})
+	}
+	return regions
 }
