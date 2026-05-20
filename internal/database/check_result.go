@@ -1,6 +1,7 @@
 package database
 
 import (
+	"strings"
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/model"
@@ -15,6 +16,7 @@ type HistorySummary struct {
 
 // AddCheckResult додає новий результат перевірки в базу даних через канал запису
 func (s *Storage) AddCheckResult(result model.CheckResult) error {
+	normalizeCheckResultRegion(&result)
 	return s.executeWrite(func(db *gorm.DB) error {
 		return db.Create(&result).Error
 	})
@@ -22,8 +24,13 @@ func (s *Storage) AddCheckResult(result model.CheckResult) error {
 
 // GetHistorySince повертає історію результатів перевірки для сервера після заданого часу.
 func (s *Storage) GetHistorySince(serverID uint, since time.Time) ([]model.CheckResult, error) {
+	return s.GetHistorySinceForRegion(serverID, model.CheckRegionGlobal, since)
+}
+
+func (s *Storage) GetHistorySinceForRegion(serverID uint, region string, since time.Time) ([]model.CheckResult, error) {
 	var results []model.CheckResult
-	err := s.DB.Where("server_id = ? AND created_at > ?", serverID, since).
+	query := s.DB.Where("server_id = ? AND created_at > ?", serverID, since)
+	err := filterCheckRegion(query, region).
 		Order("created_at asc").
 		Find(&results).Error
 	return results, err
@@ -31,8 +38,13 @@ func (s *Storage) GetHistorySince(serverID uint, since time.Time) ([]model.Check
 
 // GetRecentHistory повертає останні limit результатів перевірки в хронологічному порядку.
 func (s *Storage) GetRecentHistory(serverID uint, limit int) ([]model.CheckResult, error) {
+	return s.GetRecentHistoryForRegion(serverID, model.CheckRegionGlobal, limit)
+}
+
+func (s *Storage) GetRecentHistoryForRegion(serverID uint, region string, limit int) ([]model.CheckResult, error) {
 	var results []model.CheckResult
-	err := s.DB.Where("server_id = ?", serverID).
+	query := s.DB.Where("server_id = ?", serverID)
+	err := filterCheckRegion(query, region).
 		Order("created_at desc").
 		Limit(limit).
 		Find(&results).Error
@@ -48,21 +60,31 @@ func (s *Storage) GetRecentHistory(serverID uint, limit int) ([]model.CheckResul
 }
 
 func (s *Storage) GetHistorySummarySince(serverID uint, since time.Time) (HistorySummary, error) {
+	return s.GetHistorySummarySinceForRegion(serverID, model.CheckRegionGlobal, since)
+}
+
+func (s *Storage) GetHistorySummarySinceForRegion(serverID uint, region string, since time.Time) (HistorySummary, error) {
 	var summary HistorySummary
-	err := s.DB.Model(&model.CheckResult{}).
+	query := s.DB.Model(&model.CheckResult{}).
 		Select(`
 			COUNT(*) AS total,
 			COALESCE(SUM(CASE WHEN status LIKE '2%' OR status = 'Connected' THEN 1 ELSE 0 END), 0) AS online,
 			COALESCE(AVG(latency), 0) AS avg_latency
 		`).
-		Where("server_id = ? AND created_at > ?", serverID, since).
+		Where("server_id = ? AND created_at > ?", serverID, since)
+	err := filterCheckRegion(query, region).
 		Scan(&summary).Error
 	return summary, err
 }
 
 func (s *Storage) GetLatestCheckResult(serverID uint) (*model.CheckResult, error) {
+	return s.GetLatestCheckResultForRegion(serverID, model.CheckRegionGlobal)
+}
+
+func (s *Storage) GetLatestCheckResultForRegion(serverID uint, region string) (*model.CheckResult, error) {
 	var result model.CheckResult
-	err := s.DB.Where("server_id = ?", serverID).
+	query := s.DB.Where("server_id = ?", serverID)
+	err := filterCheckRegion(query, region).
 		Order("created_at desc").
 		First(&result).Error
 	if err != nil {
@@ -73,10 +95,15 @@ func (s *Storage) GetLatestCheckResult(serverID uint) (*model.CheckResult, error
 
 // GetIncidents повертає тільки результати з помилками для сервера
 func (s *Storage) GetIncidents(serverID uint, limit int) ([]model.CheckResult, error) {
+	return s.GetIncidentsForRegion(serverID, model.CheckRegionGlobal, limit)
+}
+
+func (s *Storage) GetIncidentsForRegion(serverID uint, region string, limit int) ([]model.CheckResult, error) {
 	var results []model.CheckResult
 	query := s.DB.Where("server_id = ?", serverID).
 		Where("status NOT LIKE '2%' AND status != 'Connected'").
 		Order("created_at desc")
+	query = filterCheckRegion(query, region)
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -84,4 +111,24 @@ func (s *Storage) GetIncidents(serverID uint, limit int) ([]model.CheckResult, e
 
 	err := query.Find(&results).Error
 	return results, err
+}
+
+func normalizeCheckResultRegion(result *model.CheckResult) {
+	result.Region = normalizeRegion(result.Region)
+}
+
+func normalizeRegion(region string) string {
+	region = strings.TrimSpace(region)
+	if region == "" {
+		return model.CheckRegionGlobal
+	}
+	return region
+}
+
+func filterCheckRegion(query *gorm.DB, region string) *gorm.DB {
+	region = normalizeRegion(region)
+	if region == model.CheckRegionAll {
+		return query
+	}
+	return query.Where("region = ?", region)
 }

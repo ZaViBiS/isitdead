@@ -30,8 +30,11 @@ type Server struct {
 
 // New повертає готовий backend для сайту
 func New(db *database.Storage, sched *checker.Scheduler, mailer VerificationMailer, staticFiles embed.FS) (*Server, error) {
+	return NewWithConfig(db, sched, mailer, staticFiles, config.Load())
+}
+
+func NewWithConfig(db *database.Storage, sched *checker.Scheduler, mailer VerificationMailer, staticFiles embed.FS, cfg *config.Config) (*Server, error) {
 	app := fiber.New()
-	cfg := config.Load()
 
 	s := &Server{
 		App:       app,
