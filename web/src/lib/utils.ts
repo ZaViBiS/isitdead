@@ -1,5 +1,6 @@
 export interface CheckResult {
 	id: number;
+	region: string;
 	status: string;
 	latency: number;
 	created_at: string;
@@ -123,6 +124,7 @@ export function getCurrentCheck(server: Server): CheckResult | null {
 	if (server.current_status) {
 		return {
 			id: 0,
+			region: 'global',
 			status: server.current_status,
 			latency: server.current_latency ?? 0,
 			created_at: ''

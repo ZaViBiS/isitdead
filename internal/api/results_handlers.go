@@ -13,6 +13,7 @@ type resultsRequest struct {
 	IncidentsOnly bool
 	Limit         int
 	Hours         int
+	Region        string
 }
 
 func (s *Server) handleGetServerResults(c fiber.Ctx) error {
@@ -35,16 +36,16 @@ func (s *Server) respondWithServerResults(c fiber.Ctx, req resultsRequest) error
 	)
 
 	if req.IncidentsOnly {
-		results, err = s.DB.GetIncidents(req.ServerID, req.Limit)
+		results, err = s.DB.GetIncidentsForRegion(req.ServerID, req.Region, req.Limit)
 	} else if req.Hours > 0 {
 		since := time.Now().UTC().Add(-time.Duration(req.Hours) * time.Hour)
-		results, err = s.DB.GetHistorySince(req.ServerID, since)
+		results, err = s.DB.GetHistorySinceForRegion(req.ServerID, req.Region, since)
 	} else {
 		limit := req.Limit
 		if limit <= 0 {
 			limit = 100
 		}
-		results, err = s.DB.GetRecentHistory(req.ServerID, limit)
+		results, err = s.DB.GetRecentHistoryForRegion(req.ServerID, req.Region, limit)
 	}
 
 	if err != nil {
@@ -63,6 +64,7 @@ func parseResultsQuery(c fiber.Ctx) (resultsRequest, error) {
 		panic(err)
 	}
 	res.IncidentsOnly = c.Query("incidents") == "true"
+	res.Region = c.Query("region")
 	limitStr := c.Query("limit")
 	if limitStr != "" {
 		res.Limit, err = strconv.Atoi(limitStr)
