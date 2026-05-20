@@ -4,10 +4,12 @@
 # ╚══════════════════════════════════════════════╝
 
 # ── Налаштування ────────────────────────────────
-APP_NAME  = isitdead           # назва бінарника
-BUILD_DIR = ./bin
-WEB_DIR   = ./web           # папка фронтенду
-CMD       = ./cmd/server    # entrypoint Go
+APP_NAME          = isitdead           # назва бінарника
+TELEGRAM_APP_NAME = isitdead-telegram
+BUILD_DIR         = ./bin
+WEB_DIR           = ./web           # папка фронтенду
+CMD               = ./cmd/server    # entrypoint Go
+TELEGRAM_CMD      = ./integration/telegram
 
 VERSION   = $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS   = -X main.version=$(VERSION)
@@ -19,7 +21,7 @@ RESET  = \033[0m
 
 # ── За замовчуванням ─────────────────────────────
 .DEFAULT_GOAL := help
-.PHONY: build run dev dev-front dev-back watch clean test lint tidy help migrate
+.PHONY: build build-telegram run dev dev-front dev-back watch clean test lint tidy help migrate
 
 # ── Backend ──────────────────────────────────────
 
@@ -28,6 +30,12 @@ build:
 	@echo "$(GREEN)▶ Building $(APP_NAME) $(VERSION)...$(RESET)"
 	@mkdir -p $(BUILD_DIR)
 	go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(CMD)
+
+## Зібрати Telegram integration binary
+build-telegram:
+	@echo "$(GREEN)▶ Building $(TELEGRAM_APP_NAME) $(VERSION)...$(RESET)"
+	@mkdir -p $(BUILD_DIR)
+	go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(TELEGRAM_APP_NAME) $(TELEGRAM_CMD)
 
 ## Зібрати і запустити
 run: build
@@ -62,7 +70,7 @@ dev:
 # ── Збірка всього ────────────────────────────────
 
 ## Зібрати фронт + бек разом (для деплою)
-build-all: build-front build
+build-all: build-front build build-telegram
 	@echo "$(GREEN)✔ Full build done$(RESET)"
 
 # ── Тести ────────────────────────────────────────
