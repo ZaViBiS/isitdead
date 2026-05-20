@@ -5,6 +5,7 @@ import "time"
 const (
 	NotificationChannelEmail    = "email"
 	NotificationChannelTelegram = "telegram"
+	NotificationChannelDiscord  = "discord"
 	NotificationEventDown       = "down"
 	NotificationEventUp         = "recovered"
 	NotificationEventSSL30d     = "ssl_30d"
