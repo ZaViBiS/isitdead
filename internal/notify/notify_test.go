@@ -28,6 +28,10 @@ func (s *fakeStore) GetUserByID(userID uint) (*model.User, error) {
 	return &s.user, nil
 }
 
+func (s *fakeStore) GetTelegramAccountByUserID(userID uint) (*model.TelegramAccount, error) {
+	return &model.TelegramAccount{UserID: userID, ChatID: 12345}, nil
+}
+
 type fakeSender struct {
 	channel  string
 	messages []Message

@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	tgbot "github.com/go-telegram/bot"
@@ -51,26 +52,35 @@ func (c *Client) handleStart(ctx context.Context, b *tgbot.Bot, update *models.U
 	if len(parts) < 2 {
 		_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   "no code?",
+			Text:   "Open the Telegram connection link from isitdead.cc to connect this chat.",
 		})
 		if err != nil {
-			log.Err(err).Msg("error while sending messege to user")
+			log.Err(err).Msg("error while sending message to user")
 		}
 		return
 	}
 	token := parts[1]
-	if err := sendToken(token, update.Message.Chat.ID); err != nil {
+	if linkErr := sendToken(token, update.Message.Chat.ID); linkErr != nil {
+		text := "Could not connect Telegram right now. Try again in a minute."
+		if errors.Is(linkErr, ErrLinkRejected) {
+			text = "This connection link is invalid or expired. Create a new Telegram link on the dashboard."
+		}
+		if errors.Is(linkErr, ErrMissingBaseURL) {
+			text = "Telegram integration is not configured correctly. BASE_URL is missing."
+		}
 		_, err := b.SendMessage(ctx, &tgbot.SendMessageParams{
 			ChatID: update.Message.Chat.ID,
-			Text:   "error 500, try again later",
+			Text:   text,
 		})
 		if err != nil {
-			log.Err(err).Msg("error while sending messege to user")
+			log.Err(err).Msg("error while sending message to user")
 		}
+		log.Err(linkErr).Msg("telegram link failed")
+		return
 	}
 
 	_, _ = b.SendMessage(ctx, &tgbot.SendMessageParams{
 		ChatID: update.Message.Chat.ID,
-		Text:   "Hello! Bot is connected.",
+		Text:   "Telegram is connected to isitdead.cc. Alerts will appear here.",
 	})
 }

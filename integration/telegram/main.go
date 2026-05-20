@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/ZaViBiS/isitdead/integration/telegram/api"
@@ -11,6 +12,11 @@ import (
 
 func main() {
 	token := os.Getenv("TOKEN")
+	if token == "" {
+		log.Error().Msg("TOKEN is required")
+		return
+	}
+
 	client, err := bot.New(token)
 	if err != nil {
 		log.Err(err).Msg("bot init error")
@@ -21,7 +27,11 @@ func main() {
 	go client.Start(context.Background())
 
 	server := api.New(client)
-	if err := server.Start(":8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8081"
+	}
+	if err := server.Start(fmt.Sprintf(":%s", port)); err != nil {
 		log.Err(err).Msg("telegram api error")
 	}
 }

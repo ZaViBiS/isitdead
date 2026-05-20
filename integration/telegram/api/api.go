@@ -4,7 +4,11 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,6 +27,11 @@ type MessageSender interface {
 
 type response struct {
 	Message string `json:"message"`
+}
+
+type sendMessageRequest struct {
+	ChatID int64  `json:"chat_id"`
+	Text   string `json:"text"`
 }
 
 func New(sender MessageSender) Server {
@@ -46,6 +55,30 @@ func (s *Server) handlePing(w http.ResponseWriter, r *http.Request) {
 	_ = writeJSON(w, http.StatusOK, response{Message: "pong"})
 }
 
+func (s *Server) handleSendMessage(w http.ResponseWriter, r *http.Request) {
+	if err := verifySharedSecret(r); err != nil {
+		_ = writeJSON(w, http.StatusUnauthorized, response{Message: err.Error()})
+		return
+	}
+
+	var req sendMessageRequest
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&req); err != nil {
+		_ = writeJSON(w, http.StatusBadRequest, response{Message: "invalid request body"})
+		return
+	}
+	if req.ChatID == 0 || req.Text == "" {
+		_ = writeJSON(w, http.StatusBadRequest, response{Message: "chat_id and text are required"})
+		return
+	}
+
+	if err := s.sender.SendMessage(r.Context(), req.ChatID, req.Text); err != nil {
+		_ = writeJSON(w, http.StatusBadGateway, response{Message: "failed to send telegram message"})
+		return
+	}
+
+	_ = writeJSON(w, http.StatusAccepted, response{Message: "accepted"})
+}
+
 func (s *Server) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -66,7 +99,19 @@ func (s *Server) setupRoutes() {
 
 	s.router.Route("/api", func(r chi.Router) {
 		r.Get("/ping", s.handlePing)
+		r.Post("/messages", s.handleSendMessage)
 	})
+}
+
+func verifySharedSecret(r *http.Request) error {
+	secret := os.Getenv("TELEGRAM_API_SECRET")
+	if secret == "" {
+		return nil
+	}
+	if r.Header.Get("Authorization") != fmt.Sprintf("Bearer %s", secret) {
+		return errors.New("invalid token")
+	}
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) error {

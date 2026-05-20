@@ -2,6 +2,7 @@
 package bot
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -9,20 +10,20 @@ import (
 	"strconv"
 )
 
+var (
+	ErrMissingBaseURL = errors.New("BASE_URL is not configured")
+	ErrLinkRejected   = errors.New("telegram link was rejected")
+)
+
 func sendToken(token string, chatID int64) error {
 	baseURL := os.Getenv("BASE_URL")
 	if baseURL == "" {
-		return fmt.Errorf("where is my url?!")
+		return ErrMissingBaseURL
 	}
-	parsedURL, err := url.Parse(baseURL + "/api/telegram/token")
+	parsedURL, err := url.Parse(baseURL + "/api/telegram/token/" + strconv.FormatInt(chatID, 10) + "/" + token)
 	if err != nil {
 		return err
 	}
-
-	q := parsedURL.Query()
-	q.Set("token", token)
-	q.Set("chat_id", strconv.FormatInt(chatID, 10))
-	parsedURL.RawQuery = q.Encode()
 
 	resp, err := http.Get(parsedURL.String())
 	if err != nil {
@@ -31,7 +32,10 @@ func sendToken(token string, chatID int64) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("request failed! url: %s with status %s", parsedURL.String(), resp.Status)
+		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone {
+			return ErrLinkRejected
+		}
+		return fmt.Errorf("telegram link request failed with status %s", resp.Status)
 	}
 	return nil
 }
