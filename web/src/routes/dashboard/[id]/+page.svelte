@@ -10,9 +10,12 @@
 		BarChart3,
 		AlertCircle,
 		ShieldCheck,
-		History
+		History,
+		Globe2
 	} from 'lucide-svelte';
 	import {
+		calculateAvgLatency,
+		calculateUptime,
 		getStatusColor,
 		getFaviconUrl,
 		getCurrentCheck,
@@ -30,6 +33,9 @@
 	let server = $state<Server | null>(null);
 	let error = $state('');
 	let isLoading = $state(true);
+	let regionalHistory = $state<Record<string, CheckResult[]>>({});
+	let regionalIncidents = $state<Record<string, CheckResult[]>>({});
+	let selectedRegion = $state('global');
 
 	onMount(async () => {
 		const id = page.params.id;
@@ -50,28 +56,33 @@
 
 				if (found) {
 					server = { ...found, history: [], history30d: [], incidents: [] };
-					const resHist = await fetch(`/api/servers/${id}/results?hours=72`, {
+					const resHist = await fetch(`/api/servers/${id}/results?hours=72&region=all`, {
 						headers: { Authorization: `Bearer ${token}` }
 					});
 					if (resHist.ok) {
 						const dataHist = (await resHist.json()) as CheckResult[];
+						regionalHistory = groupResultsByRegion(dataHist);
 						const s = server;
 						if (s) {
 							s.history = sampleChartHistory(
-								dataHist,
+								regionalHistory.global ?? [],
 								getEffectiveSlowThreshold(s.check_type, s.slow_threshold)
 							);
 						}
 					}
 
 					// Fetch last 50 incidents
-					const resIncidents = await fetch(`/api/servers/${id}/results?incidents=true&limit=50`, {
-						headers: { Authorization: `Bearer ${token}` }
-					});
+					const resIncidents = await fetch(
+						`/api/servers/${id}/results?incidents=true&limit=50&region=all`,
+						{
+							headers: { Authorization: `Bearer ${token}` }
+						}
+					);
 					if (resIncidents.ok) {
-						const dataIncidents = await resIncidents.json();
+						const dataIncidents = (await resIncidents.json()) as CheckResult[];
+						regionalIncidents = groupResultsByRegion(dataIncidents, 'desc');
 						if (server) {
-							server.incidents = dataIncidents;
+							server.incidents = regionalIncidents.global ?? [];
 						}
 					}
 				} else {
@@ -86,6 +97,74 @@
 			isLoading = false;
 		}
 	});
+
+	function resultRegion(result: CheckResult) {
+		return result.region?.trim() || 'global';
+	}
+
+	function groupResultsByRegion(results: CheckResult[], order: 'asc' | 'desc' = 'asc') {
+		const grouped: Record<string, CheckResult[]> = {};
+		for (const result of results) {
+			const region = resultRegion(result);
+			if (!grouped[region]) grouped[region] = [];
+			grouped[region].push(result);
+		}
+		for (const region of Object.keys(grouped)) {
+			grouped[region].sort(
+				(a, b) =>
+					(new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) *
+					(order === 'asc' ? 1 : -1)
+			);
+		}
+		return grouped;
+	}
+
+	function getRegionNames() {
+		const names = Object.keys(regionalHistory);
+		return names.sort((a, b) => {
+			if (a === 'global') return -1;
+			if (b === 'global') return 1;
+			return a.localeCompare(b);
+		});
+	}
+
+	function displayRegion(region: string) {
+		if (region === 'global') return 'Global';
+		return region.toUpperCase();
+	}
+
+	function getRegionHistory(region: string) {
+		return regionalHistory[region] ?? [];
+	}
+
+	function getSelectedHistory() {
+		return getRegionHistory(selectedRegion);
+	}
+
+	function getSelectedChartHistory(s: Server, slowThreshold: number) {
+		return sampleChartHistory(getSelectedHistory(), slowThreshold);
+	}
+
+	function getSelectedIncidents() {
+		return (regionalIncidents[selectedRegion] ?? []).slice(0, 50);
+	}
+
+	function isHealthyStatus(status: string) {
+		return status.startsWith('2') || status === 'Connected';
+	}
+
+	function regionSummary(region: string) {
+		const history = getRegionHistory(region);
+		const current = history.at(-1);
+		return {
+			name: region,
+			current,
+			uptime: calculateUptime(history),
+			avgLatency: calculateAvgLatency(history),
+			count: history.length,
+			online: current ? isHealthyStatus(current.status) : false
+		};
+	}
 </script>
 
 <div class="container mx-auto max-w-5xl px-4 py-8 sm:py-12">
@@ -118,6 +197,9 @@
 			server.check_type,
 			server.slow_threshold
 		)}
+		{@const regionNames = getRegionNames()}
+		{@const selectedHistory = getSelectedChartHistory(server, effectiveSlowThreshold)}
+		{@const selectedIncidents = getSelectedIncidents()}
 
 		<div class="mb-8 flex flex-col justify-between gap-6 sm:mb-12 lg:flex-row lg:items-center">
 			<div class="flex items-start gap-4 sm:gap-6">
@@ -218,6 +300,85 @@
 		</div>
 
 		<div class="grid gap-8">
+			{#if regionNames.length > 1}
+				<section class="glass-panel rounded-[2rem] p-5 sm:p-6">
+					<div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+						<h2 class="flex items-center gap-2 text-xl font-black">
+							<Globe2 class="h-5 w-5 text-brand-primary" />
+							Regions
+						</h2>
+						<span
+							class="w-fit rounded-full bg-brand-light/5 px-3 py-1 text-[10px] font-black tracking-widest text-brand-light/40 uppercase"
+						>
+							Viewing {displayRegion(selectedRegion)}
+						</span>
+					</div>
+
+					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+						{#each regionNames as region (region)}
+							{@const summary = regionSummary(region)}
+							{@const regionStatus = summary.current?.status ?? 'unknown'}
+							{@const regionLatency = summary.current?.latency ?? 0}
+							<button
+								type="button"
+								aria-pressed={selectedRegion === region}
+								onclick={() => (selectedRegion = region)}
+								class="rounded-3xl border p-4 text-left transition {selectedRegion === region
+									? 'border-brand-primary/35 bg-brand-primary/10 shadow-2xl shadow-brand-primary/5'
+									: 'border-brand-light/10 bg-brand-light/[0.025] hover:border-brand-primary/25'}"
+							>
+								<div class="mb-4 flex items-start justify-between gap-3">
+									<div class="min-w-0">
+										<div class="truncate text-lg font-black">{displayRegion(region)}</div>
+										<div class="mt-1 text-[10px] font-bold tracking-widest text-brand-light/30 uppercase">
+											{summary.count} checks
+										</div>
+									</div>
+									<span
+										class="h-3 w-3 shrink-0 rounded-full"
+										style="background-color: {getStatusColor(
+											regionStatus,
+											regionLatency,
+											effectiveSlowThreshold
+										)}"
+									></span>
+								</div>
+								<div class="grid grid-cols-2 gap-3">
+									<div>
+										<div
+											class="text-sm font-black {summary.online
+												? 'text-brand-primary'
+												: summary.current
+													? 'text-brand-accent'
+													: 'text-brand-light/35'}"
+										>
+											{summary.online ? 'Online' : summary.current ? 'Down' : 'No data'}
+										</div>
+										<div class="text-[10px] font-bold text-brand-light/25 uppercase">status</div>
+									</div>
+									<div class="text-right">
+										<div class="font-mono text-sm font-black text-brand-light/80">
+											{summary.current ? `${summary.avgLatency}ms` : '-'}
+										</div>
+										<div class="text-[10px] font-bold text-brand-light/25 uppercase">avg</div>
+									</div>
+								</div>
+								<div class="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-light/5">
+									<div
+										class="h-full rounded-full {summary.uptime >= 99
+											? 'bg-brand-primary'
+											: summary.uptime >= 95
+												? 'bg-brand-soft'
+												: 'bg-brand-accent'}"
+										style="width: {summary.count > 0 ? summary.uptime : 0}%"
+									></div>
+								</div>
+							</button>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
 			<!-- Chart Card -->
 			<div class="glass-panel rounded-[2.5rem] p-1">
 				<div class="rounded-[2.4rem] bg-brand-dark p-5 sm:p-8 lg:p-10">
@@ -225,7 +386,7 @@
 						<div>
 							<h3 class="mb-1 flex items-center gap-2 text-xl font-bold">
 								<Activity class="h-5 w-5 text-brand-primary" />
-								Response time
+								Response time · {displayRegion(selectedRegion)}
 							</h3>
 							<p class="text-sm text-brand-light/30">
 								Latency and availability over the last 3 days.
@@ -253,7 +414,7 @@
 
 					<div class="relative">
 						<StatusChart
-							history={server.history}
+							history={selectedHistory}
 							height={500}
 							slowThreshold={effectiveSlowThreshold}
 						/>
@@ -262,7 +423,7 @@
 						>
 							<span>&larr; 3 days ago</span>
 							<span
-								>Peak: {Math.max(...server.history.map((r: CheckResult) => r.latency), 0)}ms</span
+								>Peak: {Math.max(...selectedHistory.map((r: CheckResult) => r.latency), 0)}ms</span
 							>
 						</div>
 					</div>
@@ -276,12 +437,12 @@
 				>
 					<h3 class="flex items-center gap-2 text-xl font-bold">
 						<History class="h-5 w-5 text-brand-primary" />
-						Incidents
+						Incidents · {displayRegion(selectedRegion)}
 					</h3>
 					<span
 						class="rounded-full bg-brand-light/5 px-3 py-1 text-[10px] font-black tracking-widest text-brand-light/40 uppercase"
 					>
-						Last 50 incidents
+						Last {selectedIncidents.length} incidents
 					</span>
 				</div>
 
@@ -290,13 +451,14 @@
 						class="hidden grid-cols-12 border-b border-brand-light/10 bg-brand-light/[0.02] px-6 py-4 text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:grid"
 					>
 						<div class="col-span-1">Status</div>
-						<div class="col-span-5 sm:col-span-6">Timestamp</div>
-						<div class="col-span-3 sm:col-span-3">Response</div>
+						<div class="col-span-2">Region</div>
+						<div class="col-span-4">Timestamp</div>
+						<div class="col-span-3">Response</div>
 						<div class="col-span-3 text-right sm:col-span-2">Latency</div>
 					</div>
 					<div class="custom-scrollbar max-h-[600px] divide-y divide-brand-light/5 overflow-y-auto">
-						{#if server.incidents && server.incidents.length > 0}
-							{#each server.incidents as result (result.id)}
+						{#if selectedIncidents.length > 0}
+							{#each selectedIncidents as result (result.id)}
 								<div
 									class="group grid gap-3 px-4 py-4 transition-colors hover:bg-brand-light/[0.02] sm:grid-cols-12 sm:items-center sm:px-6"
 								>
@@ -314,7 +476,18 @@
 											)}"
 										></div>
 									</div>
-									<div class="flex items-center justify-between gap-3 sm:col-span-6 sm:block">
+									<div class="flex items-center justify-between gap-3 sm:col-span-2 sm:block">
+										<span
+											class="text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:hidden"
+											>Region</span
+										>
+										<span
+											class="rounded-md border border-brand-light/10 bg-brand-light/5 px-2 py-0.5 text-[10px] font-black text-brand-light/50 uppercase"
+										>
+											{displayRegion(resultRegion(result))}
+										</span>
+									</div>
+									<div class="flex items-center justify-between gap-3 sm:col-span-4 sm:block">
 										<span
 											class="text-[10px] font-black tracking-widest text-brand-light/20 uppercase sm:hidden"
 											>Timestamp</span

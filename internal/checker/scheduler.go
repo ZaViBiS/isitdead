@@ -2,6 +2,9 @@ package checker
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,13 +15,15 @@ import (
 
 // Scheduler керує циклічними перевірками серверів
 type Scheduler struct {
-	storage  *database.Storage
-	notifier TransitionNotifier
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
-	mu       sync.Mutex
-	monitors map[uint]monitorControl
+	storage         *database.Storage
+	notifier        TransitionNotifier
+	regionalChecker RegionalChecker
+	localRegion     string
+	ctx             context.Context
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
+	mu              sync.Mutex
+	monitors        map[uint]monitorControl
 }
 
 type monitorControl struct {
@@ -31,6 +36,16 @@ type lastResult struct {
 	Latency int64
 }
 
+type RegionResult struct {
+	Region  string
+	Status  string
+	Latency int64
+}
+
+type RegionalChecker interface {
+	CheckRegions(ctx context.Context, checkType, target string, timeoutSeconds int) []RegionResult
+}
+
 type TransitionNotifier interface {
 	Notify(ctx context.Context, server model.Server, previousState, currentState string, latency int64) error
 	NotifySSL(ctx context.Context, server model.Server, status model.SSLCertificateStatus, event string) error
@@ -40,15 +55,28 @@ type TransitionNotifier interface {
 func NewScheduler(db *database.Storage) *Scheduler {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Scheduler{
-		storage:  db,
-		ctx:      ctx,
-		cancel:   cancel,
-		monitors: make(map[uint]monitorControl),
+		storage:     db,
+		localRegion: "main",
+		ctx:         ctx,
+		cancel:      cancel,
+		monitors:    make(map[uint]monitorControl),
 	}
 }
 
 func (s *Scheduler) SetNotifier(notifier TransitionNotifier) {
 	s.notifier = notifier
+}
+
+func (s *Scheduler) SetLocalRegion(region string) {
+	region = strings.TrimSpace(region)
+	if region == "" || region == model.CheckRegionGlobal || region == model.CheckRegionAll {
+		region = "main"
+	}
+	s.localRegion = region
+}
+
+func (s *Scheduler) SetRegionalChecker(checker RegionalChecker) {
+	s.regionalChecker = checker
 }
 
 // Start запускає моніторинг для всіх серверів у базі
@@ -230,33 +258,142 @@ func (s *Scheduler) StopServerMonitor(serverID uint) {
 }
 
 func (s *Scheduler) performCheck(srv model.Server, last lastResult) lastResult {
-	status, latency := Check(srv.CheckType, srv.URL, srv.Timeout)
+	results := s.collectRegionResults(srv)
+	aggregated := aggregateRegionResults(results)
+	createdAt := time.Now().UTC()
 
 	log.Debug().
 		Str("server", srv.URL).
-		Str("status", status).
-		Int64("latency", latency).
+		Str("status", aggregated.Status).
+		Int64("latency", aggregated.Latency).
+		Int("regions", len(results)).
 		Msg("Check completed")
 
-	// 1. Зберігаємо історію перевірок через канал БД
-	err := s.storage.AddCheckResult(model.CheckResult{
-		ServerID:  srv.ID,
-		Status:    status,
-		Latency:   latency,
-		CreatedAt: time.Now(),
-	})
-	if err != nil {
-		log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to save check result")
+	if err := s.saveCheckResults(srv.ID, createdAt, aggregated, results); err != nil {
+		log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to save check results")
 	}
 
 	if s.notifier != nil {
-		if err := s.notifier.Notify(s.ctx, srv, last.Status, status, latency); err != nil {
+		if err := s.notifier.Notify(s.ctx, srv, last.Status, aggregated.Status, aggregated.Latency); err != nil {
 			log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to process notifications")
 		}
 	}
 
 	return lastResult{
-		Status:  status,
-		Latency: latency,
+		Status:  aggregated.Status,
+		Latency: aggregated.Latency,
 	}
+}
+
+func (s *Scheduler) collectRegionResults(srv model.Server) []RegionResult {
+	localCh := make(chan RegionResult, 1)
+	go func() {
+		status, latency := Check(srv.CheckType, srv.URL, srv.Timeout)
+		localCh <- RegionResult{
+			Region:  s.localRegion,
+			Status:  status,
+			Latency: latency,
+		}
+	}()
+
+	results := make([]RegionResult, 0, 1)
+	if s.regionalChecker != nil {
+		results = append(results, s.regionalChecker.CheckRegions(s.ctx, srv.CheckType, srv.URL, srv.Timeout)...)
+	}
+	results = append([]RegionResult{<-localCh}, results...)
+	return results
+}
+
+func (s *Scheduler) saveCheckResults(serverID uint, createdAt time.Time, aggregated RegionResult, results []RegionResult) error {
+	if err := s.storage.AddCheckResult(model.CheckResult{
+		ServerID:  serverID,
+		Region:    aggregated.Region,
+		Status:    aggregated.Status,
+		Latency:   aggregated.Latency,
+		CreatedAt: createdAt,
+	}); err != nil {
+		return err
+	}
+
+	for _, result := range results {
+		if err := s.storage.AddCheckResult(model.CheckResult{
+			ServerID:  serverID,
+			Region:    result.Region,
+			Status:    result.Status,
+			Latency:   result.Latency,
+			CreatedAt: createdAt,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func aggregateRegionResults(results []RegionResult) RegionResult {
+	if len(results) == 0 {
+		return RegionResult{Region: model.CheckRegionGlobal, Status: "No regions checked"}
+	}
+
+	successes := make([]RegionResult, 0, len(results))
+	for _, result := range results {
+		if isSuccessfulStatus(result.Status) {
+			successes = append(successes, result)
+		}
+	}
+	if len(successes) > 0 {
+		return RegionResult{
+			Region:  model.CheckRegionGlobal,
+			Status:  successes[0].Status,
+			Latency: averageLatency(successes),
+		}
+	}
+
+	return RegionResult{
+		Region:  model.CheckRegionGlobal,
+		Status:  formatAllRegionsFailed(results),
+		Latency: maxLatency(results),
+	}
+}
+
+func isSuccessfulStatus(status string) bool {
+	return strings.HasPrefix(status, "2") || status == "Connected"
+}
+
+func averageLatency(results []RegionResult) int64 {
+	if len(results) == 0 {
+		return 0
+	}
+	var total int64
+	for _, result := range results {
+		total += result.Latency
+	}
+	return int64(math.Round(float64(total) / float64(len(results))))
+}
+
+func maxLatency(results []RegionResult) int64 {
+	var max int64
+	for _, result := range results {
+		if result.Latency > max {
+			max = result.Latency
+		}
+	}
+	return max
+}
+
+func formatAllRegionsFailed(results []RegionResult) string {
+	var b strings.Builder
+	b.WriteString("All regions failed")
+	for _, result := range results {
+		fmt.Fprintf(&b, "; %s: %s", result.Region, compactStatus(result.Status))
+	}
+	return b.String()
+}
+
+func compactStatus(status string) string {
+	status = strings.Join(strings.Fields(status), " ")
+	const maxStatusLen = 160
+	if len(status) <= maxStatusLen {
+		return status
+	}
+	return status[:maxStatusLen-3] + "..."
 }
