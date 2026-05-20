@@ -236,11 +236,12 @@ func TestAPI(t *testing.T) {
 			Enabled bool   `json:"enabled"`
 		}
 		json.NewDecoder(resp.Body).Decode(&prefs)
-		assert.Len(t, prefs, 5)
+		assert.Len(t, prefs, 10)
 
 		updatePrefsPayload := []map[string]interface{}{
 			{"channel": "email", "event": "down", "enabled": false},
 			{"channel": "email", "event": "recovered", "enabled": true},
+			{"channel": "telegram", "event": "down", "enabled": true},
 		}
 		body, _ = json.Marshal(updatePrefsPayload)
 		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr+"/notifications", bytes.NewReader(body))
@@ -249,6 +250,39 @@ func TestAPI(t *testing.T) {
 
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		req = httptest.NewRequest("GET", "/api/telegram/status", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var telegramStatus struct {
+			Linked bool `json:"linked"`
+		}
+		json.NewDecoder(resp.Body).Decode(&telegramStatus)
+		assert.False(t, telegramStatus.Linked)
+
+		req = httptest.NewRequest("POST", "/api/telegram/link-token", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var linkResp struct {
+			Token string `json:"token"`
+		}
+		json.NewDecoder(resp.Body).Decode(&linkResp)
+		assert.NotEmpty(t, linkResp.Token)
+
+		req = httptest.NewRequest("GET", "/api/telegram/token/123456/"+linkResp.Token, nil)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusAccepted, resp.StatusCode)
+
+		req = httptest.NewRequest("GET", "/api/telegram/status", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		json.NewDecoder(resp.Body).Decode(&telegramStatus)
+		assert.True(t, telegramStatus.Linked)
 
 		// Update Server
 		updatePayload := map[string]interface{}{

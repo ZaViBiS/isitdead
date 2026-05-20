@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import {
 		Activity,
 		Plus,
@@ -11,6 +11,7 @@
 		ShieldCheck,
 		Settings,
 		Mail,
+		MessageCircle,
 		X,
 		Link2,
 		LockKeyhole,
@@ -28,6 +29,13 @@
 		type NotificationPreference
 	} from '$lib/utils';
 
+	type TelegramStatus = {
+		linked: boolean;
+		linked_at?: string;
+		bot_name?: string;
+		link_available: boolean;
+	};
+
 	let servers = $state<Server[]>([]);
 	let isLoading = $state(true);
 	let isAdding = $state(false);
@@ -43,6 +51,14 @@
 	let newSSLEnabled = $state(false);
 	let newNotifyEmailDown = $state(true);
 	let newNotifyEmailRecovered = $state(true);
+	let newNotifyTelegramDown = $state(false);
+	let newNotifyTelegramRecovered = $state(false);
+	let telegramLinkUrl = $state('');
+	let isCreatingTelegramLink = $state(false);
+	let telegramStatus = $state<TelegramStatus>({ linked: false, link_available: false });
+	let telegramStatusMessage = $state('');
+	let telegramPolling = $state(false);
+	let telegramPollTimer: ReturnType<typeof setInterval> | null = null;
 
 	let editingServer = $state<Server | null>(null);
 	let editName = $state('');
@@ -54,6 +70,8 @@
 	let editSSLEnabled = $state(false);
 	let editNotifyEmailDown = $state(true);
 	let editNotifyEmailRecovered = $state(true);
+	let editNotifyTelegramDown = $state(false);
+	let editNotifyTelegramRecovered = $state(false);
 
 	const checkTypeOptions = [
 		{
@@ -137,16 +155,25 @@
 
 	function notificationPayload(
 		emailDown: boolean,
-		emailRecovered: boolean
+		emailRecovered: boolean,
+		telegramDown: boolean,
+		telegramRecovered: boolean
 	): NotificationPreference[] {
 		return [
 			{ channel: 'email', event: 'down', enabled: emailDown },
-			{ channel: 'email', event: 'recovered', enabled: emailRecovered }
+			{ channel: 'email', event: 'recovered', enabled: emailRecovered },
+			{ channel: 'telegram', event: 'down', enabled: telegramDown },
+			{ channel: 'telegram', event: 'recovered', enabled: telegramRecovered }
 		];
 	}
 
-	function preferenceEnabled(prefs: NotificationPreference[], event: string) {
-		return prefs.find((pref) => pref.channel === 'email' && pref.event === event)?.enabled ?? true;
+	function preferenceEnabled(
+		prefs: NotificationPreference[],
+		channel: string,
+		event: string,
+		fallback: boolean
+	) {
+		return prefs.find((pref) => pref.channel === channel && pref.event === event)?.enabled ?? fallback;
 	}
 
 	async function fetchNotificationPreferences(serverID: number) {
@@ -161,15 +188,107 @@
 	async function saveNotificationPreferences(
 		serverID: number,
 		emailDown: boolean,
-		emailRecovered: boolean
+		emailRecovered: boolean,
+		telegramDown: boolean,
+		telegramRecovered: boolean
 	) {
 		const token = localStorage.getItem('token');
 		const res = await fetch(`/api/servers/${serverID}/notifications`, {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-			body: JSON.stringify(notificationPayload(emailDown, emailRecovered))
+			body: JSON.stringify(
+				notificationPayload(emailDown, emailRecovered, telegramDown, telegramRecovered)
+			)
 		});
 		if (!res.ok) throw new Error('Failed to save notification preferences');
+	}
+
+	async function fetchTelegramStatus(silent = false) {
+		const token = localStorage.getItem('token');
+		if (!token) return;
+		try {
+			const res = await fetch('/api/telegram/status', {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (!res.ok) throw new Error('Failed to load Telegram status');
+			telegramStatus = (await res.json()) as TelegramStatus;
+			if (telegramStatus.linked) {
+				telegramStatusMessage = 'Telegram is connected.';
+				stopTelegramStatusPolling();
+			} else if (!silent) {
+				telegramStatusMessage = '';
+			}
+		} catch {
+			if (!silent) error = 'Failed to load Telegram status';
+		}
+	}
+
+	function stopTelegramStatusPolling() {
+		if (telegramPollTimer) {
+			clearInterval(telegramPollTimer);
+			telegramPollTimer = null;
+		}
+		telegramPolling = false;
+	}
+
+	function startTelegramStatusPolling() {
+		stopTelegramStatusPolling();
+		telegramPolling = true;
+		let attempts = 0;
+		telegramPollTimer = setInterval(async () => {
+			attempts += 1;
+			await fetchTelegramStatus(true);
+			if (telegramStatus.linked || attempts >= 45) {
+				if (!telegramStatus.linked) {
+					telegramStatusMessage = 'Still waiting for Telegram confirmation.';
+				}
+				stopTelegramStatusPolling();
+			}
+		}, 2000);
+	}
+
+	function handleTelegramAction() {
+		if (telegramStatus.linked) {
+			fetchTelegramStatus();
+			return;
+		}
+		createTelegramLink();
+	}
+
+	async function createTelegramLink() {
+		const token = localStorage.getItem('token');
+		isCreatingTelegramLink = true;
+		telegramLinkUrl = '';
+		telegramStatusMessage = '';
+		try {
+			const res = await fetch('/api/telegram/link-token', {
+				method: 'POST',
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (!res.ok) throw new Error('Failed to create Telegram link');
+			const data = (await res.json()) as {
+				url?: string;
+				token: string;
+				bot_name?: string;
+				link_available: boolean;
+			};
+			telegramLinkUrl = data.url ?? data.token;
+			telegramStatus = {
+				...telegramStatus,
+				bot_name: data.bot_name ?? telegramStatus.bot_name,
+				link_available: data.link_available
+			};
+			if (data.link_available) {
+				telegramStatusMessage = 'Waiting for Telegram confirmation...';
+				startTelegramStatusPolling();
+			} else {
+				telegramStatusMessage = 'TELEGRAM_BOT_NAME is missing on the server.';
+			}
+		} catch {
+			error = 'Failed to create Telegram link';
+		} finally {
+			isCreatingTelegramLink = false;
+		}
 	}
 
 	function isServerOnline(server: Server) {
@@ -197,6 +316,11 @@
 
 	function getAttentionCount() {
 		return Math.max(servers.length - getHealthyCount(), 0);
+	}
+
+	function openAdd() {
+		telegramLinkUrl = '';
+		isAdding = true;
 	}
 
 	function getSSLLabel(server: Server) {
@@ -240,7 +364,13 @@
 
 			if (res.ok) {
 				const server = (await res.json()) as Server;
-				await saveNotificationPreferences(server.id, newNotifyEmailDown, newNotifyEmailRecovered);
+				await saveNotificationPreferences(
+					server.id,
+					newNotifyEmailDown,
+					newNotifyEmailRecovered,
+					newNotifyTelegramDown,
+					newNotifyTelegramRecovered
+				);
 				isAdding = false;
 				newName = '';
 				newUrl = '';
@@ -251,6 +381,8 @@
 				newSSLEnabled = false;
 				newNotifyEmailDown = true;
 				newNotifyEmailRecovered = true;
+				newNotifyTelegramDown = false;
+				newNotifyTelegramRecovered = false;
 				await fetchServers();
 			}
 		} catch {
@@ -269,12 +401,17 @@
 		editSSLEnabled = server.ssl_enabled;
 		editNotifyEmailDown = true;
 		editNotifyEmailRecovered = true;
+		editNotifyTelegramDown = false;
+		editNotifyTelegramRecovered = false;
+		telegramLinkUrl = '';
 		isEditing = true;
 
 		try {
 			const prefs = await fetchNotificationPreferences(server.id);
-			editNotifyEmailDown = preferenceEnabled(prefs, 'down');
-			editNotifyEmailRecovered = preferenceEnabled(prefs, 'recovered');
+			editNotifyEmailDown = preferenceEnabled(prefs, 'email', 'down', true);
+			editNotifyEmailRecovered = preferenceEnabled(prefs, 'email', 'recovered', true);
+			editNotifyTelegramDown = preferenceEnabled(prefs, 'telegram', 'down', false);
+			editNotifyTelegramRecovered = preferenceEnabled(prefs, 'telegram', 'recovered', false);
 		} catch {
 			error = 'Failed to load notification preferences';
 		}
@@ -314,7 +451,9 @@
 				await saveNotificationPreferences(
 					editingServer.id,
 					editNotifyEmailDown,
-					editNotifyEmailRecovered
+					editNotifyEmailRecovered,
+					editNotifyTelegramDown,
+					editNotifyTelegramRecovered
 				);
 				isEditing = false;
 				editingServer = null;
@@ -356,7 +495,12 @@
 		return mm > 0 ? `${h}h ${mm}m` : `${h}h`;
 	}
 
-	onMount(fetchServers);
+	onMount(() => {
+		fetchServers();
+		fetchTelegramStatus(true);
+	});
+
+	onDestroy(stopTelegramStatusPolling);
 </script>
 
 <div class="relative isolate min-h-[calc(100vh-4rem)] overflow-hidden">
@@ -395,7 +539,7 @@
 							</p>
 						</div>
 						<button
-							onclick={() => (isAdding = !isAdding)}
+							onclick={() => (isAdding ? (isAdding = false) : openAdd())}
 							class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-3 font-black text-brand-dark shadow-2xl shadow-brand-primary/15 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0 sm:w-auto"
 						>
 							<Plus class="h-5 w-5" /> Add monitor
@@ -451,6 +595,27 @@
 								{isLoading ? '--' : getOverallLatency()}<span
 									class="ml-1 text-sm text-brand-light/30">{isLoading ? '' : 'ms'}</span
 								>
+							</div>
+						</div>
+						<div class="soft-panel rounded-[2rem] p-5 sm:col-span-2 lg:col-span-1 xl:col-span-2">
+							<div class="mb-3 flex items-center justify-between gap-3">
+								<div class="micro-label">Telegram</div>
+								<span
+									class="rounded-full px-2.5 py-1 text-[10px] font-black tracking-widest uppercase {telegramStatus.linked
+										? 'bg-brand-primary/10 text-brand-primary'
+										: 'bg-brand-light/5 text-brand-light/35'}"
+								>
+									{telegramStatus.linked ? 'Connected' : 'Not connected'}
+								</span>
+							</div>
+							<div class="text-sm font-bold text-brand-light/55">
+								{telegramStatus.linked
+									? telegramStatus.linked_at
+										? `Linked ${formatDateOnly(telegramStatus.linked_at)}`
+										: 'Alerts can be sent to Telegram'
+									: telegramStatus.link_available
+										? 'Ready to connect'
+										: 'Bot name is not configured'}
 							</div>
 						</div>
 					</div>
@@ -679,7 +844,7 @@
 							<div>
 								<div class="micro-label">Notifications</div>
 								<div class="mt-1 text-sm font-bold text-brand-light/75">
-									Choose what deserves an email
+									Choose what deserves an alert
 								</div>
 							</div>
 						</div>
@@ -703,6 +868,104 @@
 								class="h-5 w-5 accent-brand-primary"
 							/>
 						</label>
+						<label
+							class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 {telegramStatus.linked
+								? ''
+								: 'opacity-55'}"
+						>
+							<span class="text-sm font-bold text-brand-light/75">Telegram when down</span>
+							<input
+								type="checkbox"
+								bind:checked={newNotifyTelegramDown}
+								disabled={!telegramStatus.linked}
+								class="h-5 w-5 accent-brand-primary"
+							/>
+						</label>
+						<label
+							class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 {telegramStatus.linked
+								? ''
+								: 'opacity-55'}"
+						>
+							<span class="text-sm font-bold text-brand-light/75">Telegram when recovered</span>
+							<input
+								type="checkbox"
+								bind:checked={newNotifyTelegramRecovered}
+								disabled={!telegramStatus.linked}
+								class="h-5 w-5 accent-brand-primary"
+							/>
+						</label>
+						<div
+							class="flex flex-col gap-3 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 sm:col-span-2"
+						>
+							<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+								<div class="flex items-center gap-3">
+									<MessageCircle
+										class="h-4 w-4 {telegramStatus.linked
+											? 'text-brand-primary'
+											: 'text-brand-light/35'}"
+									/>
+									<div>
+										<div class="text-sm font-black text-brand-light/80">Telegram</div>
+										<div
+											class="mt-1 text-xs font-bold {telegramStatus.linked
+												? 'text-brand-primary'
+												: telegramPolling
+													? 'text-brand-gold'
+													: 'text-brand-light/35'}"
+										>
+											{telegramStatus.linked
+												? 'Connected'
+												: telegramPolling
+													? 'Waiting for confirmation'
+													: 'Not connected'}
+										</div>
+									</div>
+								</div>
+								<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+									{#if telegramLinkUrl && !telegramStatus.linked}
+										{#if telegramLinkUrl.startsWith('http')}
+											<a
+												href={telegramLinkUrl}
+												target="_blank"
+												rel="external noreferrer"
+												class="max-w-full truncate rounded-xl border border-brand-primary/20 bg-brand-primary/10 px-3 py-2 text-xs font-black text-brand-primary"
+												>Open Telegram</a
+											>
+										{:else}
+											<span
+												class="max-w-full truncate rounded-xl border border-brand-gold/20 bg-brand-gold/10 px-3 py-2 text-xs font-black text-brand-gold"
+												>{telegramLinkUrl}</span
+											>
+										{/if}
+									{/if}
+									<button
+										type="button"
+										onclick={handleTelegramAction}
+										disabled={isCreatingTelegramLink || telegramPolling}
+										class="rounded-xl border border-brand-light/10 px-4 py-2 text-xs font-black transition hover:bg-brand-light/5 disabled:cursor-wait disabled:opacity-50"
+									>
+										{telegramStatus.linked
+											? 'Refresh'
+											: isCreatingTelegramLink
+												? 'Creating...'
+												: telegramPolling
+													? 'Waiting...'
+													: 'Get link'}
+									</button>
+								</div>
+							</div>
+							{#if telegramStatusMessage}
+								<div
+									class="rounded-xl border px-3 py-2 text-xs font-bold {telegramStatus.linked
+										? 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary'
+										: telegramPolling
+											? 'border-brand-gold/20 bg-brand-gold/10 text-brand-gold'
+											: 'border-brand-light/10 bg-brand-light/5 text-brand-light/45'}"
+								>
+									{telegramStatusMessage}
+								</div>
+							{/if}
+						</div>
 					</div>
 					<div
 						class="sticky bottom-0 z-10 mt-1 flex min-w-0 flex-col-reverse gap-3 border-t border-brand-light/10 bg-brand-panel/95 pt-4 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] backdrop-blur-sm sm:static sm:mt-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:backdrop-blur-none lg:col-span-2"
@@ -947,7 +1210,7 @@
 									<div>
 										<div class="micro-label">Notifications</div>
 										<div class="mt-1 text-sm font-bold text-brand-light/75">
-											Choose what deserves an email
+											Choose what deserves an alert
 										</div>
 									</div>
 								</div>
@@ -971,6 +1234,104 @@
 										class="h-5 w-5 accent-brand-primary"
 									/>
 								</label>
+								<label
+									class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 {telegramStatus.linked
+										? ''
+										: 'opacity-55'}"
+								>
+									<span class="text-sm font-bold text-brand-light/75">Telegram when down</span>
+									<input
+										type="checkbox"
+										bind:checked={editNotifyTelegramDown}
+										disabled={!telegramStatus.linked}
+										class="h-5 w-5 accent-brand-primary"
+									/>
+								</label>
+								<label
+									class="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 {telegramStatus.linked
+										? ''
+										: 'opacity-55'}"
+								>
+									<span class="text-sm font-bold text-brand-light/75">Telegram when recovered</span>
+									<input
+										type="checkbox"
+										bind:checked={editNotifyTelegramRecovered}
+										disabled={!telegramStatus.linked}
+										class="h-5 w-5 accent-brand-primary"
+									/>
+								</label>
+								<div
+									class="flex flex-col gap-3 rounded-xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 md:col-span-2"
+								>
+									<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+										<div class="flex items-center gap-3">
+											<MessageCircle
+												class="h-4 w-4 {telegramStatus.linked
+													? 'text-brand-primary'
+													: 'text-brand-light/35'}"
+											/>
+											<div>
+												<div class="text-sm font-black text-brand-light/80">Telegram</div>
+												<div
+													class="mt-1 text-xs font-bold {telegramStatus.linked
+														? 'text-brand-primary'
+														: telegramPolling
+															? 'text-brand-gold'
+															: 'text-brand-light/35'}"
+												>
+													{telegramStatus.linked
+														? 'Connected'
+														: telegramPolling
+															? 'Waiting for confirmation'
+															: 'Not connected'}
+												</div>
+											</div>
+										</div>
+										<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+											{#if telegramLinkUrl && !telegramStatus.linked}
+												{#if telegramLinkUrl.startsWith('http')}
+													<a
+														href={telegramLinkUrl}
+														target="_blank"
+														rel="external noreferrer"
+														class="max-w-full truncate rounded-xl border border-brand-primary/20 bg-brand-primary/10 px-3 py-2 text-xs font-black text-brand-primary"
+														>Open Telegram</a
+													>
+												{:else}
+													<span
+														class="max-w-full truncate rounded-xl border border-brand-gold/20 bg-brand-gold/10 px-3 py-2 text-xs font-black text-brand-gold"
+														>{telegramLinkUrl}</span
+													>
+												{/if}
+											{/if}
+											<button
+												type="button"
+												onclick={handleTelegramAction}
+												disabled={isCreatingTelegramLink || telegramPolling}
+												class="rounded-xl border border-brand-light/10 px-4 py-2 text-xs font-black transition hover:bg-brand-light/5 disabled:cursor-wait disabled:opacity-50"
+											>
+												{telegramStatus.linked
+													? 'Refresh'
+													: isCreatingTelegramLink
+														? 'Creating...'
+														: telegramPolling
+															? 'Waiting...'
+															: 'Get link'}
+											</button>
+										</div>
+									</div>
+									{#if telegramStatusMessage}
+										<div
+											class="rounded-xl border px-3 py-2 text-xs font-bold {telegramStatus.linked
+												? 'border-brand-primary/20 bg-brand-primary/10 text-brand-primary'
+												: telegramPolling
+													? 'border-brand-gold/20 bg-brand-gold/10 text-brand-gold'
+													: 'border-brand-light/10 bg-brand-light/5 text-brand-light/45'}"
+										>
+											{telegramStatusMessage}
+										</div>
+									{/if}
+								</div>
 							</div>
 						</div>
 						<div
@@ -1014,7 +1375,7 @@
 					Add your first website, API endpoint, or TCP service to start tracking uptime.
 				</p>
 				<button
-					onclick={() => (isAdding = true)}
+					onclick={openAdd}
 					class="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3 font-black text-brand-dark shadow-lg shadow-brand-primary/20 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0 sm:w-auto"
 				>
 					<Plus class="h-5 w-5" /> Add monitor

@@ -39,7 +39,11 @@ func New(staticFiles embed.FS) (*App, error) {
 	mailer := mail.New(cfg)
 
 	// сервіс нотифікацій
-	notifier := notify.NewService(db, notify.NewEmailSender(mailer))
+	senders := []notify.Sender{notify.NewEmailSender(mailer)}
+	if cfg.TelegramAPIURL != "" {
+		senders = append(senders, notify.NewTelegramSender(db, cfg.TelegramAPIURL, cfg.TelegramAPISecret))
+	}
+	notifier := notify.NewService(db, senders...)
 	sched.SetNotifier(notifier)
 
 	// Backend + Frontend (embed)
