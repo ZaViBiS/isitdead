@@ -1,6 +1,8 @@
 package database
 
 import (
+	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -28,6 +30,10 @@ func (s *Storage) GetHistorySince(serverID uint, since time.Time) ([]model.Check
 }
 
 func (s *Storage) GetHistorySinceForRegion(serverID uint, region string, since time.Time) ([]model.CheckResult, error) {
+	if normalizeRegion(region) == model.CheckRegionGlobal {
+		return s.getAggregatedHistorySince(serverID, since)
+	}
+
 	var results []model.CheckResult
 	query := s.DB.Where("server_id = ? AND created_at > ?", serverID, since)
 	err := filterCheckRegion(query, region).
@@ -42,6 +48,10 @@ func (s *Storage) GetRecentHistory(serverID uint, limit int) ([]model.CheckResul
 }
 
 func (s *Storage) GetRecentHistoryForRegion(serverID uint, region string, limit int) ([]model.CheckResult, error) {
+	if normalizeRegion(region) == model.CheckRegionGlobal {
+		return s.getAggregatedRecentHistory(serverID, limit)
+	}
+
 	var results []model.CheckResult
 	query := s.DB.Where("server_id = ?", serverID)
 	err := filterCheckRegion(query, region).
@@ -64,6 +74,14 @@ func (s *Storage) GetHistorySummarySince(serverID uint, since time.Time) (Histor
 }
 
 func (s *Storage) GetHistorySummarySinceForRegion(serverID uint, region string, since time.Time) (HistorySummary, error) {
+	if normalizeRegion(region) == model.CheckRegionGlobal {
+		results, err := s.getAggregatedHistorySince(serverID, since)
+		if err != nil {
+			return HistorySummary{}, err
+		}
+		return summarizeHistory(results), nil
+	}
+
 	var summary HistorySummary
 	query := s.DB.Model(&model.CheckResult{}).
 		Select(`
@@ -82,6 +100,10 @@ func (s *Storage) GetLatestCheckResult(serverID uint) (*model.CheckResult, error
 }
 
 func (s *Storage) GetLatestCheckResultForRegion(serverID uint, region string) (*model.CheckResult, error) {
+	if normalizeRegion(region) == model.CheckRegionGlobal {
+		return s.getLatestAggregatedCheckResult(serverID)
+	}
+
 	var result model.CheckResult
 	query := s.DB.Where("server_id = ?", serverID)
 	err := filterCheckRegion(query, region).
@@ -99,6 +121,10 @@ func (s *Storage) GetIncidents(serverID uint, limit int) ([]model.CheckResult, e
 }
 
 func (s *Storage) GetIncidentsForRegion(serverID uint, region string, limit int) ([]model.CheckResult, error) {
+	if normalizeRegion(region) == model.CheckRegionGlobal {
+		return s.getAggregatedIncidents(serverID, limit)
+	}
+
 	var results []model.CheckResult
 	query := s.DB.Where("server_id = ?", serverID).
 		Where("status NOT LIKE '2%' AND status != 'Connected'").
@@ -128,7 +154,180 @@ func normalizeRegion(region string) string {
 func filterCheckRegion(query *gorm.DB, region string) *gorm.DB {
 	region = normalizeRegion(region)
 	if region == model.CheckRegionAll {
-		return query
+		return query.Where("region != ?", model.CheckRegionGlobal)
 	}
 	return query.Where("region = ?", region)
+}
+
+func (s *Storage) getAggregatedHistorySince(serverID uint, since time.Time) ([]model.CheckResult, error) {
+	var regional []model.CheckResult
+	err := s.DB.
+		Where("server_id = ? AND created_at > ? AND region != ?", serverID, since, model.CheckRegionGlobal).
+		Order("created_at asc, id asc").
+		Find(&regional).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var legacy []model.CheckResult
+	err = s.DB.
+		Where("server_id = ? AND created_at > ? AND region = ?", serverID, since, model.CheckRegionGlobal).
+		Order("created_at asc").
+		Find(&legacy).Error
+	if err != nil {
+		return nil, err
+	}
+
+	aggregated := aggregateCheckResults(regional)
+	if len(aggregated) == 0 {
+		return legacy, nil
+	}
+	if len(legacy) == 0 {
+		return aggregated, nil
+	}
+
+	regionalTimestamps := make(map[int64]struct{}, len(aggregated))
+	for _, result := range aggregated {
+		regionalTimestamps[result.CreatedAt.UnixNano()] = struct{}{}
+	}
+	for _, result := range legacy {
+		if _, ok := regionalTimestamps[result.CreatedAt.UnixNano()]; !ok {
+			aggregated = append(aggregated, result)
+		}
+	}
+	sort.SliceStable(aggregated, func(i, j int) bool {
+		return aggregated[i].CreatedAt.Before(aggregated[j].CreatedAt)
+	})
+	return aggregated, nil
+}
+
+func (s *Storage) getAggregatedRecentHistory(serverID uint, limit int) ([]model.CheckResult, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+
+	history, err := s.getAggregatedHistorySince(serverID, time.Time{})
+	if err != nil {
+		return nil, err
+	}
+	if len(history) <= limit {
+		return history, nil
+	}
+	return history[len(history)-limit:], nil
+}
+
+func (s *Storage) getLatestAggregatedCheckResult(serverID uint) (*model.CheckResult, error) {
+	history, err := s.getAggregatedRecentHistory(serverID, 1)
+	if err != nil {
+		return nil, err
+	}
+	if len(history) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &history[len(history)-1], nil
+}
+
+func (s *Storage) getAggregatedIncidents(serverID uint, limit int) ([]model.CheckResult, error) {
+	history, err := s.getAggregatedHistorySince(serverID, time.Time{})
+	if err != nil {
+		return nil, err
+	}
+
+	incidents := make([]model.CheckResult, 0)
+	for i := len(history) - 1; i >= 0; i-- {
+		if !isOnlineStatus(history[i].Status) {
+			incidents = append(incidents, history[i])
+			if limit > 0 && len(incidents) >= limit {
+				break
+			}
+		}
+	}
+	return incidents, nil
+}
+
+func aggregateCheckResults(results []model.CheckResult) []model.CheckResult {
+	aggregated := make([]model.CheckResult, 0)
+	for i := 0; i < len(results); {
+		createdAt := results[i].CreatedAt
+		j := i + 1
+		for j < len(results) && results[j].CreatedAt.Equal(createdAt) {
+			j++
+		}
+		aggregated = append(aggregated, aggregateCheckResultGroup(results[i:j]))
+		i = j
+	}
+	return aggregated
+}
+
+func aggregateCheckResultGroup(group []model.CheckResult) model.CheckResult {
+	if len(group) == 0 {
+		return model.CheckResult{Region: model.CheckRegionGlobal, Status: "No regions checked"}
+	}
+
+	successes := make([]model.CheckResult, 0, len(group))
+	for _, result := range group {
+		if isOnlineStatus(result.Status) {
+			successes = append(successes, result)
+		}
+	}
+	if len(successes) > 0 {
+		return model.CheckResult{
+			ServerID:  group[0].ServerID,
+			Region:    model.CheckRegionGlobal,
+			Status:    successes[0].Status,
+			Latency:   averageCheckLatency(successes),
+			CreatedAt: group[0].CreatedAt,
+		}
+	}
+
+	return model.CheckResult{
+		ServerID:  group[0].ServerID,
+		Region:    model.CheckRegionGlobal,
+		Status:    "All regions failed",
+		Latency:   maxCheckLatency(group),
+		CreatedAt: group[0].CreatedAt,
+	}
+}
+
+func summarizeHistory(history []model.CheckResult) HistorySummary {
+	var summary HistorySummary
+	summary.Total = int64(len(history))
+	if len(history) == 0 {
+		return summary
+	}
+
+	var totalLatency int64
+	for _, result := range history {
+		if isOnlineStatus(result.Status) {
+			summary.Online++
+		}
+		totalLatency += result.Latency
+	}
+	summary.AvgLatency = float64(totalLatency) / float64(len(history))
+	return summary
+}
+
+func isOnlineStatus(status string) bool {
+	return strings.HasPrefix(status, "2") || status == "Connected"
+}
+
+func averageCheckLatency(results []model.CheckResult) int64 {
+	if len(results) == 0 {
+		return 0
+	}
+	var total int64
+	for _, result := range results {
+		total += result.Latency
+	}
+	return int64(math.Round(float64(total) / float64(len(results))))
+}
+
+func maxCheckLatency(results []model.CheckResult) int64 {
+	var max int64
+	for _, result := range results {
+		if result.Latency > max {
+			max = result.Latency
+		}
+	}
+	return max
 }

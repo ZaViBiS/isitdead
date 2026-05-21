@@ -56,12 +56,18 @@
 
 				if (found) {
 					server = { ...found, history: [], history30d: [], incidents: [] };
-					const resHist = await fetch(`/api/servers/${id}/results?hours=72&region=all`, {
-						headers: { Authorization: `Bearer ${token}` }
-					});
-					if (resHist.ok) {
-						const dataHist = (await resHist.json()) as CheckResult[];
-						regionalHistory = groupResultsByRegion(dataHist);
+					const [resHist, resRegions] = await Promise.all([
+						fetch(`/api/servers/${id}/results?hours=72`, {
+							headers: { Authorization: `Bearer ${token}` }
+						}),
+						fetch(`/api/servers/${id}/results?hours=72&region=all`, {
+							headers: { Authorization: `Bearer ${token}` }
+						})
+					]);
+					if (resHist.ok || resRegions.ok) {
+						const dataHist = resHist.ok ? ((await resHist.json()) as CheckResult[]) : [];
+						const dataRegions = resRegions.ok ? ((await resRegions.json()) as CheckResult[]) : [];
+						regionalHistory = groupResultsByRegion([...dataHist, ...dataRegions]);
 						const s = server;
 						if (s) {
 							s.history = sampleChartHistory(
@@ -72,15 +78,25 @@
 					}
 
 					// Fetch last 50 incidents
-					const resIncidents = await fetch(
-						`/api/servers/${id}/results?incidents=true&limit=50&region=all`,
-						{
+					const [resIncidents, resRegionIncidents] = await Promise.all([
+						fetch(`/api/servers/${id}/results?incidents=true&limit=50`, {
 							headers: { Authorization: `Bearer ${token}` }
-						}
-					);
-					if (resIncidents.ok) {
-						const dataIncidents = (await resIncidents.json()) as CheckResult[];
-						regionalIncidents = groupResultsByRegion(dataIncidents, 'desc');
+						}),
+						fetch(`/api/servers/${id}/results?incidents=true&limit=50&region=all`, {
+							headers: { Authorization: `Bearer ${token}` }
+						})
+					]);
+					if (resIncidents.ok || resRegionIncidents.ok) {
+						const dataIncidents = resIncidents.ok
+							? ((await resIncidents.json()) as CheckResult[])
+							: [];
+						const dataRegionIncidents = resRegionIncidents.ok
+							? ((await resRegionIncidents.json()) as CheckResult[])
+							: [];
+						regionalIncidents = groupResultsByRegion(
+							[...dataIncidents, ...dataRegionIncidents],
+							'desc'
+						);
 						if (server) {
 							server.incidents = regionalIncidents.global ?? [];
 						}
@@ -120,16 +136,19 @@
 	}
 
 	function getRegionNames() {
-		const names = Object.keys(regionalHistory);
+		const names = Object.keys(regionalHistory).filter((region) => region !== 'global');
 		return names.sort((a, b) => {
-			if (a === 'global') return -1;
-			if (b === 'global') return 1;
 			return a.localeCompare(b);
 		});
 	}
 
+	function getViewNames() {
+		const names = getRegionNames();
+		return regionalHistory.global ? ['global', ...names] : names;
+	}
+
 	function displayRegion(region: string) {
-		if (region === 'global') return 'Global';
+		if (region === 'global') return 'Overall';
 		return region.toUpperCase();
 	}
 
@@ -198,6 +217,7 @@
 			server.slow_threshold
 		)}
 		{@const regionNames = getRegionNames()}
+		{@const viewNames = getViewNames()}
 		{@const selectedHistory = getSelectedChartHistory(server, effectiveSlowThreshold)}
 		{@const selectedIncidents = getSelectedIncidents()}
 
@@ -300,18 +320,28 @@
 		</div>
 
 		<div class="grid gap-8">
-			{#if regionNames.length > 1}
+			{#if regionNames.length > 0}
 				<section class="glass-panel rounded-[2rem] p-5 sm:p-6">
-					<div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 						<h2 class="flex items-center gap-2 text-xl font-black">
 							<Globe2 class="h-5 w-5 text-brand-primary" />
 							Regions
 						</h2>
-						<span
-							class="w-fit rounded-full bg-brand-light/5 px-3 py-1 text-[10px] font-black tracking-widest text-brand-light/40 uppercase"
-						>
-							Viewing {displayRegion(selectedRegion)}
-						</span>
+						<div class="flex flex-wrap gap-2">
+							{#each viewNames as region (region)}
+								<button
+									type="button"
+									aria-pressed={selectedRegion === region}
+									onclick={() => (selectedRegion = region)}
+									class="rounded-full border px-3 py-1.5 text-[10px] font-black tracking-widest uppercase transition {selectedRegion ===
+									region
+										? 'border-brand-primary/35 bg-brand-primary/10 text-brand-primary'
+										: 'border-brand-light/10 bg-brand-light/5 text-brand-light/40 hover:text-brand-light/70'}"
+								>
+									{displayRegion(region)}
+								</button>
+							{/each}
+						</div>
 					</div>
 
 					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
