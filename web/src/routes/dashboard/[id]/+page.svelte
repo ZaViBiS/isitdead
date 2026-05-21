@@ -170,6 +170,46 @@
 		return sampleChartHistory(getSelectedHistory(region), slowThreshold);
 	}
 
+	function chartRegionColor(region: string, index: number) {
+		const colors: Record<string, string> = {
+			de: '#73E2A7',
+			us: '#7CC7FF'
+		};
+		return colors[region.toLowerCase()] ?? ['#E3C0D3', '#E5B181', '#DEF4C6'][index % 3];
+	}
+
+	function getChartRegions() {
+		const regions = getRegionNames();
+		if (regions.length > 0) {
+			return regions.sort((a, b) => {
+				const order = ['de', 'us'];
+				const aIndex = order.indexOf(a.toLowerCase());
+				const bIndex = order.indexOf(b.toLowerCase());
+				if (aIndex !== -1 || bIndex !== -1) {
+					return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
+				}
+				return a.localeCompare(b);
+			});
+		}
+		return regionalHistory.global ? ['global'] : [];
+	}
+
+	function getChartSeries(slowThreshold: number) {
+		return getChartRegions()
+			.map((region, index) => ({
+				key: region,
+				label: displayRegion(region),
+				color: region === 'global' ? '#73E2A7' : chartRegionColor(region, index),
+				history: sampleChartHistory(getRegionHistory(region), slowThreshold)
+			}))
+			.filter((item) => item.history.length >= 2);
+	}
+
+	function getChartPeak(series: { history: CheckResult[] }[], fallbackHistory: CheckResult[]) {
+		const points = series.length > 0 ? series.flatMap((item) => item.history) : fallbackHistory;
+		return Math.max(...points.map((result) => result.latency), 0);
+	}
+
 	function getSelectedIncidents(region: string) {
 		return (regionalIncidents[region] ?? []).slice(0, 50);
 	}
@@ -227,6 +267,7 @@
 		{@const activeRegion = getActiveRegion()}
 		{@const activeSummary = regionSummary(activeRegion)}
 		{@const selectedHistory = getSelectedChartHistory(activeRegion, effectiveSlowThreshold)}
+		{@const chartSeries = getChartSeries(effectiveSlowThreshold)}
 		{@const selectedIncidents = getSelectedIncidents(activeRegion)}
 
 		<div class="mb-8 flex flex-col justify-between gap-6 sm:mb-12 lg:flex-row lg:items-center">
@@ -338,7 +379,8 @@
 							type="button"
 							aria-pressed={activeRegion === 'global'}
 							onclick={() => (selectedRegion = 'global')}
-							class="glass-panel rounded-[2rem] p-5 text-left transition sm:p-6 {activeRegion === 'global'
+							class="glass-panel rounded-[2rem] p-5 text-left transition sm:p-6 {activeRegion ===
+							'global'
 								? 'border-brand-primary/35 bg-brand-primary/10 shadow-2xl shadow-brand-primary/5'
 								: 'hover:border-brand-primary/25'}"
 						>
@@ -380,13 +422,17 @@
 							<div class="grid grid-cols-2 gap-3">
 								<div class="rounded-2xl border border-brand-light/5 bg-brand-light/[0.025] p-3">
 									<div class="font-mono text-lg font-black text-brand-light/85">
-										{summary.avgLatency}<span class="ml-0.5 text-[10px] text-brand-light/30">ms</span>
+										{summary.avgLatency}<span class="ml-0.5 text-[10px] text-brand-light/30"
+											>ms</span
+										>
 									</div>
 									<div class="text-[10px] font-bold text-brand-light/25 uppercase">avg</div>
 								</div>
 								<div class="rounded-2xl border border-brand-light/5 bg-brand-light/[0.025] p-3">
 									<div class="text-lg font-black text-brand-light/85">
-										{summary.uptime.toFixed(1)}<span class="ml-0.5 text-[10px] text-brand-light/30">%</span>
+										{summary.uptime.toFixed(1)}<span class="ml-0.5 text-[10px] text-brand-light/30"
+											>%</span
+										>
 									</div>
 									<div class="text-[10px] font-bold text-brand-light/25 uppercase">uptime</div>
 								</div>
@@ -424,7 +470,9 @@
 										<div class="mb-4 flex items-start justify-between gap-3">
 											<div class="min-w-0">
 												<div class="truncate text-lg font-black">{displayRegion(region)}</div>
-												<div class="mt-1 text-[10px] font-bold tracking-widest text-brand-light/30 uppercase">
+												<div
+													class="mt-1 text-[10px] font-bold tracking-widest text-brand-light/30 uppercase"
+												>
 													{summary.current ? formatDateTime(summary.current.created_at) : 'No data'}
 												</div>
 											</div>
@@ -448,7 +496,9 @@
 												>
 													{summary.online ? 'Online' : summary.current ? 'Down' : 'No data'}
 												</div>
-												<div class="text-[10px] font-bold text-brand-light/25 uppercase">status</div>
+												<div class="text-[10px] font-bold text-brand-light/25 uppercase">
+													status
+												</div>
 											</div>
 											<div>
 												<div class="font-mono text-sm font-black text-brand-light/80">
@@ -460,7 +510,9 @@
 												<div class="text-sm font-black text-brand-light/80">
 													{summary.count}
 												</div>
-												<div class="text-[10px] font-bold text-brand-light/25 uppercase">checks</div>
+												<div class="text-[10px] font-bold text-brand-light/25 uppercase">
+													checks
+												</div>
 											</div>
 										</div>
 										<div class="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-light/5">
@@ -531,20 +583,22 @@
 							<div
 								class="flex flex-wrap items-center gap-4 rounded-2xl border border-brand-light/10 bg-brand-light/5 px-4 py-2 text-[10px] font-black tracking-widest uppercase"
 							>
-								<span class="flex items-center gap-1.5"
-									><span
-										class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"
-									></span> Healthy</span
-								>
-								{#if supportsSlowThreshold(server.check_type)}
-									<span class="flex items-center gap-1.5"
-										><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
-										{server.slow_threshold}ms</span
-									>
+								{#if chartSeries.length > 0}
+									{#each chartSeries as item (item.key)}
+										<span class="flex items-center gap-1.5">
+											<span
+												class="h-2 w-2 rounded-full shadow-[0_0_8px_rgba(115,226,167,0.35)]"
+												style="background-color: {item.color}"
+											></span>
+											{item.label}
+										</span>
+									{/each}
+								{:else}
+									<span class="flex items-center gap-1.5">
+										<span class="h-2 w-2 rounded-full bg-brand-primary"></span>
+										Waiting for regional checks
+									</span>
 								{/if}
-								<span class="flex items-center gap-1.5"
-									><span class="h-2 w-2 rounded-full bg-brand-accent"></span> Down</span
-								>
 							</div>
 						</div>
 					</div>
@@ -552,6 +606,7 @@
 					<div class="relative">
 						<StatusChart
 							history={selectedHistory}
+							series={chartSeries}
 							height={500}
 							slowThreshold={effectiveSlowThreshold}
 						/>
@@ -559,9 +614,7 @@
 							class="absolute bottom-4 left-4 flex flex-wrap gap-2 text-[10px] font-bold tracking-widest text-brand-light/20 uppercase sm:gap-4"
 						>
 							<span>&larr; 3 days ago</span>
-							<span
-								>Peak: {Math.max(...selectedHistory.map((r: CheckResult) => r.latency), 0)}ms</span
-							>
+							<span>Peak: {getChartPeak(chartSeries, selectedHistory)}ms</span>
 						</div>
 					</div>
 				</div>
