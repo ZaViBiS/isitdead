@@ -13,7 +13,6 @@
 		Mail,
 		MessageCircle,
 		X,
-		Link2,
 		LockKeyhole,
 		ShieldAlert
 	} from 'lucide-svelte';
@@ -85,14 +84,12 @@
 			label: 'TCP',
 			description: 'Ports and service sockets',
 			icon: Activity
-		},
-		{
-			value: 'links',
-			label: 'Links',
-			description: 'Broken link scans',
-			icon: Link2
 		}
 	];
+
+	function frontendCheckType(checkType: string) {
+		return checkType === 'ping' ? 'ping' : 'http';
+	}
 
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
@@ -122,7 +119,7 @@
 
 	function normalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
-		if (!['http', 'links'].includes(checkType) || trimmed === '') return trimmed;
+		if (checkType !== 'http' || trimmed === '') return trimmed;
 		if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
 		return `https://${trimmed}`;
 	}
@@ -130,7 +127,7 @@
 	function willNormalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
 		return (
-			['http', 'links'].includes(checkType) &&
+			checkType === 'http' &&
 			trimmed !== '' &&
 			!trimmed.startsWith('http://') &&
 			!trimmed.startsWith('https://')
@@ -139,18 +136,17 @@
 
 	function getTargetPlaceholder(checkType: string) {
 		if (checkType === 'ping') return 'example.com:80';
-		if (checkType === 'links') return 'example.com or https://example.com';
 		return 'example.com or http://example.com';
 	}
 
 	function selectNewType(checkType: string) {
-		newType = checkType;
-		if (checkType !== 'http' && checkType !== 'links') newSSLEnabled = false;
+		newType = frontendCheckType(checkType);
+		if (newType !== 'http') newSSLEnabled = false;
 	}
 
 	function selectEditType(checkType: string) {
-		editType = checkType;
-		if (checkType !== 'http' && checkType !== 'links') editSSLEnabled = false;
+		editType = frontendCheckType(checkType);
+		if (editType !== 'http') editSSLEnabled = false;
 	}
 
 	function notificationPayload(
@@ -201,6 +197,27 @@
 			)
 		});
 		if (!res.ok) throw new Error('Failed to save notification preferences');
+	}
+
+	function sleep(ms: number) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	async function waitForFirstCheck(serverID: number, token: string) {
+		for (let attempt = 0; attempt < 6; attempt += 1) {
+			try {
+				const res = await fetch(`/api/servers/${serverID}/results?limit=1`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (res.ok) {
+					const results = (await res.json()) as unknown[];
+					if (results.length > 0) return;
+				}
+			} catch {
+				// The dashboard refresh below still shows the monitor if the first check is delayed.
+			}
+			await sleep(500);
+		}
 	}
 
 	async function fetchTelegramStatus(silent = false) {
@@ -353,8 +370,8 @@
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 				body: JSON.stringify({
 					name: newName,
-					url: normalizeMonitorUrl(newUrl, newType),
-					check_type: newType,
+					url: normalizeMonitorUrl(newUrl, frontendCheckType(newType)),
+					check_type: frontendCheckType(newType),
 					check_interval: Number(newInterval),
 					timeout: Number(newTimeout),
 					slow_threshold: Number(newSlowThreshold),
@@ -371,6 +388,7 @@
 					newNotifyTelegramDown,
 					newNotifyTelegramRecovered
 				);
+				await waitForFirstCheck(server.id, token ?? '');
 				isAdding = false;
 				newName = '';
 				newUrl = '';
@@ -394,11 +412,11 @@
 		editingServer = server;
 		editName = server.name;
 		editUrl = server.url;
-		editType = server.check_type;
+		editType = frontendCheckType(server.check_type);
 		editInterval = server.check_interval;
 		editTimeout = server.timeout;
 		editSlowThreshold = server.slow_threshold;
-		editSSLEnabled = server.ssl_enabled;
+		editSSLEnabled = server.ssl_enabled && editType === 'http';
 		editNotifyEmailDown = true;
 		editNotifyEmailRecovered = true;
 		editNotifyTelegramDown = false;
@@ -427,8 +445,8 @@
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 				body: JSON.stringify({
 					name: editName,
-					url: normalizeMonitorUrl(editUrl, editType),
-					check_type: editType,
+					url: normalizeMonitorUrl(editUrl, frontendCheckType(editType)),
+					check_type: frontendCheckType(editType),
 					check_interval: Number(editInterval),
 					timeout: Number(editTimeout),
 					slow_threshold: Number(editSlowThreshold),
@@ -712,7 +730,7 @@
 							</div>
 							<div class="space-y-2 md:col-span-2">
 								<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">Check type</div>
-								<div class="grid gap-2 sm:grid-cols-3">
+								<div class="grid gap-2 sm:grid-cols-2">
 									{#each checkTypeOptions as option (option.value)}
 										{@const TypeIcon = option.icon}
 										<button
@@ -743,7 +761,7 @@
 									{/each}
 								</div>
 							</div>
-							{#if newType === 'http' || newType === 'links'}
+							{#if newType === 'http'}
 								<label
 									class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 md:col-span-2"
 								>
@@ -1077,7 +1095,7 @@
 										<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">
 											Check type
 										</div>
-										<div class="grid gap-2 sm:grid-cols-3">
+										<div class="grid gap-2 sm:grid-cols-2">
 											{#each checkTypeOptions as option (option.value)}
 												{@const TypeIcon = option.icon}
 												<button
@@ -1108,7 +1126,7 @@
 											{/each}
 										</div>
 									</div>
-									{#if editType === 'http' || editType === 'links'}
+									{#if editType === 'http'}
 										<label
 											class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 md:col-span-2"
 										>
