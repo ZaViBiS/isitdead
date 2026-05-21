@@ -170,46 +170,6 @@
 		return sampleChartHistory(getSelectedHistory(region), slowThreshold);
 	}
 
-	function chartRegionColor(region: string, index: number) {
-		const colors: Record<string, string> = {
-			de: '#73E2A7',
-			us: '#7CC7FF'
-		};
-		return colors[region.toLowerCase()] ?? ['#E3C0D3', '#E5B181', '#DEF4C6'][index % 3];
-	}
-
-	function getChartRegions() {
-		const regions = getRegionNames();
-		if (regions.length > 0) {
-			return regions.sort((a, b) => {
-				const order = ['de', 'us'];
-				const aIndex = order.indexOf(a.toLowerCase());
-				const bIndex = order.indexOf(b.toLowerCase());
-				if (aIndex !== -1 || bIndex !== -1) {
-					return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
-				}
-				return a.localeCompare(b);
-			});
-		}
-		return regionalHistory.global ? ['global'] : [];
-	}
-
-	function getChartSeries(slowThreshold: number) {
-		return getChartRegions()
-			.map((region, index) => ({
-				key: region,
-				label: displayRegion(region),
-				color: region === 'global' ? '#73E2A7' : chartRegionColor(region, index),
-				history: sampleChartHistory(getRegionHistory(region), slowThreshold)
-			}))
-			.filter((item) => item.history.length >= 2);
-	}
-
-	function getChartPeak(series: { history: CheckResult[] }[], fallbackHistory: CheckResult[]) {
-		const points = series.length > 0 ? series.flatMap((item) => item.history) : fallbackHistory;
-		return Math.max(...points.map((result) => result.latency), 0);
-	}
-
 	function getSelectedIncidents(region: string) {
 		return (regionalIncidents[region] ?? []).slice(0, 50);
 	}
@@ -267,7 +227,6 @@
 		{@const activeRegion = getActiveRegion()}
 		{@const activeSummary = regionSummary(activeRegion)}
 		{@const selectedHistory = getSelectedChartHistory(activeRegion, effectiveSlowThreshold)}
-		{@const chartSeries = getChartSeries(effectiveSlowThreshold)}
 		{@const selectedIncidents = getSelectedIncidents(activeRegion)}
 
 		<div class="mb-8 flex flex-col justify-between gap-6 sm:mb-12 lg:flex-row lg:items-center">
@@ -583,22 +542,20 @@
 							<div
 								class="flex flex-wrap items-center gap-4 rounded-2xl border border-brand-light/10 bg-brand-light/5 px-4 py-2 text-[10px] font-black tracking-widest uppercase"
 							>
-								{#if chartSeries.length > 0}
-									{#each chartSeries as item (item.key)}
-										<span class="flex items-center gap-1.5">
-											<span
-												class="h-2 w-2 rounded-full shadow-[0_0_8px_rgba(115,226,167,0.35)]"
-												style="background-color: {item.color}"
-											></span>
-											{item.label}
-										</span>
-									{/each}
-								{:else}
-									<span class="flex items-center gap-1.5">
-										<span class="h-2 w-2 rounded-full bg-brand-primary"></span>
-										Waiting for regional checks
-									</span>
+								<span class="flex items-center gap-1.5"
+									><span
+										class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"
+									></span> Healthy</span
+								>
+								{#if supportsSlowThreshold(server.check_type)}
+									<span class="flex items-center gap-1.5"
+										><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
+										{server.slow_threshold}ms</span
+									>
 								{/if}
+								<span class="flex items-center gap-1.5"
+									><span class="h-2 w-2 rounded-full bg-brand-accent"></span> Down</span
+								>
 							</div>
 						</div>
 					</div>
@@ -606,7 +563,6 @@
 					<div class="relative">
 						<StatusChart
 							history={selectedHistory}
-							series={chartSeries}
 							height={500}
 							slowThreshold={effectiveSlowThreshold}
 						/>
@@ -614,7 +570,9 @@
 							class="absolute bottom-4 left-4 flex flex-wrap gap-2 text-[10px] font-bold tracking-widest text-brand-light/20 uppercase sm:gap-4"
 						>
 							<span>&larr; 3 days ago</span>
-							<span>Peak: {getChartPeak(chartSeries, selectedHistory)}ms</span>
+							<span
+								>Peak: {Math.max(...selectedHistory.map((r: CheckResult) => r.latency), 0)}ms</span
+							>
 						</div>
 					</div>
 				</div>
