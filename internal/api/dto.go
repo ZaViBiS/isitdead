@@ -22,6 +22,14 @@ type serverRequest struct {
 	SSLEnabled    bool   `json:"ssl_enabled"`
 }
 
+type checkoutRequest struct {
+	Plan string `json:"plan"`
+}
+
+type checkoutResponse struct {
+	URL string `json:"url"`
+}
+
 type dashboardServerResponse struct {
 	ID             uint                          `json:"id"`
 	Name           string                        `json:"name"`

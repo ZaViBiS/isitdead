@@ -3,7 +3,9 @@ package database
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"time"
 
+	"github.com/ZaViBiS/isitdead/internal/billing"
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -57,7 +59,51 @@ func (s *Storage) GetUserByID(userID uint) (*model.User, error) {
 	if err := s.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return nil, err
 	}
+	if user.Plan == "" {
+		user.Plan = billing.PlanFree
+	}
 	return &user, nil
+}
+
+func (s *Storage) GetUserByStripeCustomerID(customerID string) (*model.User, error) {
+	var user model.User
+	if err := s.DB.Where("stripe_customer_id = ?", customerID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (s *Storage) GetUserByStripeSubscriptionID(subscriptionID string) (*model.User, error) {
+	var user model.User
+	if err := s.DB.Where("stripe_subscription_id = ?", subscriptionID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (s *Storage) CountUserServers(userID uint) (int64, error) {
+	var count int64
+	if err := s.DB.Model(&model.Server{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (s *Storage) UpdateUserBilling(userID uint, plan, customerID, subscriptionID, status, priceID string, periodEnd *time.Time) error {
+	if plan == "" {
+		plan = billing.PlanFree
+	}
+	return s.executeWrite(func(db *gorm.DB) error {
+		updates := map[string]interface{}{
+			"plan":                       plan,
+			"stripe_customer_id":         customerID,
+			"stripe_subscription_id":     subscriptionID,
+			"stripe_subscription_status": status,
+			"stripe_price_id":            priceID,
+			"plan_current_period_end":    periodEnd,
+		}
+		return db.Model(&model.User{}).Where("id = ?", userID).Updates(updates).Error
+	})
 }
 
 // GetUserByGoogleID знаходить користувача за Google ID

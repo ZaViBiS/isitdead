@@ -29,7 +29,7 @@
 
 ## Етап 3 — Реліз
 
-- [ ] [release] Інтегрувати Stripe для платежів (створити `internal/billing/stripe.go`)
+- [x] [release] Інтегрувати Stripe для платежів (створити `internal/api/billing_handlers.go`)
 - [ ] [release] Реалізувати моніторинг DNS-записів та оповіщення (створити `internal/checker/dns.go`)
 - [ ] [release] Реалізувати моніторинг доступності окремих API-ендпоінтів (редагувати `internal/checker/checker.go`)
 - [ ] [release] Реалізувати валідатор API-відповідей (перевірка вмісту JSON/body) (редагувати `internal/checker/checker.go`)
