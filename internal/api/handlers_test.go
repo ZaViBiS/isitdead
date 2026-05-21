@@ -288,7 +288,7 @@ func TestAPI(t *testing.T) {
 		updatePayload := map[string]interface{}{
 			"name":           "Updated Name",
 			"url":            "http://example.com/updated",
-			"check_interval": 120,
+			"check_interval": 300,
 			"check_type":     "http",
 			"timeout":        15,
 			"slow_threshold": 450,
