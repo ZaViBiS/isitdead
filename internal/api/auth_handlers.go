@@ -95,9 +95,12 @@ func (s *Server) handleGetMe(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"id":       user.ID,
-		"username": user.Username,
-		"email":    user.Email,
+		"id":                         user.ID,
+		"username":                   user.Username,
+		"email":                      user.Email,
+		"plan":                       user.Plan,
+		"stripe_subscription_status": user.StripeSubscriptionStatus,
+		"plan_current_period_end":    user.PlanCurrentPeriodEnd,
 	})
 }
 

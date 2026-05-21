@@ -25,7 +25,9 @@
 		getFaviconUrl,
 		formatDateOnly,
 		type Server,
-		type NotificationPreference
+		type NotificationPreference,
+		type User,
+		type BillingPlan
 	} from '$lib/utils';
 
 	type TelegramStatus = {
@@ -36,6 +38,8 @@
 	};
 
 	let servers = $state<Server[]>([]);
+	let user = $state<User | null>(null);
+	let billingPlans = $state<BillingPlan[]>([]);
 	let isLoading = $state(true);
 	let isAdding = $state(false);
 	let isEditing = $state(false);
@@ -114,6 +118,22 @@
 			error = 'Connection error';
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	async function fetchBilling() {
+		const token = localStorage.getItem('token');
+		try {
+			const [meRes, plansRes] = await Promise.all([
+				token
+					? fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } })
+					: Promise.resolve(null),
+				fetch('/api/billing/plans')
+			]);
+			if (meRes?.ok) user = (await meRes.json()) as User;
+			if (plansRes.ok) billingPlans = (await plansRes.json()) as BillingPlan[];
+		} catch {
+			// Billing details are non-critical for loading monitor data.
 		}
 	}
 
@@ -340,6 +360,22 @@
 		isAdding = true;
 	}
 
+	function currentPlan() {
+		const planID = user?.plan ?? 'free';
+		return billingPlans.find((plan) => plan.id === planID) ?? billingPlans[0];
+	}
+
+	function monitorLimitLabel() {
+		const plan = currentPlan();
+		if (!plan) return `${servers.length} monitors`;
+		return `${servers.length}/${plan.monitor_limit} monitors`;
+	}
+
+	function allowedIntervalPresets() {
+		const minInterval = currentPlan()?.min_interval ?? 300;
+		return intervalPresets.filter((preset) => preset >= minInterval);
+	}
+
 	function getSSLLabel(server: Server) {
 		const status = server.ssl_status;
 		if (!status) return 'SSL';
@@ -402,6 +438,10 @@
 				newNotifyTelegramDown = false;
 				newNotifyTelegramRecovered = false;
 				await fetchServers();
+				await fetchBilling();
+			} else {
+				const data = await res.json();
+				error = data.error ?? 'Failed to add server';
 			}
 		} catch {
 			error = 'Failed to add server';
@@ -475,6 +515,9 @@
 				);
 				isEditing = false;
 				editingServer = null;
+			} else {
+				const data = await res.json();
+				error = data.error ?? 'Failed to update server';
 			}
 		} catch {
 			error = 'Failed to update server';
@@ -515,6 +558,7 @@
 
 	onMount(() => {
 		fetchServers();
+		fetchBilling();
 		fetchTelegramStatus(true);
 	});
 
@@ -556,12 +600,20 @@
 								Track uptime, response time, and recent failures in one focused workspace.
 							</p>
 						</div>
-						<button
-							onclick={() => (isAdding ? (isAdding = false) : openAdd())}
-							class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-3 font-black text-brand-dark shadow-2xl shadow-brand-primary/15 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0 sm:w-auto"
-						>
-							<Plus class="h-5 w-5" /> Add monitor
-						</button>
+						<div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+							<a
+								href={resolve('/pricing')}
+								class="inline-flex items-center justify-center rounded-2xl border border-brand-light/10 bg-brand-light/[0.035] px-4 py-3 text-sm font-black text-brand-light/65 transition hover:border-brand-primary/30 hover:text-brand-primary"
+							>
+								{currentPlan()?.name ?? 'Free'} · {monitorLimitLabel()}
+							</a>
+							<button
+								onclick={() => (isAdding ? (isAdding = false) : openAdd())}
+								class="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-3 font-black text-brand-dark shadow-2xl shadow-brand-primary/15 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0"
+							>
+								<Plus class="h-5 w-5" /> Add monitor
+							</button>
+						</div>
 					</div>
 				</div>
 
@@ -840,7 +892,7 @@
 									>
 								</div>
 								<div class="grid grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5">
-									{#each intervalPresets as preset (preset)}
+									{#each allowedIntervalPresets() as preset (preset)}
 										<button
 											type="button"
 											onclick={() => (newInterval = preset)}
@@ -1164,7 +1216,7 @@
 											>
 										</div>
 										<div class="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap">
-											{#each intervalPresets as preset (preset)}
+											{#each allowedIntervalPresets() as preset (preset)}
 												<button
 													type="button"
 													onclick={() => (editInterval = preset)}
