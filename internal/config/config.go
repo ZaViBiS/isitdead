@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	RoleMain  = "main"
-	RoleProbe = "probe"
+	RoleMain           = "main"
+	RoleProbe          = "probe"
+	DefaultLocalRegion = "de"
 )
 
 type ProbeRegion struct {
@@ -39,7 +40,7 @@ type Config struct {
 
 func Load() *Config {
 	role := strings.ToLower(strings.TrimSpace(getEnv("INSTANCE_ROLE", getEnv("NODE_ROLE", RoleMain))))
-	region := strings.TrimSpace(getEnv("REGION", "main"))
+	region := strings.TrimSpace(getEnv("REGION", DefaultLocalRegion))
 
 	return &Config{
 		Env:               getEnv("ENV", "dev"),

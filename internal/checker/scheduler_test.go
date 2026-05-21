@@ -144,6 +144,13 @@ func TestSchedulerMultiRegionCheckStoresAggregateAndRegions(t *testing.T) {
 	assert.Equal(t, model.CheckRegionGlobal, globalHistory[0].Region)
 	assert.Equal(t, "200 OK", globalHistory[0].Status)
 
+	allHistory, err := storage.GetHistorySinceForRegion(srv.ID, model.CheckRegionAll, time.Time{})
+	assert.NoError(t, err)
+	assert.Len(t, allHistory, 2)
+	for _, result := range allHistory {
+		assert.NotEqual(t, model.CheckRegionGlobal, result.Region)
+	}
+
 	localHistory, err := storage.GetHistorySinceForRegion(srv.ID, "eu", time.Time{})
 	assert.NoError(t, err)
 	assert.Len(t, localHistory, 1)
