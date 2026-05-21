@@ -147,6 +147,12 @@
 		return regionalHistory.global ? ['global', ...names] : names;
 	}
 
+	function getActiveRegion() {
+		const names = getViewNames();
+		if (names.includes(selectedRegion)) return selectedRegion;
+		return names[0] ?? selectedRegion;
+	}
+
 	function displayRegion(region: string) {
 		if (region === 'global') return 'Overall';
 		return region.toUpperCase();
@@ -156,16 +162,16 @@
 		return regionalHistory[region] ?? [];
 	}
 
-	function getSelectedHistory() {
-		return getRegionHistory(selectedRegion);
+	function getSelectedHistory(region: string) {
+		return getRegionHistory(region);
 	}
 
-	function getSelectedChartHistory(s: Server, slowThreshold: number) {
-		return sampleChartHistory(getSelectedHistory(), slowThreshold);
+	function getSelectedChartHistory(region: string, slowThreshold: number) {
+		return sampleChartHistory(getSelectedHistory(region), slowThreshold);
 	}
 
-	function getSelectedIncidents() {
-		return (regionalIncidents[selectedRegion] ?? []).slice(0, 50);
+	function getSelectedIncidents(region: string) {
+		return (regionalIncidents[region] ?? []).slice(0, 50);
 	}
 
 	function isHealthyStatus(status: string) {
@@ -218,8 +224,10 @@
 		)}
 		{@const regionNames = getRegionNames()}
 		{@const viewNames = getViewNames()}
-		{@const selectedHistory = getSelectedChartHistory(server, effectiveSlowThreshold)}
-		{@const selectedIncidents = getSelectedIncidents()}
+		{@const activeRegion = getActiveRegion()}
+		{@const activeSummary = regionSummary(activeRegion)}
+		{@const selectedHistory = getSelectedChartHistory(activeRegion, effectiveSlowThreshold)}
+		{@const selectedIncidents = getSelectedIncidents(activeRegion)}
 
 		<div class="mb-8 flex flex-col justify-between gap-6 sm:mb-12 lg:flex-row lg:items-center">
 			<div class="flex items-start gap-4 sm:gap-6">
@@ -320,125 +328,224 @@
 		</div>
 
 		<div class="grid gap-8">
-			{#if regionNames.length > 0}
-				<section class="glass-panel rounded-[2rem] p-5 sm:p-6">
-					<div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-						<h2 class="flex items-center gap-2 text-xl font-black">
-							<Globe2 class="h-5 w-5 text-brand-primary" />
-							Regions
-						</h2>
-						<div class="flex flex-wrap gap-2">
-							{#each viewNames as region (region)}
-								<button
-									type="button"
-									aria-pressed={selectedRegion === region}
-									onclick={() => (selectedRegion = region)}
-									class="rounded-full border px-3 py-1.5 text-[10px] font-black tracking-widest uppercase transition {selectedRegion ===
-									region
-										? 'border-brand-primary/35 bg-brand-primary/10 text-brand-primary'
-										: 'border-brand-light/10 bg-brand-light/5 text-brand-light/40 hover:text-brand-light/70'}"
-								>
-									{displayRegion(region)}
-								</button>
-							{/each}
-						</div>
-					</div>
+			{#if viewNames.length > 0}
+				<section class="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.4fr)]">
+					{#if regionalHistory.global}
+						{@const summary = regionSummary('global')}
+						{@const overallStatus = summary.current?.status ?? 'unknown'}
+						{@const overallLatency = summary.current?.latency ?? 0}
+						<button
+							type="button"
+							aria-pressed={activeRegion === 'global'}
+							onclick={() => (selectedRegion = 'global')}
+							class="glass-panel rounded-[2rem] p-5 text-left transition sm:p-6 {activeRegion === 'global'
+								? 'border-brand-primary/35 bg-brand-primary/10 shadow-2xl shadow-brand-primary/5'
+								: 'hover:border-brand-primary/25'}"
+						>
+							<div class="mb-8 flex items-start justify-between gap-4">
+								<div>
+									<div class="mb-2 flex items-center gap-2 text-xl font-black">
+										<Globe2 class="h-5 w-5 text-brand-primary" />
+										Overall
+									</div>
+									<div class="text-sm font-medium text-brand-light/35">
+										{summary.current ? formatDateTime(summary.current.created_at) : 'No checks yet'}
+									</div>
+								</div>
+								<span
+									class="h-4 w-4 shrink-0 rounded-full border-2 border-brand-dark"
+									style="background-color: {getStatusColor(
+										overallStatus,
+										overallLatency,
+										effectiveSlowThreshold
+									)}"
+								></span>
+							</div>
 
-					<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-						{#each regionNames as region (region)}
-							{@const summary = regionSummary(region)}
-							{@const regionStatus = summary.current?.status ?? 'unknown'}
-							{@const regionLatency = summary.current?.latency ?? 0}
-							<button
-								type="button"
-								aria-pressed={selectedRegion === region}
-								onclick={() => (selectedRegion = region)}
-								class="rounded-3xl border p-4 text-left transition {selectedRegion === region
-									? 'border-brand-primary/35 bg-brand-primary/10 shadow-2xl shadow-brand-primary/5'
-									: 'border-brand-light/10 bg-brand-light/[0.025] hover:border-brand-primary/25'}"
-							>
-								<div class="mb-4 flex items-start justify-between gap-3">
-									<div class="min-w-0">
-										<div class="truncate text-lg font-black">{displayRegion(region)}</div>
-										<div class="mt-1 text-[10px] font-bold tracking-widest text-brand-light/30 uppercase">
-											{summary.count} checks
-										</div>
-									</div>
-									<span
-										class="h-3 w-3 shrink-0 rounded-full"
-										style="background-color: {getStatusColor(
-											regionStatus,
-											regionLatency,
-											effectiveSlowThreshold
-										)}"
-									></span>
+							<div class="mb-7">
+								<div
+									class="text-3xl font-black {summary.online
+										? 'text-brand-primary'
+										: summary.current
+											? 'text-brand-accent'
+											: 'text-brand-light/35'}"
+								>
+									{summary.online ? 'Operational' : summary.current ? 'Incident' : 'No data'}
 								</div>
-								<div class="grid grid-cols-2 gap-3">
-									<div>
-										<div
-											class="text-sm font-black {summary.online
-												? 'text-brand-primary'
-												: summary.current
-													? 'text-brand-accent'
-													: 'text-brand-light/35'}"
-										>
-											{summary.online ? 'Online' : summary.current ? 'Down' : 'No data'}
-										</div>
-										<div class="text-[10px] font-bold text-brand-light/25 uppercase">status</div>
-									</div>
-									<div class="text-right">
-										<div class="font-mono text-sm font-black text-brand-light/80">
-											{summary.current ? `${summary.avgLatency}ms` : '-'}
-										</div>
-										<div class="text-[10px] font-bold text-brand-light/25 uppercase">avg</div>
-									</div>
+								<div class="mt-1 text-xs font-bold tracking-widest text-brand-light/25 uppercase">
+									{summary.count} checks
 								</div>
-								<div class="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-light/5">
-									<div
-										class="h-full rounded-full {summary.uptime >= 99
-											? 'bg-brand-primary'
-											: summary.uptime >= 95
-												? 'bg-brand-soft'
-												: 'bg-brand-accent'}"
-										style="width: {summary.count > 0 ? summary.uptime : 0}%"
-									></div>
+							</div>
+
+							<div class="grid grid-cols-2 gap-3">
+								<div class="rounded-2xl border border-brand-light/5 bg-brand-light/[0.025] p-3">
+									<div class="font-mono text-lg font-black text-brand-light/85">
+										{summary.avgLatency}<span class="ml-0.5 text-[10px] text-brand-light/30">ms</span>
+									</div>
+									<div class="text-[10px] font-bold text-brand-light/25 uppercase">avg</div>
 								</div>
-							</button>
-						{/each}
-					</div>
+								<div class="rounded-2xl border border-brand-light/5 bg-brand-light/[0.025] p-3">
+									<div class="text-lg font-black text-brand-light/85">
+										{summary.uptime.toFixed(1)}<span class="ml-0.5 text-[10px] text-brand-light/30">%</span>
+									</div>
+									<div class="text-[10px] font-bold text-brand-light/25 uppercase">uptime</div>
+								</div>
+							</div>
+						</button>
+					{/if}
+
+					{#if regionNames.length > 0}
+						<div class="glass-panel rounded-[2rem] p-5 sm:p-6">
+							<div class="mb-5 flex items-center justify-between gap-4">
+								<h2 class="flex items-center gap-2 text-xl font-black">
+									<Activity class="h-5 w-5 text-brand-primary" />
+									Probes
+								</h2>
+								<span
+									class="rounded-full bg-brand-light/5 px-3 py-1 text-[10px] font-black tracking-widest text-brand-light/40 uppercase"
+								>
+									{regionNames.length} regions
+								</span>
+							</div>
+
+							<div class="grid gap-3 sm:grid-cols-2">
+								{#each regionNames as region (region)}
+									{@const summary = regionSummary(region)}
+									{@const regionStatus = summary.current?.status ?? 'unknown'}
+									{@const regionLatency = summary.current?.latency ?? 0}
+									<button
+										type="button"
+										aria-pressed={activeRegion === region}
+										onclick={() => (selectedRegion = region)}
+										class="rounded-3xl border p-4 text-left transition {activeRegion === region
+											? 'border-brand-primary/35 bg-brand-primary/10 shadow-2xl shadow-brand-primary/5'
+											: 'border-brand-light/10 bg-brand-light/[0.025] hover:border-brand-primary/25'}"
+									>
+										<div class="mb-4 flex items-start justify-between gap-3">
+											<div class="min-w-0">
+												<div class="truncate text-lg font-black">{displayRegion(region)}</div>
+												<div class="mt-1 text-[10px] font-bold tracking-widest text-brand-light/30 uppercase">
+													{summary.current ? formatDateTime(summary.current.created_at) : 'No data'}
+												</div>
+											</div>
+											<span
+												class="h-3 w-3 shrink-0 rounded-full"
+												style="background-color: {getStatusColor(
+													regionStatus,
+													regionLatency,
+													effectiveSlowThreshold
+												)}"
+											></span>
+										</div>
+										<div class="grid grid-cols-3 gap-3">
+											<div>
+												<div
+													class="text-sm font-black {summary.online
+														? 'text-brand-primary'
+														: summary.current
+															? 'text-brand-accent'
+															: 'text-brand-light/35'}"
+												>
+													{summary.online ? 'Online' : summary.current ? 'Down' : 'No data'}
+												</div>
+												<div class="text-[10px] font-bold text-brand-light/25 uppercase">status</div>
+											</div>
+											<div>
+												<div class="font-mono text-sm font-black text-brand-light/80">
+													{summary.current ? `${summary.avgLatency}ms` : '-'}
+												</div>
+												<div class="text-[10px] font-bold text-brand-light/25 uppercase">avg</div>
+											</div>
+											<div class="text-right">
+												<div class="text-sm font-black text-brand-light/80">
+													{summary.count}
+												</div>
+												<div class="text-[10px] font-bold text-brand-light/25 uppercase">checks</div>
+											</div>
+										</div>
+										<div class="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-light/5">
+											<div
+												class="h-full rounded-full {summary.uptime >= 99
+													? 'bg-brand-primary'
+													: summary.uptime >= 95
+														? 'bg-brand-soft'
+														: 'bg-brand-accent'}"
+												style="width: {summary.count > 0 ? summary.uptime : 0}%"
+											></div>
+										</div>
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
 				</section>
 			{/if}
 
 			<!-- Chart Card -->
 			<div class="glass-panel rounded-[2.5rem] p-1">
 				<div class="rounded-[2.4rem] bg-brand-dark p-5 sm:p-8 lg:p-10">
-					<div class="mb-10 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
+					<div class="mb-10 flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
 						<div>
-							<h3 class="mb-1 flex items-center gap-2 text-xl font-bold">
-								<Activity class="h-5 w-5 text-brand-primary" />
-								Response time · {displayRegion(selectedRegion)}
-							</h3>
+							<div class="mb-1 flex flex-wrap items-center gap-2">
+								<h3 class="flex items-center gap-2 text-xl font-bold">
+									<Activity class="h-5 w-5 text-brand-primary" />
+									Response time
+								</h3>
+								<span
+									class="rounded-full border border-brand-primary/20 bg-brand-primary/10 px-2.5 py-1 text-[10px] font-black tracking-widest text-brand-primary uppercase"
+								>
+									{displayRegion(activeRegion)}
+								</span>
+							</div>
 							<p class="text-sm text-brand-light/30">
-								Latency and availability over the last 3 days.
+								{activeSummary.current
+									? `${activeSummary.avgLatency}ms average · ${activeSummary.uptime.toFixed(1)}% uptime`
+									: 'Collecting telemetry data'}
 							</p>
 						</div>
-						<div
-							class="flex flex-wrap items-center gap-4 rounded-2xl border border-brand-light/10 bg-brand-light/5 px-4 py-2 text-[10px] font-black tracking-widest uppercase"
-						>
-							<span class="flex items-center gap-1.5"
-								><span
-									class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"
-								></span> Healthy</span
-							>
-							{#if supportsSlowThreshold(server.check_type)}
-								<span class="flex items-center gap-1.5"
-									><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
-									{server.slow_threshold}ms</span
+						<div class="flex flex-col gap-3 lg:items-end">
+							{#if viewNames.length > 1}
+								<div
+									class="inline-flex w-fit flex-wrap gap-1 rounded-2xl border border-brand-light/10 bg-brand-light/[0.035] p-1"
 								>
+									{#each viewNames as region (region)}
+										<button
+											type="button"
+											aria-pressed={activeRegion === region}
+											onclick={() => (selectedRegion = region)}
+											class="inline-flex h-9 items-center gap-2 rounded-xl px-3 text-[10px] font-black tracking-widest uppercase transition {activeRegion ===
+											region
+												? 'bg-brand-primary text-brand-dark shadow-lg shadow-brand-primary/10'
+												: 'text-brand-light/40 hover:bg-brand-light/5 hover:text-brand-light/75'}"
+										>
+											{#if region === 'global'}
+												<Globe2 class="h-3.5 w-3.5" />
+											{:else}
+												<Activity class="h-3.5 w-3.5" />
+											{/if}
+											{displayRegion(region)}
+										</button>
+									{/each}
+								</div>
 							{/if}
-							<span class="flex items-center gap-1.5"
-								><span class="h-2 w-2 rounded-full bg-brand-accent"></span> Down</span
+							<div
+								class="flex flex-wrap items-center gap-4 rounded-2xl border border-brand-light/10 bg-brand-light/5 px-4 py-2 text-[10px] font-black tracking-widest uppercase"
 							>
+								<span class="flex items-center gap-1.5"
+									><span
+										class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"
+									></span> Healthy</span
+								>
+								{#if supportsSlowThreshold(server.check_type)}
+									<span class="flex items-center gap-1.5"
+										><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
+										{server.slow_threshold}ms</span
+									>
+								{/if}
+								<span class="flex items-center gap-1.5"
+									><span class="h-2 w-2 rounded-full bg-brand-accent"></span> Down</span
+								>
+							</div>
 						</div>
 					</div>
 
@@ -467,7 +574,7 @@
 				>
 					<h3 class="flex items-center gap-2 text-xl font-bold">
 						<History class="h-5 w-5 text-brand-primary" />
-						Incidents · {displayRegion(selectedRegion)}
+						Incidents · {displayRegion(activeRegion)}
 					</h3>
 					<span
 						class="rounded-full bg-brand-light/5 px-3 py-1 text-[10px] font-black tracking-widest text-brand-light/40 uppercase"
