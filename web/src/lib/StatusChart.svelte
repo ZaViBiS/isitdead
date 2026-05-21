@@ -1,155 +1,121 @@
 <script lang="ts">
-	import { formatDate, type CheckResult } from '$lib/utils';
-
-	type ChartSeries = {
-		key: string;
-		label: string;
-		color: string;
-		history: CheckResult[];
-	};
-
-	type HoveredPoint = {
-		series: ChartSeries;
-		result: CheckResult;
-		x: number;
-		y: number;
-	};
+	import { getStatusColor, formatDate, type CheckResult } from '$lib/utils';
 
 	let {
 		history,
-		series = [],
 		height = 100,
 		slowThreshold = 300
-	} = $props<{
-		history?: CheckResult[];
-		series?: ChartSeries[];
-		height?: number;
-		slowThreshold?: number;
-	}>();
+	} = $props<{ history: CheckResult[]; height?: number; slowThreshold?: number }>();
 
-	let hoveredPoint = $state<HoveredPoint | null>(null);
-	let items = $derived(visibleSeries());
+	let hoveredResult = $state<CheckResult | null>(null);
 
-	type ChartPoint = {
-		x: number;
-		y: number;
-		result: CheckResult;
-	};
-
-	const chartWidth = 1000;
-	const chartHeight = 300;
-	const gridLines = [0.25, 0.5, 0.75];
-
-	function visibleSeries() {
-		const input: ChartSeries[] = series.length
-			? series
-			: history
-				? [{ key: 'latency', label: 'Latency', color: '#73E2A7', history }]
-				: [];
-		return input.filter((item) => item.history.length >= 2);
-	}
-
-	function getTimeRange(items: ChartSeries[]) {
-		const times = items.flatMap((item) =>
-			item.history.map((result) => new Date(result.created_at).getTime())
-		);
-		return {
-			start: Math.min(...times),
-			end: Math.max(...times)
-		};
-	}
-
-	function getMaxLatency(items: ChartSeries[]) {
-		return Math.max(...items.flatMap((item) => item.history.map((r) => r.latency)), 100);
-	}
-
-	function getChartPoints(
-		item: ChartSeries,
-		range: { start: number; end: number },
-		maxLatency: number
-	) {
-		const duration = Math.max(range.end - range.start, 1);
+	function getChartPoints(history: CheckResult[], width: number, h: number) {
+		if (!history || history.length < 2) return [];
+		const maxLatency = Math.max(...history.map((r) => r.latency), 100);
 		const chartMax = maxLatency * 1.1;
-		return item.history.map((r) => ({
-			x: ((new Date(r.created_at).getTime() - range.start) / duration) * chartWidth,
-			y: chartHeight - (r.latency / chartMax) * chartHeight,
+		const startTime = new Date(history[0].created_at).getTime();
+		const endTime = new Date(history[history.length - 1].created_at).getTime();
+		const duration = Math.max(endTime - startTime, 1);
+		return history.map((r) => ({
+			x: ((new Date(r.created_at).getTime() - startTime) / duration) * width,
+			y: h - (r.latency / chartMax) * h,
 			result: r
 		}));
 	}
 
-	function getLatencyPathD(points: ChartPoint[]) {
+	function getPathD(points: { x: number; y: number }[]) {
 		if (points.length < 2) return '';
 		return points.map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`)).join(' ');
 	}
 
 	function handleMouseMove(e: MouseEvent) {
-		const items = visibleSeries();
-		if (items.length === 0) return;
+		if (!history || history.length === 0) return;
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 		const x = e.clientX - rect.left;
 		const ratio = x / rect.width;
-		const range = getTimeRange(items);
-		const targetTime = range.start + ratio * (range.end - range.start);
-		const maxLatency = getMaxLatency(items);
+		const startTime = new Date(history[0].created_at).getTime();
+		const endTime = new Date(history[history.length - 1].created_at).getTime();
+		const targetTime = startTime + ratio * (endTime - startTime);
 
-		const points: HoveredPoint[] = items.flatMap((item) =>
-			getChartPoints(item, range, maxLatency).map((point) => ({
-				series: item,
-				result: point.result,
-				x: point.x,
-				y: point.y
-			}))
-		);
-		hoveredPoint = points.reduce((closest, point) => {
-			const closestDistance = Math.abs(new Date(closest.result.created_at).getTime() - targetTime);
-			const nextDistance = Math.abs(new Date(point.result.created_at).getTime() - targetTime);
-			return nextDistance < closestDistance ? point : closest;
+		hoveredResult = history.reduce((closest: CheckResult, result: CheckResult) => {
+			const closestDistance = Math.abs(new Date(closest.created_at).getTime() - targetTime);
+			const nextDistance = Math.abs(new Date(result.created_at).getTime() - targetTime);
+			return nextDistance < closestDistance ? result : closest;
 		});
 	}
+
+	const gridLines = [0.25, 0.5, 0.75];
 </script>
 
 <div
 	class="status-chart relative w-full cursor-crosshair overflow-hidden rounded-[2rem] border border-brand-light/5 bg-brand-light/[0.01]"
 	style="--chart-height: {height}px"
 	onmousemove={handleMouseMove}
-	onmouseleave={() => (hoveredPoint = null)}
+	onmouseleave={() => (hoveredResult = null)}
 	role="presentation"
 >
-	{#if items.length > 0}
-		{@const range = getTimeRange(items)}
-		{@const maxLatency = getMaxLatency(items)}
+	{#if history && history.length >= 2}
+		{@const points = getChartPoints(history, 1000, 300)}
 		<svg class="h-full w-full" preserveAspectRatio="none" viewBox="0 0 1000 300">
+			<defs>
+				<linearGradient id="grad-large" x1="0%" y1="0%" x2="0%" y2="100%">
+					<stop offset="0%" stop-color="#73E2A7" stop-opacity="0.15" />
+					<stop offset="100%" stop-color="#73E2A7" stop-opacity="0" />
+				</linearGradient>
+				<linearGradient id="line-grad-large" x1="0%" y1="0%" x2="100%" y2="0%">
+					{#each points as p, i (p.result.id)}
+						<stop
+							offset="{(i / (points.length - 1)) * 100}%"
+							stop-color={getStatusColor(p.result.status, p.result.latency, slowThreshold)}
+						/>
+					{/each}
+				</linearGradient>
+				<filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+					<feGaussianBlur stdDeviation="3" result="blur" />
+					<feComposite in="SourceGraphic" in2="blur" operator="over" />
+				</filter>
+			</defs>
+
 			{#each gridLines as line (line)}
 				<line
 					x1="0"
-					y1={chartHeight * line}
-					x2={chartWidth}
-					y2={chartHeight * line}
+					y1={300 * line}
+					x2="1000"
+					y2={300 * line}
 					stroke="white"
 					stroke-opacity="0.03"
 					stroke-width="1"
 				/>
 			{/each}
 
-			{#each items as item (item.key)}
-				{@const points = getChartPoints(item, range, maxLatency)}
-				<path
-					d={getLatencyPathD(points)}
-					fill="none"
-					stroke={item.color}
-					stroke-width="3"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					class="opacity-90"
-				/>
-			{/each}
+			<path
+				d={`M ${points[0].x},300 ` +
+					points.map((p) => `L ${p.x},${p.y}`).join(' ') +
+					` L ${points[points.length - 1].x},300 Z`}
+				fill="url(#grad-large)"
+			/>
+			<path
+				d={getPathD(points)}
+				fill="none"
+				stroke="url(#line-grad-large)"
+				stroke-width="3"
+				stroke-linejoin="round"
+				filter="url(#glow)"
+				class="opacity-90"
+			/>
 
-			{#if hoveredPoint}
+			{#if hoveredResult}
+				{@const startTime = new Date(history[0].created_at).getTime()}
+				{@const endTime = new Date(history[history.length - 1].created_at).getTime()}
+				{@const hX =
+					((new Date(hoveredResult.created_at).getTime() - startTime) /
+						Math.max(endTime - startTime, 1)) *
+					1000}
 				<line
-					x1={hoveredPoint.x}
+					x1={hX}
 					y1="0"
-					x2={hoveredPoint.x}
-					y2={chartHeight}
+					x2={hX}
+					y2="300"
 					stroke="#DEF4C6"
 					stroke-width="1"
 					stroke-dasharray="4,4"
@@ -158,13 +124,23 @@
 			{/if}
 		</svg>
 
-		{#if hoveredPoint}
-			{@const hX_p = (hoveredPoint.x / chartWidth) * 100}
-			{@const hY_p = (hoveredPoint.y / chartHeight) * 100}
+		{#if hoveredResult}
+			{@const maxLatency = Math.max(...history.map((r: CheckResult) => r.latency), 100) * 1.1}
+			{@const startTime = new Date(history[0].created_at).getTime()}
+			{@const endTime = new Date(history[history.length - 1].created_at).getTime()}
+			{@const hX_p =
+				((new Date(hoveredResult.created_at).getTime() - startTime) /
+					Math.max(endTime - startTime, 1)) *
+				100}
+			{@const hY_p = (1 - hoveredResult.latency / maxLatency) * 100}
 
 			<div
 				class="pointer-events-none absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-dark shadow-[0_0_15px_rgba(115,226,167,0.5)] transition-all duration-75"
-				style="left: {hX_p}%; top: {hY_p}%; background-color: {hoveredPoint.series.color}"
+				style="left: {hX_p}%; top: {hY_p}%; background-color: {getStatusColor(
+					hoveredResult.status,
+					hoveredResult.latency,
+					slowThreshold
+				)}"
 			></div>
 
 			<div
@@ -176,19 +152,26 @@
 					: 'auto'}; margin-left: {hX_p > 80 ? '0' : '20px'}"
 			>
 				<div class="text-[10px] font-black tracking-widest text-brand-light/40 uppercase">
-					{hoveredPoint.series.label} · {formatDate(hoveredPoint.result.created_at)}
+					{formatDate(hoveredResult.created_at)}
 				</div>
 				<div class="mt-1 flex items-end justify-between gap-4">
-					<span class="text-2xl leading-none font-black" style="color: {hoveredPoint.series.color}">
-						{hoveredPoint.result.latency}<span class="ml-0.5 text-xs opacity-50">ms</span>
+					<span
+						class="text-2xl leading-none font-black"
+						style="color: {getStatusColor(
+							hoveredResult.status,
+							hoveredResult.latency,
+							slowThreshold
+						)}"
+					>
+						{hoveredResult.latency}<span class="ml-0.5 text-xs opacity-50">ms</span>
 					</span>
 					<span
 						class="rounded-md border border-brand-light/10 bg-brand-light/5 px-2 py-0.5 text-[10px] font-black text-brand-light/60 uppercase"
 					>
-						{hoveredPoint.result.status === 'Connected' ? 'Online' : hoveredPoint.result.status}
+						{hoveredResult.status === 'Connected' ? 'Online' : hoveredResult.status}
 					</span>
 				</div>
-				{#if hoveredPoint.result.latency > slowThreshold}
+				{#if hoveredResult.latency > slowThreshold}
 					<div class="mt-2 flex items-center gap-1 text-[9px] font-bold text-brand-soft">
 						<div class="h-1 w-1 animate-pulse rounded-full bg-brand-soft"></div>
 						Latency threshold exceeded
