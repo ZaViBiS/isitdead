@@ -29,6 +29,29 @@ export interface Server {
 	hourly_buckets?: DashboardBucket[];
 }
 
+export interface User {
+	id: number;
+	username: string;
+	email: string;
+	plan: string;
+	stripe_subscription_status?: string;
+	plan_current_period_end?: string;
+}
+
+export interface BillingPlan {
+	id: string;
+	name: string;
+	description: string;
+	price: string;
+	monitor_limit: number;
+	min_interval: number;
+	history_days: number;
+	public_pages: boolean;
+	ssl_monitoring: boolean;
+	telegram_alerts: boolean;
+	stripe_available: boolean;
+}
+
 export interface SSLCertificateStatus {
 	valid: boolean;
 	self_signed: boolean;

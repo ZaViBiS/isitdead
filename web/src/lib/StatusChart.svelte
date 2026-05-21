@@ -11,39 +11,24 @@
 
 	type ChartPoint = {
 		x: number;
-		latencyY: number;
-		availabilityY: number;
-		color: string;
+		y: number;
 		result: CheckResult;
 	};
 
 	const chartWidth = 1000;
 	const chartHeight = 300;
-	const latencyTop = 24;
-	const latencyHeight = 190;
-	const availabilityTop = 242;
-	const availabilityHeight = 34;
 	const gridLines = [0.25, 0.5, 0.75];
-
-	function getAvailabilityY(result: CheckResult) {
-		const color = getStatusColor(result.status, result.latency, slowThreshold);
-		if (color === '#D62246') return availabilityTop + availabilityHeight;
-		if (color === '#E5B181') return availabilityTop + availabilityHeight / 2;
-		return availabilityTop;
-	}
 
 	function getChartPoints(history: CheckResult[], width: number) {
 		if (!history || history.length < 2) return [];
-		const maxLatency = Math.max(...history.map((r) => r.latency), 100);
+		const maxLatency = Math.max(...history.map((r) => r.latency), slowThreshold, 100);
 		const chartMax = maxLatency * 1.1;
 		const startTime = new Date(history[0].created_at).getTime();
 		const endTime = new Date(history[history.length - 1].created_at).getTime();
 		const duration = Math.max(endTime - startTime, 1);
 		return history.map((r) => ({
 			x: ((new Date(r.created_at).getTime() - startTime) / duration) * width,
-			latencyY: latencyTop + (1 - r.latency / chartMax) * latencyHeight,
-			availabilityY: getAvailabilityY(r),
-			color: getStatusColor(r.status, r.latency, slowThreshold),
+			y: chartHeight - (r.latency / chartMax) * chartHeight,
 			result: r
 		}));
 	}
@@ -51,22 +36,13 @@
 	function getLatencyPathD(points: ChartPoint[]) {
 		if (points.length < 2) return '';
 		return points
-			.map((p, i) => (i === 0 ? `M ${p.x},${p.latencyY}` : `L ${p.x},${p.latencyY}`))
+			.map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`))
 			.join(' ');
 	}
 
-	function getAvailabilitySegments(points: ChartPoint[]) {
-		const segments: { d: string; color: string; key: string }[] = [];
-		for (let i = 1; i < points.length; i += 1) {
-			const previous = points[i - 1];
-			const current = points[i];
-			segments.push({
-				d: `M ${previous.x},${previous.availabilityY} L ${current.x},${previous.availabilityY} L ${current.x},${current.availabilityY}`,
-				color: current.color,
-				key: `${previous.result.id}-${current.result.id}-${i}`
-			});
-		}
-		return segments;
+	function getThresholdY(history: CheckResult[]) {
+		const maxLatency = Math.max(...history.map((r) => r.latency), slowThreshold, 100);
+		return chartHeight - (slowThreshold / (maxLatency * 1.1)) * chartHeight;
 	}
 
 	function handleMouseMove(e: MouseEvent) {
@@ -117,15 +93,18 @@
 				/>
 			{/each}
 
-			<line
-				x1="0"
-				y1={availabilityTop - 12}
-				x2={chartWidth}
-				y2={availabilityTop - 12}
-				stroke="white"
-				stroke-opacity="0.06"
-				stroke-width="1"
-			/>
+			{#if Number.isFinite(slowThreshold)}
+				<line
+					x1="0"
+					y1={getThresholdY(history)}
+					x2={chartWidth}
+					y2={getThresholdY(history)}
+					stroke="#E5B181"
+					stroke-opacity="0.65"
+					stroke-width="2"
+					stroke-dasharray="8,8"
+				/>
+			{/if}
 			<path
 				d={getLatencyPathD(points)}
 				fill="none"
@@ -136,17 +115,6 @@
 				filter="url(#glow)"
 				class="opacity-90"
 			/>
-			{#each getAvailabilitySegments(points) as segment (segment.key)}
-				<path
-					d={segment.d}
-					fill="none"
-					stroke={segment.color}
-					stroke-width="3"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					class="opacity-80"
-				/>
-			{/each}
 
 			{#if hoveredResult}
 				{@const startTime = new Date(history[0].created_at).getTime()}
@@ -171,7 +139,7 @@
 		{#if hoveredResult}
 			{@const hoveredPoint = points.find((p) => p.result === hoveredResult) ?? points[0]}
 			{@const hX_p = (hoveredPoint.x / chartWidth) * 100}
-			{@const hY_p = (hoveredPoint.latencyY / chartHeight) * 100}
+			{@const hY_p = (hoveredPoint.y / chartHeight) * 100}
 
 			<div
 				class="pointer-events-none absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-dark shadow-[0_0_15px_rgba(115,226,167,0.5)] transition-all duration-75"

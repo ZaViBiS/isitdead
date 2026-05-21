@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ZaViBiS/isitdead/internal/billing"
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -172,6 +173,30 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
 	}
 
+	user, err := s.DB.GetUserByID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
+	}
+	plan := billing.PlanByID(user.Plan, s.billingPriceIDs())
+	currentCount, err := s.DB.CountUserServers(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not check plan limits"})
+	}
+	if int(currentCount) >= plan.MonitorLimit {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":         "Monitor limit reached for your plan",
+			"plan":          plan.ID,
+			"monitor_limit": plan.MonitorLimit,
+		})
+	}
+	if serverRequest.CheckInterval < plan.MinInterval {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":        "Check interval is not available on your plan",
+			"plan":         plan.ID,
+			"min_interval": plan.MinInterval,
+		})
+	}
+
 	if serverRequest.SSLEnabled && !supportsSSLMonitoring(serverRequest.CheckType) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "SSL monitoring is only supported for HTTP and link monitors"})
 	}
@@ -212,6 +237,19 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 	}
 	if req.SlowThreshold <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
+	}
+
+	user, err := s.DB.GetUserByID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
+	}
+	plan := billing.PlanByID(user.Plan, s.billingPriceIDs())
+	if req.CheckInterval < plan.MinInterval {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":        "Check interval is not available on your plan",
+			"plan":         plan.ID,
+			"min_interval": plan.MinInterval,
+		})
 	}
 
 	if req.SSLEnabled && !supportsSSLMonitoring(req.CheckType) {
