@@ -56,7 +56,7 @@ func NewScheduler(db *database.Storage) *Scheduler {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Scheduler{
 		storage:     db,
-		localRegion: "main",
+		localRegion: "de",
 		ctx:         ctx,
 		cancel:      cancel,
 		monitors:    make(map[uint]monitorControl),
@@ -70,7 +70,7 @@ func (s *Scheduler) SetNotifier(notifier TransitionNotifier) {
 func (s *Scheduler) SetLocalRegion(region string) {
 	region = strings.TrimSpace(region)
 	if region == "" || region == model.CheckRegionGlobal || region == model.CheckRegionAll {
-		region = "main"
+		region = "de"
 	}
 	s.localRegion = region
 }
@@ -269,7 +269,7 @@ func (s *Scheduler) performCheck(srv model.Server, last lastResult) lastResult {
 		Int("regions", len(results)).
 		Msg("Check completed")
 
-	if err := s.saveCheckResults(srv.ID, createdAt, aggregated, results); err != nil {
+	if err := s.saveCheckResults(srv.ID, createdAt, results); err != nil {
 		log.Error().Err(err).Uint("server_id", srv.ID).Msg("Failed to save check results")
 	}
 
@@ -304,17 +304,7 @@ func (s *Scheduler) collectRegionResults(srv model.Server) []RegionResult {
 	return results
 }
 
-func (s *Scheduler) saveCheckResults(serverID uint, createdAt time.Time, aggregated RegionResult, results []RegionResult) error {
-	if err := s.storage.AddCheckResult(model.CheckResult{
-		ServerID:  serverID,
-		Region:    aggregated.Region,
-		Status:    aggregated.Status,
-		Latency:   aggregated.Latency,
-		CreatedAt: createdAt,
-	}); err != nil {
-		return err
-	}
-
+func (s *Scheduler) saveCheckResults(serverID uint, createdAt time.Time, results []RegionResult) error {
 	for _, result := range results {
 		if err := s.storage.AddCheckResult(model.CheckResult{
 			ServerID:  serverID,

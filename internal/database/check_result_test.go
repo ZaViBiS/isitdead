@@ -60,7 +60,9 @@ func TestCheckResultRegionFiltering(t *testing.T) {
 
 	serverID := uint(42)
 	now := time.Now().UTC()
+	legacyTime := now.Add(-time.Minute)
 	results := []model.CheckResult{
+		{ServerID: serverID, Region: model.CheckRegionGlobal, Status: "200 OK", Latency: 120, CreatedAt: legacyTime},
 		{ServerID: serverID, Region: model.CheckRegionGlobal, Status: "200 OK", Latency: 100, CreatedAt: now},
 		{ServerID: serverID, Region: "eu", Status: "500 Internal Server Error", Latency: 300, CreatedAt: now},
 		{ServerID: serverID, Region: "us", Status: "200 OK", Latency: 80, CreatedAt: now},
@@ -71,8 +73,10 @@ func TestCheckResultRegionFiltering(t *testing.T) {
 
 	defaultHistory, err := storage.GetHistorySince(serverID, time.Time{})
 	assert.NoError(t, err)
-	assert.Len(t, defaultHistory, 1)
-	assert.Equal(t, model.CheckRegionGlobal, defaultHistory[0].Region)
+	assert.Len(t, defaultHistory, 2)
+	assert.Equal(t, model.CheckRegionGlobal, defaultHistory[1].Region)
+	assert.Equal(t, "200 OK", defaultHistory[1].Status)
+	assert.Equal(t, int64(80), defaultHistory[1].Latency)
 
 	euHistory, err := storage.GetHistorySinceForRegion(serverID, "eu", time.Time{})
 	assert.NoError(t, err)
@@ -81,15 +85,15 @@ func TestCheckResultRegionFiltering(t *testing.T) {
 
 	allHistory, err := storage.GetHistorySinceForRegion(serverID, model.CheckRegionAll, time.Time{})
 	assert.NoError(t, err)
-	assert.Len(t, allHistory, 3)
+	assert.Len(t, allHistory, 2)
 
 	summary, err := storage.GetHistorySummarySince(serverID, time.Time{})
 	assert.NoError(t, err)
-	assert.Equal(t, int64(1), summary.Total)
-	assert.Equal(t, int64(1), summary.Online)
+	assert.Equal(t, int64(2), summary.Total)
+	assert.Equal(t, int64(2), summary.Online)
 
 	allSummary, err := storage.GetHistorySummarySinceForRegion(serverID, model.CheckRegionAll, time.Time{})
 	assert.NoError(t, err)
-	assert.Equal(t, int64(3), allSummary.Total)
-	assert.Equal(t, int64(2), allSummary.Online)
+	assert.Equal(t, int64(2), allSummary.Total)
+	assert.Equal(t, int64(1), allSummary.Online)
 }
