@@ -272,6 +272,7 @@ func aggregateCheckResultGroup(group []model.CheckResult) model.CheckResult {
 	}
 	if len(successes) > 0 {
 		return model.CheckResult{
+			ID:        group[0].ID,
 			ServerID:  group[0].ServerID,
 			Region:    model.CheckRegionGlobal,
 			Status:    successes[0].Status,
@@ -281,6 +282,7 @@ func aggregateCheckResultGroup(group []model.CheckResult) model.CheckResult {
 	}
 
 	return model.CheckResult{
+		ID:        group[0].ID,
 		ServerID:  group[0].ServerID,
 		Region:    model.CheckRegionGlobal,
 		Status:    "All regions failed",
