@@ -77,6 +77,7 @@ func TestCheckResultRegionFiltering(t *testing.T) {
 	assert.Equal(t, model.CheckRegionGlobal, defaultHistory[1].Region)
 	assert.Equal(t, "200 OK", defaultHistory[1].Status)
 	assert.Equal(t, int64(80), defaultHistory[1].Latency)
+	assert.NotZero(t, defaultHistory[1].ID)
 
 	euHistory, err := storage.GetHistorySinceForRegion(serverID, "eu", time.Time{})
 	assert.NoError(t, err)
