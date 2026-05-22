@@ -284,6 +284,11 @@ func TestAPI(t *testing.T) {
 		json.NewDecoder(resp.Body).Decode(&telegramStatus)
 		assert.True(t, telegramStatus.Linked)
 
+		req = httptest.NewRequest("GET", "/api/servers/not-a-number/results?limit=1", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
 		// Update Server
 		updatePayload := map[string]interface{}{
 			"name":           "Updated Name",

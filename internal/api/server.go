@@ -46,6 +46,7 @@ func NewWithConfig(db *database.Storage, sched *checker.Scheduler, mailer Verifi
 
 	// Логування запитів
 	app.Use(func(c fiber.Ctx) error {
+		c.Set("Referrer-Policy", "no-referrer")
 		start := time.Now()
 		err := c.Next()
 

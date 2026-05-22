@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -13,24 +14,38 @@ func (s *Server) authMiddleware(c fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authorization header"})
 	}
 
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	userID, err := s.userIDFromJWT(strings.TrimPrefix(authHeader, "Bearer "))
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired token"})
+	}
+
+	c.Locals("user_id", userID)
+
+	return c.Next()
+}
+
+func (s *Server) userIDFromJWT(tokenString string) (uint, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, errors.New("unexpected signing method")
+		}
 		return []byte(s.Config.JWTSecret), nil
 	})
-
 	if err != nil || !token.Valid {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired token"})
+		return 0, errors.New("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid token claims"})
+		return 0, errors.New("invalid token claims")
 	}
 
-	userID := uint(claims["user_id"].(float64))
-	c.Locals("user_id", userID)
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return 0, errors.New("invalid user id claim")
+	}
 
-	return c.Next()
+	return uint(userID), nil
 }
 
 func (s *Server) adminMiddleware(c fiber.Ctx) error {
