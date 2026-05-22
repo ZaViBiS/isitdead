@@ -61,7 +61,7 @@ func parseResultsQuery(c fiber.Ctx) (resultsRequest, error) {
 
 	res.ServerID, err = parseServerID(c)
 	if err != nil {
-		panic(err)
+		return resultsRequest{}, err
 	}
 	res.IncidentsOnly = c.Query("incidents") == "true"
 	res.Region = c.Query("region")
