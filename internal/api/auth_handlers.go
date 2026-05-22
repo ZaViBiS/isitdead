@@ -58,7 +58,10 @@ func (s *Server) handleLogin(c fiber.Ctx) error {
 
 	// Перевіряємо чи підтверджена пошта
 	if !user.VerifiedEmail {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Please verify your email before logging in"})
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":              "Please verify your email before logging in",
+			"verification_error": true,
+		})
 	}
 
 	// Перевіряємо пароль
@@ -80,6 +83,38 @@ func (s *Server) handleLogin(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"token": t,
 		"user":  fiber.Map{"id": user.ID, "username": user.Username, "email": user.Email, "is_admin": s.isAdminEmail(user.Email)},
+	})
+}
+
+func (s *Server) handleResendConfirmation(c fiber.Ctx) error {
+	var req resendConfirmationRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	user, err := s.DB.GetUserByEmail(req.Email)
+	if err != nil || user.VerifiedEmail {
+		return c.JSON(fiber.Map{
+			"message": "If this email still needs confirmation, a new link has been sent.",
+		})
+	}
+
+	if s.Mailer == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Mailer is not configured"})
+	}
+
+	token, err := s.DB.ResetVerificationToken(user.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not create verification token"})
+	}
+
+	if err := s.Mailer.SendVerificationEmail(user.Email, token); err != nil {
+		log.Error().Err(err).Uint("user_id", user.ID).Msg("Failed to resend verification email")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to send verification email"})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Confirmation email sent. Please check your inbox.",
 	})
 }
 

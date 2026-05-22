@@ -42,10 +42,10 @@
 	function planFeatures(plan: BillingPlan) {
 		return [
 			`${plan.monitor_limit} monitors`,
-			`${Math.floor(plan.min_interval / 60) || plan.min_interval}${plan.min_interval < 60 ? 's' : ' min'} checks`,
-			`${plan.history_days} days history`,
-			plan.public_pages ? 'Public status pages' : 'Private dashboard',
-			plan.telegram_alerts ? 'Telegram alerts' : 'Email alerts'
+			'Fast checks included',
+			'Full status history included',
+			'Public status pages included',
+			'Email, Telegram, and SSL alerts included'
 		];
 	}
 
@@ -119,11 +119,11 @@
 			<div class="max-w-3xl">
 				<div class="signal-pill mb-6">Pricing</div>
 				<h1 class="text-4xl leading-none font-black tracking-tight sm:text-6xl">
-					Scale checks when your services need it.
+					Pay only when you need more monitors.
 				</h1>
 				<p class="mt-5 max-w-2xl text-lg leading-8 text-brand-light/55">
-					Start with a small monitor limit, then unlock faster intervals, public status pages, and
-					Telegram alerts when your operations need more room.
+					Every plan includes the same monitoring features. The only limit that changes is how many
+					monitors you can run.
 				</p>
 			</div>
 			{#if user && user.plan !== 'free'}
@@ -183,7 +183,7 @@
 						<div class="mb-6">
 							<div class="text-5xl font-black tracking-tight">{plan.price}</div>
 							<div class="mt-2 text-xs font-bold tracking-widest text-brand-light/30 uppercase">
-								{plan.id === 'free' ? 'No card required' : 'Billed by Stripe'}
+								{plan.id === 'free' ? 'No card required' : 'More monitor slots'}
 							</div>
 						</div>
 

@@ -12,6 +12,10 @@ type loginRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type resendConfirmationRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
 type serverRequest struct {
 	Name          string `json:"name"`
 	URL           string `json:"url"`

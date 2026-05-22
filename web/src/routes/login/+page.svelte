@@ -2,14 +2,17 @@
 	import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import LogoMark from '$lib/LogoMark.svelte';
 
 	let email = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
+	let isResending = $state(false);
 	let message = $state('');
 	let isError = $state(false);
+	let canResendConfirmation = $state(false);
 
 	onMount(() => {
 		const oauth = page.url.searchParams.get('oauth');
@@ -23,6 +26,7 @@
 		isLoading = true;
 		message = '';
 		isError = false;
+		canResendConfirmation = false;
 
 		try {
 			const res = await fetch('/api/auth/session', { method: 'POST' });
@@ -31,17 +35,17 @@
 			if (res.ok) {
 				localStorage.setItem('token', data.token);
 				localStorage.setItem('user', JSON.stringify(data.user));
-				window.history.replaceState({}, document.title, '/login');
-				window.location.href = '/dashboard';
+				window.history.replaceState({}, document.title, resolve('/login'));
+				await goto(resolve('/dashboard'));
 			} else {
 				isError = true;
 				message = data.error || 'Google sign-in failed';
-				window.history.replaceState({}, document.title, '/login');
+				window.history.replaceState({}, document.title, resolve('/login'));
 			}
 		} catch {
 			isError = true;
 			message = 'Google sign-in failed. Please try again.';
-			window.history.replaceState({}, document.title, '/login');
+			window.history.replaceState({}, document.title, resolve('/login'));
 		} finally {
 			isLoading = false;
 		}
@@ -67,17 +71,41 @@
 			if (res.ok) {
 				localStorage.setItem('token', data.token);
 				localStorage.setItem('user', JSON.stringify(data.user));
-				// Використовуємо window.location для надійності, якщо goto глючить
-				window.location.href = '/dashboard';
+				await goto(resolve('/dashboard'));
 			} else {
 				isError = true;
 				message = data.error || 'Invalid email or password';
+				canResendConfirmation = data.verification_error === true;
 			}
 		} catch {
 			isError = true;
 			message = 'Connection error. Please check if the server is running.';
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	async function resendConfirmation() {
+		if (isResending || !email) return;
+		isResending = true;
+		message = '';
+		isError = false;
+
+		try {
+			const res = await fetch('/api/auth/resend-confirmation', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email })
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || 'Could not resend confirmation email');
+			message = data.message || 'Confirmation email sent. Please check your inbox.';
+			canResendConfirmation = false;
+		} catch (err) {
+			isError = true;
+			message = err instanceof Error ? err.message : 'Could not resend confirmation email';
+		} finally {
+			isResending = false;
 		}
 	}
 </script>
@@ -145,12 +173,24 @@
 
 			{#if message}
 				<div
-					class="flex items-center gap-2 rounded-lg {isError
+					class="flex flex-col gap-3 rounded-lg {isError
 						? 'bg-brand-accent/10 text-brand-accent'
 						: 'bg-brand-primary/10 text-brand-primary'} p-4 text-sm"
 				>
-					{#if isError}<AlertCircle class="h-4 w-4" />{/if}
-					{message}
+					<div class="flex items-center gap-2">
+						{#if isError}<AlertCircle class="h-4 w-4 shrink-0" />{/if}
+						{message}
+					</div>
+					{#if canResendConfirmation}
+						<button
+							type="button"
+							onclick={resendConfirmation}
+							disabled={isResending}
+							class="w-fit rounded-lg border border-brand-accent/25 px-3 py-2 text-xs font-black transition hover:bg-brand-accent/10 disabled:opacity-50"
+						>
+							{isResending ? 'Sending...' : 'Resend confirmation email'}
+						</button>
+					{/if}
 				</div>
 			{/if}
 

@@ -186,23 +186,16 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
 	}
-	plan := billing.PlanByID(user.Plan, s.billingPriceIDs())
 	currentCount, err := s.DB.CountUserServers(userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not check plan limits"})
 	}
+	plan := billing.PlanByID(user.Plan, s.billingPriceIDs())
 	if int(currentCount) >= plan.MonitorLimit {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error":         "Monitor limit reached for your plan",
 			"plan":          plan.ID,
 			"monitor_limit": plan.MonitorLimit,
-		})
-	}
-	if serverRequest.CheckInterval < plan.MinInterval {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error":        "Check interval is not available on your plan",
-			"plan":         plan.ID,
-			"min_interval": plan.MinInterval,
 		})
 	}
 
@@ -251,19 +244,6 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 
 	if err := validateMonitorTiming(req.Timeout, req.SlowThreshold); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	user, err := s.DB.GetUserByID(userID)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
-	}
-	plan := billing.PlanByID(user.Plan, s.billingPriceIDs())
-	if req.CheckInterval < plan.MinInterval {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error":        "Check interval is not available on your plan",
-			"plan":         plan.ID,
-			"min_interval": plan.MinInterval,
-		})
 	}
 
 	if req.SSLEnabled && !supportsSSLMonitoring(req.CheckType) {

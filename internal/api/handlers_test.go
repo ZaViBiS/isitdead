@@ -93,6 +93,19 @@ func TestAPI(t *testing.T) {
 
 		loginResp, _ := server.App.Test(loginReq)
 		assert.Equal(t, http.StatusForbidden, loginResp.StatusCode)
+
+		resendPayload := map[string]string{"email": "test@example.com"}
+		resendBody, _ := json.Marshal(resendPayload)
+		resendReq := httptest.NewRequest("POST", "/api/auth/resend-confirmation", bytes.NewReader(resendBody))
+		resendReq.Header.Set("Content-Type", "application/json")
+
+		oldToken := verificationToken
+		resendResp, _ := server.App.Test(resendReq)
+		assert.Equal(t, http.StatusOK, resendResp.StatusCode)
+		assert.Equal(t, "test@example.com", mailer.lastTo)
+		assert.NotEmpty(t, mailer.lastToken)
+		assert.NotEqual(t, oldToken, mailer.lastToken)
+		verificationToken = mailer.lastToken
 	})
 
 	t.Run("Confirm Email", func(t *testing.T) {
@@ -248,6 +261,23 @@ func TestAPI(t *testing.T) {
 			"slow_threshold": 300,
 		}
 		body, _ = json.Marshal(userUpdate)
+		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		// Billing plans only limit monitor count, not check interval.
+		fastIntervalPayload := map[string]interface{}{
+			"name":           "Fast Interval",
+			"url":            "http://example.com",
+			"check_interval": 30,
+			"check_type":     "http",
+			"timeout":        10,
+			"slow_threshold": 300,
+		}
+		body, _ = json.Marshal(fastIntervalPayload)
 		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)

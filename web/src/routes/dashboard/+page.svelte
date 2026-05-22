@@ -234,7 +234,14 @@
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 			body: JSON.stringify(
-				notificationPayload(emailDown, emailRecovered, telegramDown, telegramRecovered, discordDown, discordRecovered)
+				notificationPayload(
+					emailDown,
+					emailRecovered,
+					telegramDown,
+					telegramRecovered,
+					discordDown,
+					discordRecovered
+				)
 			)
 		});
 		if (!res.ok) throw new Error('Failed to save notification preferences');
@@ -393,7 +400,7 @@
 	}
 
 	function allowedIntervalPresets() {
-		const minInterval = currentPlan()?.min_interval ?? 300;
+		const minInterval = currentPlan()?.min_interval ?? 30;
 		return intervalPresets.filter((preset) => preset >= minInterval);
 	}
 

@@ -44,6 +44,25 @@ func (s *Storage) VerifyUser(userID uint) error {
 	})
 }
 
+func (s *Storage) ResetVerificationToken(userID uint) (string, error) {
+	token := GenerateToken()
+	err := s.executeWrite(func(db *gorm.DB) error {
+		return db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Where("user_id = ?", userID).Delete(&model.EmailVerification{}).Error; err != nil {
+				return err
+			}
+			return tx.Create(&model.EmailVerification{
+				UserID: userID,
+				Token:  token,
+			}).Error
+		})
+	})
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
 // GetUserByEmail знаходить користувача за email
 func (s *Storage) GetUserByEmail(email string) (*model.User, error) {
 	var user model.User

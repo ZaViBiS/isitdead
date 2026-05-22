@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Mail, Lock, User, ArrowRight } from 'lucide-svelte';
+	import { Mail, Lock, User, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import LogoMark from '$lib/LogoMark.svelte';
 
@@ -9,7 +10,10 @@
 	let email = $state('');
 	let password = $state('');
 	let isLoading = $state(false);
+	let isResending = $state(false);
 	let message = $state('');
+	let isError = $state(false);
+	let pendingConfirmationEmail = $state('');
 
 	onMount(() => {
 		const token = page.url.searchParams.get('token');
@@ -20,7 +24,7 @@
 			if (user) {
 				localStorage.setItem('user', JSON.stringify({ username: user }));
 			}
-			window.location.href = '/dashboard';
+			void goto(resolve('/dashboard'));
 		}
 	});
 
@@ -28,6 +32,7 @@
 		e.preventDefault();
 		isLoading = true;
 		message = '';
+		isError = false;
 
 		try {
 			const res = await fetch('/api/register', {
@@ -41,18 +46,43 @@
 				message =
 					data.message ||
 					'Registration successful! Please check your email to confirm your account.';
-				// Очищуємо форму
+				pendingConfirmationEmail = email;
 				username = '';
 				email = '';
 				password = '';
 			} else {
 				const data = await res.json();
+				isError = true;
 				message = data.error || 'Registration failed. Please try again.';
 			}
 		} catch {
-			message = 'Connection error. Is the backend running?';
+			isError = true;
+			message = 'Connection error. Please try again in a moment.';
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	async function resendConfirmation() {
+		if (isResending || !pendingConfirmationEmail) return;
+		isResending = true;
+		message = '';
+		isError = false;
+
+		try {
+			const res = await fetch('/api/auth/resend-confirmation', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: pendingConfirmationEmail })
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || 'Could not resend confirmation email');
+			message = data.message || 'Confirmation email sent. Please check your inbox.';
+		} catch (err) {
+			isError = true;
+			message = err instanceof Error ? err.message : 'Could not resend confirmation email';
+		} finally {
+			isResending = false;
 		}
 	}
 </script>
@@ -145,8 +175,29 @@
 			</div>
 
 			{#if message}
-				<div class="rounded-lg bg-brand-primary/10 p-4 text-sm text-brand-primary">
-					{message}
+				<div
+					class="flex flex-col gap-3 rounded-lg {isError
+						? 'bg-brand-accent/10 text-brand-accent'
+						: 'bg-brand-primary/10 text-brand-primary'} p-4 text-sm"
+				>
+					<div class="flex items-center gap-2">
+						{#if isError}
+							<AlertCircle class="h-4 w-4 shrink-0" />
+						{:else}
+							<CheckCircle2 class="h-4 w-4 shrink-0" />
+						{/if}
+						{message}
+					</div>
+					{#if pendingConfirmationEmail && !isError}
+						<button
+							type="button"
+							onclick={resendConfirmation}
+							disabled={isResending}
+							class="w-fit rounded-lg border border-brand-primary/25 px-3 py-2 text-xs font-black transition hover:bg-brand-primary/10 disabled:opacity-50"
+						>
+							{isResending ? 'Sending...' : 'Resend confirmation email'}
+						</button>
+					{/if}
 				</div>
 			{/if}
 
