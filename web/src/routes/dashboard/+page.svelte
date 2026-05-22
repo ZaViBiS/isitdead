@@ -13,7 +13,6 @@
 		Mail,
 		MessageCircle,
 		X,
-		Link2,
 		LockKeyhole,
 		ShieldAlert
 	} from 'lucide-svelte';
@@ -26,7 +25,9 @@
 		getFaviconUrl,
 		formatDateOnly,
 		type Server,
-		type NotificationPreference
+		type NotificationPreference,
+		type User,
+		type BillingPlan
 	} from '$lib/utils';
 
 	type TelegramStatus = {
@@ -37,6 +38,8 @@
 	};
 
 	let servers = $state<Server[]>([]);
+	let user = $state<User | null>(null);
+	let billingPlans = $state<BillingPlan[]>([]);
 	let isLoading = $state(true);
 	let isAdding = $state(false);
 	let isEditing = $state(false);
@@ -89,14 +92,21 @@
 			label: 'TCP',
 			description: 'Ports and service sockets',
 			icon: Activity
-		},
-		{
-			value: 'links',
-			label: 'Links',
-			description: 'Broken link scans',
-			icon: Link2
 		}
 	];
+
+	function frontendCheckType(checkType: string) {
+		return checkType === 'ping' ? 'ping' : 'http';
+	}
+
+	function safeExternalHref(rawUrl: string) {
+		try {
+			const parsed = new URL(rawUrl);
+			return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '';
+		} catch {
+			return '';
+		}
+	}
 
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
@@ -124,9 +134,25 @@
 		}
 	}
 
+	async function fetchBilling() {
+		const token = localStorage.getItem('token');
+		try {
+			const [meRes, plansRes] = await Promise.all([
+				token
+					? fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } })
+					: Promise.resolve(null),
+				fetch('/api/billing/plans')
+			]);
+			if (meRes?.ok) user = (await meRes.json()) as User;
+			if (plansRes.ok) billingPlans = (await plansRes.json()) as BillingPlan[];
+		} catch {
+			// Billing details are non-critical for loading monitor data.
+		}
+	}
+
 	function normalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
-		if (!['http', 'links'].includes(checkType) || trimmed === '') return trimmed;
+		if (checkType !== 'http' || trimmed === '') return trimmed;
 		if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
 		return `https://${trimmed}`;
 	}
@@ -134,7 +160,7 @@
 	function willNormalizeMonitorUrl(url: string, checkType: string) {
 		const trimmed = url.trim();
 		return (
-			['http', 'links'].includes(checkType) &&
+			checkType === 'http' &&
 			trimmed !== '' &&
 			!trimmed.startsWith('http://') &&
 			!trimmed.startsWith('https://')
@@ -143,18 +169,17 @@
 
 	function getTargetPlaceholder(checkType: string) {
 		if (checkType === 'ping') return 'example.com:80';
-		if (checkType === 'links') return 'example.com or https://example.com';
 		return 'example.com or http://example.com';
 	}
 
 	function selectNewType(checkType: string) {
-		newType = checkType;
-		if (checkType !== 'http' && checkType !== 'links') newSSLEnabled = false;
+		newType = frontendCheckType(checkType);
+		if (newType !== 'http') newSSLEnabled = false;
 	}
 
 	function selectEditType(checkType: string) {
-		editType = checkType;
-		if (checkType !== 'http' && checkType !== 'links') editSSLEnabled = false;
+		editType = frontendCheckType(checkType);
+		if (editType !== 'http') editSSLEnabled = false;
 	}
 
 	function notificationPayload(
@@ -181,7 +206,9 @@
 		event: string,
 		fallback: boolean
 	) {
-		return prefs.find((pref) => pref.channel === channel && pref.event === event)?.enabled ?? fallback;
+		return (
+			prefs.find((pref) => pref.channel === channel && pref.event === event)?.enabled ?? fallback
+		);
 	}
 
 	async function fetchNotificationPreferences(serverID: number) {
@@ -211,6 +238,27 @@
 			)
 		});
 		if (!res.ok) throw new Error('Failed to save notification preferences');
+	}
+
+	function sleep(ms: number) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	async function waitForFirstCheck(serverID: number, token: string) {
+		for (let attempt = 0; attempt < 6; attempt += 1) {
+			try {
+				const res = await fetch(`/api/servers/${serverID}/results?limit=1`, {
+					headers: { Authorization: `Bearer ${token}` }
+				});
+				if (res.ok) {
+					const results = (await res.json()) as unknown[];
+					if (results.length > 0) return;
+				}
+			} catch {
+				// The dashboard refresh below still shows the monitor if the first check is delayed.
+			}
+			await sleep(500);
+		}
 	}
 
 	async function fetchTelegramStatus(silent = false) {
@@ -333,6 +381,22 @@
 		isAdding = true;
 	}
 
+	function currentPlan() {
+		const planID = user?.plan ?? 'free';
+		return billingPlans.find((plan) => plan.id === planID) ?? billingPlans[0];
+	}
+
+	function monitorLimitLabel() {
+		const plan = currentPlan();
+		if (!plan) return `${servers.length} monitors`;
+		return `${servers.length}/${plan.monitor_limit} monitors`;
+	}
+
+	function allowedIntervalPresets() {
+		const minInterval = currentPlan()?.min_interval ?? 300;
+		return intervalPresets.filter((preset) => preset >= minInterval);
+	}
+
 	function getSSLLabel(server: Server) {
 		const status = server.ssl_status;
 		if (!status) return 'SSL';
@@ -363,8 +427,8 @@
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 				body: JSON.stringify({
 					name: newName,
-					url: normalizeMonitorUrl(newUrl, newType),
-					check_type: newType,
+					url: normalizeMonitorUrl(newUrl, frontendCheckType(newType)),
+					check_type: frontendCheckType(newType),
 					check_interval: Number(newInterval),
 					timeout: Number(newTimeout),
 					slow_threshold: Number(newSlowThreshold),
@@ -383,6 +447,7 @@
 					newNotifyDiscordDown,
 					newNotifyDiscordRecovered
 				);
+				await waitForFirstCheck(server.id, token ?? '');
 				isAdding = false;
 				newName = '';
 				newUrl = '';
@@ -398,6 +463,10 @@
 				newNotifyDiscordDown = false;
 				newNotifyDiscordRecovered = false;
 				await fetchServers();
+				await fetchBilling();
+			} else {
+				const data = await res.json();
+				error = data.error ?? 'Failed to add server';
 			}
 		} catch {
 			error = 'Failed to add server';
@@ -408,11 +477,11 @@
 		editingServer = server;
 		editName = server.name;
 		editUrl = server.url;
-		editType = server.check_type;
+		editType = frontendCheckType(server.check_type);
 		editInterval = server.check_interval;
 		editTimeout = server.timeout;
 		editSlowThreshold = server.slow_threshold;
-		editSSLEnabled = server.ssl_enabled;
+		editSSLEnabled = server.ssl_enabled && editType === 'http';
 		editNotifyEmailDown = true;
 		editNotifyEmailRecovered = true;
 		editNotifyTelegramDown = false;
@@ -443,8 +512,8 @@
 				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 				body: JSON.stringify({
 					name: editName,
-					url: normalizeMonitorUrl(editUrl, editType),
-					check_type: editType,
+					url: normalizeMonitorUrl(editUrl, frontendCheckType(editType)),
+					check_type: frontendCheckType(editType),
 					check_interval: Number(editInterval),
 					timeout: Number(editTimeout),
 					slow_threshold: Number(editSlowThreshold),
@@ -475,6 +544,9 @@
 				);
 				isEditing = false;
 				editingServer = null;
+			} else {
+				const data = await res.json();
+				error = data.error ?? 'Failed to update server';
 			}
 		} catch {
 			error = 'Failed to update server';
@@ -515,6 +587,7 @@
 
 	onMount(() => {
 		fetchServers();
+		fetchBilling();
 		fetchTelegramStatus(true);
 	});
 
@@ -556,12 +629,20 @@
 								Track uptime, response time, and recent failures in one focused workspace.
 							</p>
 						</div>
-						<button
-							onclick={() => (isAdding ? (isAdding = false) : openAdd())}
-							class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-3 font-black text-brand-dark shadow-2xl shadow-brand-primary/15 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0 sm:w-auto"
-						>
-							<Plus class="h-5 w-5" /> Add monitor
-						</button>
+						<div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+							<a
+								href={resolve('/pricing')}
+								class="inline-flex items-center justify-center rounded-2xl border border-brand-light/10 bg-brand-light/[0.035] px-4 py-3 text-sm font-black text-brand-light/65 transition hover:border-brand-primary/30 hover:text-brand-primary"
+							>
+								{currentPlan()?.name ?? 'Free'} · {monitorLimitLabel()}
+							</a>
+							<button
+								onclick={() => (isAdding ? (isAdding = false) : openAdd())}
+								class="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-3 font-black text-brand-dark shadow-2xl shadow-brand-primary/15 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0"
+							>
+								<Plus class="h-5 w-5" /> Add monitor
+							</button>
+						</div>
 					</div>
 				</div>
 
@@ -730,7 +811,7 @@
 							</div>
 							<div class="space-y-2 md:col-span-2">
 								<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">Check type</div>
-								<div class="grid gap-2 sm:grid-cols-3">
+								<div class="grid gap-2 sm:grid-cols-2">
 									{#each checkTypeOptions as option (option.value)}
 										{@const TypeIcon = option.icon}
 										<button
@@ -761,7 +842,7 @@
 									{/each}
 								</div>
 							</div>
-							{#if newType === 'http' || newType === 'links'}
+							{#if newType === 'http'}
 								<label
 									class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 md:col-span-2"
 								>
@@ -840,7 +921,7 @@
 									>
 								</div>
 								<div class="grid grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-4 xl:grid-cols-5">
-									{#each intervalPresets as preset (preset)}
+									{#each allowedIntervalPresets() as preset (preset)}
 										<button
 											type="button"
 											onclick={() => (newInterval = preset)}
@@ -1095,7 +1176,7 @@
 										<div class="ml-1 text-xs font-bold text-brand-light/45 uppercase">
 											Check type
 										</div>
-										<div class="grid gap-2 sm:grid-cols-3">
+										<div class="grid gap-2 sm:grid-cols-2">
 											{#each checkTypeOptions as option (option.value)}
 												{@const TypeIcon = option.icon}
 												<button
@@ -1126,7 +1207,7 @@
 											{/each}
 										</div>
 									</div>
-									{#if editType === 'http' || editType === 'links'}
+									{#if editType === 'http'}
 										<label
 											class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-brand-light/10 bg-brand-dark/40 px-4 py-3 md:col-span-2"
 										>
@@ -1164,7 +1245,7 @@
 											>
 										</div>
 										<div class="flex max-w-full gap-2 overflow-x-auto pb-1 sm:flex-wrap">
-											{#each intervalPresets as preset (preset)}
+											{#each allowedIntervalPresets() as preset (preset)}
 												<button
 													type="button"
 													onclick={() => (editInterval = preset)}
@@ -1574,15 +1655,17 @@
 												>
 													{s.url}
 												</p>
-												<a
-													href={s.url}
-													target="_blank"
-													rel="external noreferrer"
-													class="shrink-0 rounded-lg p-1 text-brand-light/25 transition hover:bg-brand-light/5 hover:text-brand-primary"
-													title="Open target"
-												>
-													<ExternalLink class="h-3.5 w-3.5" />
-												</a>
+												{#if safeExternalHref(s.url)}
+													<a
+														href={safeExternalHref(s.url)}
+														target="_blank"
+														rel="external noreferrer"
+														class="shrink-0 rounded-lg p-1 text-brand-light/25 transition hover:bg-brand-light/5 hover:text-brand-primary"
+														title="Open target"
+													>
+														<ExternalLink class="h-3.5 w-3.5" />
+													</a>
+												{/if}
 											</div>
 										</div>
 									</div>

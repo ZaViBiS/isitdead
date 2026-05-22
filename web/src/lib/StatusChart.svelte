@@ -76,7 +76,6 @@
 				</filter>
 			</defs>
 
-			<!-- Grid Lines -->
 			{#each gridLines as line (line)}
 				<line
 					x1="0"

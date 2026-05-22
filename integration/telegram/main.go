@@ -29,7 +29,7 @@ func main() {
 	server := api.New(client)
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8081"
+		port = "18081"
 	}
 	if err := server.Start(fmt.Sprintf(":%s", port)); err != nil {
 		log.Err(err).Msg("telegram api error")

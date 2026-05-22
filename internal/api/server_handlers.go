@@ -6,9 +6,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ZaViBiS/isitdead/internal/billing"
+	"github.com/ZaViBiS/isitdead/internal/checker"
+	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
+)
+
+const (
+	maxMonitorTimeoutSeconds = 60
+	maxSlowThresholdMS       = 60000
 )
 
 func (s *Server) handleGetServers(c fiber.Ctx) error {
@@ -161,15 +169,41 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	if serverRequest.CheckType == "" {
 		serverRequest.CheckType = "http"
 	}
+	targetURL, err := checker.ValidateMonitorTarget(serverRequest.CheckType, serverRequest.URL)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	serverRequest.URL = targetURL
 
 	if serverRequest.CheckInterval < 10 {
 		serverRequest.CheckInterval = 300 // default
 	}
-	if serverRequest.Timeout <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Timeout is required"})
+	if err := validateMonitorTiming(serverRequest.Timeout, serverRequest.SlowThreshold); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-	if serverRequest.SlowThreshold <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
+
+	user, err := s.DB.GetUserByID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
+	}
+	plan := billing.PlanByID(user.Plan, s.billingPriceIDs())
+	currentCount, err := s.DB.CountUserServers(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not check plan limits"})
+	}
+	if int(currentCount) >= plan.MonitorLimit {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":         "Monitor limit reached for your plan",
+			"plan":          plan.ID,
+			"monitor_limit": plan.MonitorLimit,
+		})
+	}
+	if serverRequest.CheckInterval < plan.MinInterval {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":        "Check interval is not available on your plan",
+			"plan":         plan.ID,
+			"min_interval": plan.MinInterval,
+		})
 	}
 
 	if serverRequest.SSLEnabled && !supportsSSLMonitoring(serverRequest.CheckType) {
@@ -206,12 +240,30 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
-
-	if req.Timeout <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Timeout is required"})
+	if req.CheckType == "" {
+		req.CheckType = "http"
 	}
-	if req.SlowThreshold <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Slow threshold is required"})
+	targetURL, err := checker.ValidateMonitorTarget(req.CheckType, req.URL)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	req.URL = targetURL
+
+	if err := validateMonitorTiming(req.Timeout, req.SlowThreshold); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	user, err := s.DB.GetUserByID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
+	}
+	plan := billing.PlanByID(user.Plan, s.billingPriceIDs())
+	if req.CheckInterval < plan.MinInterval {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":        "Check interval is not available on your plan",
+			"plan":         plan.ID,
+			"min_interval": plan.MinInterval,
+		})
 	}
 
 	if req.SSLEnabled && !supportsSSLMonitoring(req.CheckType) {
@@ -241,6 +293,22 @@ func supportsSSLMonitoring(checkType string) bool {
 	return checkType == "http" || checkType == "links"
 }
 
+func validateMonitorTiming(timeout, slowThreshold int) error {
+	if timeout <= 0 {
+		return errors.New("Timeout is required")
+	}
+	if timeout > maxMonitorTimeoutSeconds {
+		return errors.New("Timeout is too large")
+	}
+	if slowThreshold <= 0 {
+		return errors.New("Slow threshold is required")
+	}
+	if slowThreshold > maxSlowThresholdMS {
+		return errors.New("Slow threshold is too large")
+	}
+	return nil
+}
+
 func (s *Server) handleDeleteServer(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	serverID, err := parseServerID(c)
@@ -250,6 +318,9 @@ func (s *Server) handleDeleteServer(c fiber.Ctx) error {
 
 	err = s.DB.DeleteServer(userID, serverID)
 	if err != nil {
+		if errors.Is(err, database.ErrServerNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Server not found"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete server"})
 	}
 

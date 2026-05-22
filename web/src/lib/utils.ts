@@ -1,5 +1,6 @@
 export interface CheckResult {
 	id: number;
+	region: string;
 	status: string;
 	latency: number;
 	created_at: string;
@@ -26,6 +27,29 @@ export interface Server {
 	current_status?: string;
 	current_latency?: number;
 	hourly_buckets?: DashboardBucket[];
+}
+
+export interface User {
+	id: number;
+	username: string;
+	email: string;
+	plan: string;
+	stripe_subscription_status?: string;
+	plan_current_period_end?: string;
+}
+
+export interface BillingPlan {
+	id: string;
+	name: string;
+	description: string;
+	price: string;
+	monitor_limit: number;
+	min_interval: number;
+	history_days: number;
+	public_pages: boolean;
+	ssl_monitoring: boolean;
+	telegram_alerts: boolean;
+	stripe_available: boolean;
 }
 
 export interface SSLCertificateStatus {
@@ -123,6 +147,7 @@ export function getCurrentCheck(server: Server): CheckResult | null {
 	if (server.current_status) {
 		return {
 			id: 0,
+			region: 'global',
 			status: server.current_status,
 			latency: server.current_latency ?? 0,
 			created_at: ''

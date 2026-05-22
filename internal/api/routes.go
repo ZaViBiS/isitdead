@@ -7,6 +7,9 @@ func (s *Server) setupRoutes() {
 	api.Post("/register", s.handleRegister)
 	api.Post("/login", s.handleLogin)
 	api.Get("/auth/confirm", s.handleConfirmEmail)
+	api.Post("/auth/session", s.handleGoogleSession)
+	api.Get("/billing/plans", s.handleGetBillingPlans)
+	api.Post("/stripe/webhook", s.handleStripeWebhook)
 
 	// Google OAuth
 	api.Get("/auth/google", s.handleGoogleLogin)
@@ -24,6 +27,8 @@ func (s *Server) setupRoutes() {
 	// Protected routes
 	api.Use(s.authMiddleware)
 	api.Get("/me", s.handleGetMe)
+	api.Post("/billing/checkout", s.handleCreateCheckoutSession)
+	api.Post("/billing/portal", s.handleCreateBillingPortalSession)
 	api.Get("/servers", s.handleGetServers)
 	api.Get("/dashboard/servers", s.handleGetDashboardServers)
 	api.Post("/servers", s.handleAddServer)
