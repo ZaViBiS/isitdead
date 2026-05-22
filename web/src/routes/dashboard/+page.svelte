@@ -95,6 +95,15 @@
 		return checkType === 'ping' ? 'ping' : 'http';
 	}
 
+	function safeExternalHref(rawUrl: string) {
+		try {
+			const parsed = new URL(rawUrl);
+			return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '';
+		} catch {
+			return '';
+		}
+	}
+
 	async function fetchServers() {
 		const token = localStorage.getItem('token');
 		if (!token) {
@@ -1626,15 +1635,17 @@
 												>
 													{s.url}
 												</p>
-												<a
-													href={s.url}
-													target="_blank"
-													rel="external noreferrer"
-													class="shrink-0 rounded-lg p-1 text-brand-light/25 transition hover:bg-brand-light/5 hover:text-brand-primary"
-													title="Open target"
-												>
-													<ExternalLink class="h-3.5 w-3.5" />
-												</a>
+												{#if safeExternalHref(s.url)}
+													<a
+														href={safeExternalHref(s.url)}
+														target="_blank"
+														rel="external noreferrer"
+														class="shrink-0 rounded-lg p-1 text-brand-light/25 transition hover:bg-brand-light/5 hover:text-brand-primary"
+														title="Open target"
+													>
+														<ExternalLink class="h-3.5 w-3.5" />
+													</a>
+												{/if}
 											</div>
 										</div>
 									</div>

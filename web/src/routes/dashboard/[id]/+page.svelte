@@ -37,6 +37,15 @@
 	let regionalIncidents = $state<Record<string, CheckResult[]>>({});
 	let selectedRegion = $state('global');
 
+	function safeExternalHref(rawUrl: string) {
+		try {
+			const parsed = new URL(rawUrl);
+			return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '';
+		} catch {
+			return '';
+		}
+	}
+
 	onMount(async () => {
 		const id = page.params.id;
 		const token = localStorage.getItem('token');
@@ -285,13 +294,15 @@
 					<div class="flex min-w-0 items-start gap-2 text-brand-light/30">
 						<p class="min-w-0 text-sm font-medium break-all sm:text-lg">{server.url}</p>
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-						<a
-							href={server.url}
-							target="_blank"
-							rel="external noreferrer"
-							class="rounded-full bg-brand-light/5 p-2 transition-colors hover:bg-brand-primary/10"
-							><ExternalLink class="h-4 w-4" /></a
-						>
+						{#if safeExternalHref(server.url)}
+							<a
+								href={safeExternalHref(server.url)}
+								target="_blank"
+								rel="external noreferrer"
+								class="rounded-full bg-brand-light/5 p-2 transition-colors hover:bg-brand-primary/10"
+								><ExternalLink class="h-4 w-4" /></a
+							>
+						{/if}
 					</div>
 				</div>
 			</div>
