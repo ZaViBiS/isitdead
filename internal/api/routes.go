@@ -7,6 +7,7 @@ func (s *Server) setupRoutes() {
 	api.Post("/register", s.handleRegister)
 	api.Post("/login", s.handleLogin)
 	api.Get("/auth/confirm", s.handleConfirmEmail)
+	api.Post("/auth/session", s.handleGoogleSession)
 	api.Get("/billing/plans", s.handleGetBillingPlans)
 	api.Post("/stripe/webhook", s.handleStripeWebhook)
 
