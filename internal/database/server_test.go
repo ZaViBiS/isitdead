@@ -1,10 +1,14 @@
 package database
 
 import (
+	"errors"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 func TestServerCRUD(t *testing.T) {
@@ -73,10 +77,46 @@ func TestServerSecurity(t *testing.T) {
 
 	// Тест: User 2 намагається видалити сервер User 1
 	err = storage.DeleteServer(user2.ID, srv1.ID)
-	// GORM Delete по ID і UserID просто не знайде запис, якщо їх немає, і не поверне помилку через специфіку роботи,
-	// але ми можемо перевірити чи сервер все ще на місці.
-	assert.NoError(t, err)
+	assert.Error(t, err, "User 2 should not be able to delete User 1's server")
 
 	servers, _ := storage.GetUserServers(user1.ID)
 	assert.Len(t, servers, 1, "Server should still exist after unauthorized delete attempt")
+}
+
+func TestDeleteServerDoesNotDeleteOtherUsersSSLStatus(t *testing.T) {
+	dbPath := "test_server_delete_ssl_security.db"
+	defer os.Remove(dbPath)
+
+	storage, err := Init(dbPath)
+	assert.NoError(t, err)
+	defer storage.Close()
+
+	user1, _, err := storage.AddUser("u1", "ssl-owner@example.com", "p")
+	assert.NoError(t, err)
+	user2, _, err := storage.AddUser("u2", "ssl-attacker@example.com", "p")
+	assert.NoError(t, err)
+
+	srv1, err := storage.AddServer(user1.ID, "S1", "https://example.com", "http", 300, 10, 300, true)
+	assert.NoError(t, err)
+
+	expiresAt := time.Now().UTC().Add(24 * time.Hour)
+	assert.NoError(t, storage.UpsertSSLCertificateStatus(model.SSLCertificateStatus{
+		ServerID:      srv1.ID,
+		Valid:         true,
+		ExpiresAt:     &expiresAt,
+		DaysRemaining: 1,
+		LastCheckedAt: time.Now().UTC(),
+	}))
+
+	err = storage.DeleteServer(user2.ID, srv1.ID)
+	assert.Error(t, err)
+
+	_, err = storage.GetSSLCertificateStatus(srv1.ID)
+	assert.NoError(t, err, "unauthorized delete must not remove another user's SSL status")
+
+	err = storage.DeleteServer(user1.ID, srv1.ID)
+	assert.NoError(t, err)
+
+	_, err = storage.GetSSLCertificateStatus(srv1.ID)
+	assert.True(t, errors.Is(err, gorm.ErrRecordNotFound), "owner delete should remove SSL status")
 }

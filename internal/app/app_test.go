@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ZaViBiS/isitdead/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,6 +24,7 @@ func TestAppNew(t *testing.T) {
 func TestAppNewProbeRole(t *testing.T) {
 	t.Setenv("INSTANCE_ROLE", "probe")
 	t.Setenv("REGION", "eu")
+	t.Setenv("PROBE_SECRET", "shared")
 	t.Setenv("DB_PATH", "/tmp/isitdead-probe-test.db")
 	defer os.Remove("/tmp/isitdead-probe-test.db")
 
@@ -34,4 +36,32 @@ func TestAppNewProbeRole(t *testing.T) {
 	assert.Nil(t, a.scheduler)
 	assert.NotNil(t, a.probeServer)
 	assert.NoFileExists(t, "/tmp/isitdead-probe-test.db")
+}
+
+func TestValidateConfigRejectsDefaultJWTSecretInProduction(t *testing.T) {
+	err := validateConfig(&config.Config{
+		Env:          "prod",
+		InstanceRole: config.RoleMain,
+		JWTSecret:    config.DefaultJWTSecret,
+	})
+	assert.Error(t, err)
+}
+
+func TestValidateConfigRejectsProbeWithoutSecret(t *testing.T) {
+	err := validateConfig(&config.Config{
+		Env:          "dev",
+		InstanceRole: config.RoleProbe,
+		JWTSecret:    config.DefaultJWTSecret,
+	})
+	assert.Error(t, err)
+}
+
+func TestValidateConfigRejectsProbeRegionsWithoutSecret(t *testing.T) {
+	err := validateConfig(&config.Config{
+		Env:          "dev",
+		InstanceRole: config.RoleMain,
+		JWTSecret:    config.DefaultJWTSecret,
+		ProbeRegions: []config.ProbeRegion{{Name: "us", URL: "https://probe.example.com"}},
+	})
+	assert.Error(t, err)
 }

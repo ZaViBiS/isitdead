@@ -198,7 +198,9 @@
 		event: string,
 		fallback: boolean
 	) {
-		return prefs.find((pref) => pref.channel === channel && pref.event === event)?.enabled ?? fallback;
+		return (
+			prefs.find((pref) => pref.channel === channel && pref.event === event)?.enabled ?? fallback
+		);
 	}
 
 	async function fetchNotificationPreferences(serverID: number) {
