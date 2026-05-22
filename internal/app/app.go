@@ -33,6 +33,9 @@ type App struct {
 
 func New(staticFiles embed.FS) (*App, error) {
 	cfg := config.Load()
+	if err := validateConfig(cfg); err != nil {
+		return nil, err
+	}
 	if cfg.InstanceRole == config.RoleProbe {
 		return &App{
 			probeServer: probe.NewServer(cfg.Region, cfg.ProbeSecret),
@@ -79,6 +82,19 @@ func New(staticFiles embed.FS) (*App, error) {
 		config:    cfg,
 		mailer:    mailer,
 	}, nil
+}
+
+func validateConfig(cfg *config.Config) error {
+	if cfg.Env == "prod" && cfg.JWTSecret == config.DefaultJWTSecret {
+		return fmt.Errorf("JWT_SECRET must be set in production")
+	}
+	if cfg.InstanceRole == config.RoleProbe && cfg.ProbeSecret == "" {
+		return fmt.Errorf("PROBE_SECRET must be set for probe instances")
+	}
+	if len(cfg.ProbeRegions) > 0 && cfg.ProbeSecret == "" {
+		return fmt.Errorf("PROBE_SECRET must be set when PROBE_REGIONS is configured")
+	}
+	return nil
 }
 
 func (a *App) Run() error {

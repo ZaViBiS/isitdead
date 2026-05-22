@@ -49,6 +49,14 @@
 		];
 	}
 
+	function redirectToStripe(url: string) {
+		const target = new URL(url);
+		if (target.protocol !== 'https:' || !target.hostname.endsWith('.stripe.com')) {
+			throw new Error('Invalid billing redirect URL');
+		}
+		window.location.href = target.toString();
+	}
+
 	async function startCheckout(plan: BillingPlan) {
 		error = '';
 		const token = localStorage.getItem('token');
@@ -67,7 +75,7 @@
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? 'Could not start checkout');
-			window.location.href = data.url;
+			redirectToStripe(data.url);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not start checkout';
 		} finally {
@@ -88,7 +96,7 @@
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? 'Could not open billing portal');
-			window.location.href = data.url;
+			redirectToStripe(data.url);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not open billing portal';
 		} finally {
@@ -114,8 +122,8 @@
 					Scale checks when your services need it.
 				</h1>
 				<p class="mt-5 max-w-2xl text-lg leading-8 text-brand-light/55">
-					Start with a small monitor limit, then unlock faster intervals, public status pages,
-					and Telegram alerts when your operations need more room.
+					Start with a small monitor limit, then unlock faster intervals, public status pages, and
+					Telegram alerts when your operations need more room.
 				</p>
 			</div>
 			{#if user && user.plan !== 'free'}
@@ -130,7 +138,9 @@
 		</div>
 
 		{#if error}
-			<div class="mb-6 rounded-2xl border border-brand-accent/20 bg-brand-accent/10 px-5 py-4 text-sm font-bold text-brand-accent">
+			<div
+				class="mb-6 rounded-2xl border border-brand-accent/20 bg-brand-accent/10 px-5 py-4 text-sm font-bold text-brand-accent"
+			>
 				{error}
 			</div>
 		{/if}
@@ -152,7 +162,9 @@
 								<div class="flex items-center gap-2">
 									<h2 class="text-2xl font-black">{plan.name}</h2>
 									{#if selected}
-										<span class="rounded-full bg-brand-primary px-2.5 py-1 text-[10px] font-black text-brand-dark uppercase">
+										<span
+											class="rounded-full bg-brand-primary px-2.5 py-1 text-[10px] font-black text-brand-dark uppercase"
+										>
 											Current
 										</span>
 									{/if}
