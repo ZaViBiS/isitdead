@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/billing"
+	"github.com/ZaViBiS/isitdead/internal/checker"
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -162,6 +163,11 @@ func (s *Server) handleAddServer(c fiber.Ctx) error {
 	if serverRequest.CheckType == "" {
 		serverRequest.CheckType = "http"
 	}
+	targetURL, err := checker.ValidateMonitorTarget(serverRequest.CheckType, serverRequest.URL)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	serverRequest.URL = targetURL
 
 	if serverRequest.CheckInterval < 10 {
 		serverRequest.CheckInterval = 300 // default
@@ -231,6 +237,14 @@ func (s *Server) handleUpdateServer(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
+	if req.CheckType == "" {
+		req.CheckType = "http"
+	}
+	targetURL, err := checker.ValidateMonitorTarget(req.CheckType, req.URL)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	req.URL = targetURL
 
 	if req.Timeout <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Timeout is required"})

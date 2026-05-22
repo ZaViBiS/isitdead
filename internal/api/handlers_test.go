@@ -180,6 +180,22 @@ func TestAPI(t *testing.T) {
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
+		unsafeURLPayload := map[string]interface{}{
+			"name":           "Unsafe URL",
+			"url":            "javascript:alert(1)",
+			"check_interval": 300,
+			"check_type":     "http",
+			"timeout":        10,
+			"slow_threshold": 300,
+		}
+		body, _ = json.Marshal(unsafeURLPayload)
+		req = httptest.NewRequest("POST", "/api/servers", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
 		// Add Server
 		srvPayload := map[string]interface{}{
 			"name":           "Test Server",
@@ -222,6 +238,22 @@ func TestAPI(t *testing.T) {
 
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		unsafeUpdatePayload := map[string]interface{}{
+			"name":           "Unsafe Update",
+			"url":            "data:text/html,<script>alert(1)</script>",
+			"check_interval": 300,
+			"check_type":     "http",
+			"timeout":        10,
+			"slow_threshold": 300,
+		}
+		body, _ = json.Marshal(unsafeUpdatePayload)
+		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 		// Notification preferences
 		req = httptest.NewRequest("GET", "/api/servers/"+serverIDStr+"/notifications", nil)
