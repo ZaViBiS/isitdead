@@ -41,6 +41,8 @@ func Init(dbPath string) (*Storage, error) {
 		&model.NotificationPreference{},
 		&model.TelegramAccount{},
 		&model.TelegramLinkToken{},
+		&model.DiscordAccount{},
+		&model.DiscordLinkToken{},
 	); err != nil {
 		panic(err)
 	}

@@ -67,6 +67,9 @@ func New(staticFiles embed.FS) (*App, error) {
 	if cfg.TelegramAPIURL != "" {
 		senders = append(senders, notify.NewTelegramSender(db, cfg.TelegramAPIURL, cfg.TelegramAPISecret))
 	}
+	if cfg.DiscordWebhookEnabled != "0" {
+		senders = append(senders, notify.NewDiscordSender(db))
+	}
 	notifier := notify.NewService(db, senders...)
 	sched.SetNotifier(notifier)
 

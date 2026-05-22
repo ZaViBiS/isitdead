@@ -284,12 +284,13 @@ func TestAPI(t *testing.T) {
 			Enabled bool   `json:"enabled"`
 		}
 		json.NewDecoder(resp.Body).Decode(&prefs)
-		assert.Len(t, prefs, 10)
+		assert.Len(t, prefs, 15)
 
 		updatePrefsPayload := []map[string]interface{}{
 			{"channel": "email", "event": "down", "enabled": false},
 			{"channel": "email", "event": "recovered", "enabled": true},
 			{"channel": "telegram", "event": "down", "enabled": true},
+			{"channel": "discord", "event": "down", "enabled": true},
 		}
 		body, _ = json.Marshal(updatePrefsPayload)
 		req = httptest.NewRequest("PUT", "/api/servers/"+serverIDStr+"/notifications", bytes.NewReader(body))

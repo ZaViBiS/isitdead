@@ -33,6 +33,7 @@ type Config struct {
 	TelegramBotName       string
 	TelegramAPIURL        string
 	TelegramAPISecret     string
+	DiscordWebhookEnabled string
 	StripeSecretKey       string
 	StripeWebhookSecret   string
 	StripeProPriceID      string
@@ -56,11 +57,13 @@ func Load() *Config {
 		ResendFrom:            getEnv("RESEND_FROM", "no-reply@localhost"),
 		ClientID:              getEnv("CLIENT_ID", ""),
 		ClientSecret:          getEnv("CLIENT_SECRET", ""),
+
 		JWTSecret:             getEnv("JWT_SECRET", DefaultJWTSecret),
 		AdminEmails:           getEnv("ADMIN_EMAILS", ""),
 		TelegramBotName:       getEnv("TELEGRAM_BOT_NAME", ""),
 		TelegramAPIURL:        getEnv("TELEGRAM_API_URL", ""),
 		TelegramAPISecret:     getEnv("TELEGRAM_API_SECRET", ""),
+		DiscordWebhookEnabled: getEnv("DISCORD_WEBHOOK_ENABLED", "1"),
 		StripeSecretKey:       getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookSecret:   getEnv("STRIPE_WEBHOOK_SECRET", ""),
 		StripeProPriceID:      getEnv("STRIPE_PRO_PRICE_ID", ""),
@@ -69,6 +72,7 @@ func Load() *Config {
 		Region:                region,
 		ProbeSecret:           getEnv("PROBE_SECRET", ""),
 		ProbeRegions:          parseProbeRegions(getEnv("PROBE_REGIONS", "")),
+
 	}
 }
 

@@ -20,6 +20,10 @@ func (s *Server) setupRoutes() {
 	tg.Get("/token/:chat_id/:token", s.handleTelegramNewUser)
 	tg.Get("/token", s.handleTelegramNewUser)
 
+	discord := s.App.Group("/api/discord")
+	discord.Get("/token/:token", s.handleDiscordNewUser)
+	discord.Get("/token", s.handleDiscordNewUser)
+
 	// Protected routes
 	api.Use(s.authMiddleware)
 	api.Get("/me", s.handleGetMe)
@@ -35,4 +39,6 @@ func (s *Server) setupRoutes() {
 	api.Get("/servers/:id/results", s.handleGetServerResults)
 	api.Get("/telegram/status", s.handleGetTelegramStatus)
 	api.Post("/telegram/link-token", s.handleCreateTelegramLinkToken)
+	api.Get("/discord/status", s.handleGetDiscordStatus)
+	api.Post("/discord/link-token", s.handleCreateDiscordLinkToken)
 }
