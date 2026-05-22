@@ -11,6 +11,7 @@ const (
 	RoleMain           = "main"
 	RoleProbe          = "probe"
 	DefaultLocalRegion = "de"
+	DefaultJWTSecret   = "dev-secret-change-me"
 )
 
 type ProbeRegion struct {
@@ -55,7 +56,7 @@ func Load() *Config {
 		ResendFrom:            getEnv("RESEND_FROM", "no-reply@localhost"),
 		ClientID:              getEnv("CLIENT_ID", ""),
 		ClientSecret:          getEnv("CLIENT_SECRET", ""),
-		JWTSecret:             getEnv("JWT_SECRET", "dev-secret-change-me"),
+		JWTSecret:             getEnv("JWT_SECRET", DefaultJWTSecret),
 		AdminEmails:           getEnv("ADMIN_EMAILS", ""),
 		TelegramBotName:       getEnv("TELEGRAM_BOT_NAME", ""),
 		TelegramAPIURL:        getEnv("TELEGRAM_API_URL", ""),

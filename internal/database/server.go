@@ -1,9 +1,13 @@
 package database
 
 import (
+	"errors"
+
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"gorm.io/gorm"
 )
+
+var ErrServerNotFound = errors.New("server not found")
 
 // AddServer додає новий сервер для моніторингу
 func (s *Storage) AddServer(userID uint, name string, url string, checkType string, checkInterval int, timeout int, slowThreshold int, sslEnabled bool) (*model.Server, error) {
@@ -83,8 +87,12 @@ func (s *Storage) UpdateServer(userID, serverID uint, name, url, checkType strin
 func (s *Storage) DeleteServer(userID, serverID uint) error {
 	return s.executeWrite(func(db *gorm.DB) error {
 		return db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Where("id = ? AND user_id = ?", serverID, userID).Delete(&model.Server{}).Error; err != nil {
-				return err
+			result := tx.Where("id = ? AND user_id = ?", serverID, userID).Delete(&model.Server{})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return ErrServerNotFound
 			}
 			if err := tx.Where("server_id = ?", serverID).Delete(&model.SSLCertificateStatus{}).Error; err != nil {
 				return err

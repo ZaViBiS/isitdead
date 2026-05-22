@@ -57,7 +57,10 @@
 						<LayoutDashboard class="h-4 w-4" />
 						<span class="hidden sm:inline">Dashboard</span>
 					</a>
-					<a href={resolve('/pricing')} class="hidden text-sm font-medium hover:text-brand-primary md:block">
+					<a
+						href={resolve('/pricing')}
+						class="hidden text-sm font-medium hover:text-brand-primary md:block"
+					>
 						Pricing
 					</a>
 					<div class="h-4 w-px bg-brand-light/10"></div>
