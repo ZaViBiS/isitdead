@@ -12,17 +12,40 @@
 	let isError = $state(false);
 
 	onMount(() => {
-		const token = page.url.searchParams.get('token');
-		const user = page.url.searchParams.get('user');
+		const oauth = page.url.searchParams.get('oauth');
 
-		if (token) {
-			localStorage.setItem('token', token);
-			if (user) {
-				localStorage.setItem('user', JSON.stringify({ username: user }));
-			}
-			window.location.href = '/dashboard';
+		if (oauth === 'success') {
+			completeGoogleLogin();
 		}
 	});
+
+	async function completeGoogleLogin() {
+		isLoading = true;
+		message = '';
+		isError = false;
+
+		try {
+			const res = await fetch('/api/auth/session', { method: 'POST' });
+			const data = await res.json();
+
+			if (res.ok) {
+				localStorage.setItem('token', data.token);
+				localStorage.setItem('user', JSON.stringify(data.user));
+				window.history.replaceState({}, document.title, '/login');
+				window.location.href = '/dashboard';
+			} else {
+				isError = true;
+				message = data.error || 'Google sign-in failed';
+				window.history.replaceState({}, document.title, '/login');
+			}
+		} catch {
+			isError = true;
+			message = 'Google sign-in failed. Please try again.';
+			window.history.replaceState({}, document.title, '/login');
+		} finally {
+			isLoading = false;
+		}
+	}
 
 	async function handleLogin(e: Event) {
 		e.preventDefault();

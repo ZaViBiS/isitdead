@@ -84,6 +84,12 @@ func TestCheck(t *testing.T) {
 		assert.Contains(t, status, "missing protocol scheme")
 	})
 
+	t.Run("blocks private http target", func(t *testing.T) {
+		status, _ := Check("http", "http://127.0.0.1/admin", 10)
+
+		assert.Contains(t, status, "private or internal address")
+	})
+
 	t.Run("timeout", func(t *testing.T) {
 		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 			return nil, context.DeadlineExceeded
@@ -92,6 +98,38 @@ func TestCheck(t *testing.T) {
 
 		assert.Contains(t, status, "context deadline exceeded")
 	})
+}
+
+func TestValidateMonitorTarget(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkType string
+		target    string
+		want      string
+		wantErr   string
+	}{
+		{name: "http url", checkType: "http", target: " https://example.com/path#frag ", want: "https://example.com/path"},
+		{name: "links url", checkType: "links", target: "http://example.com", want: "http://example.com"},
+		{name: "reject javascript", checkType: "http", target: "javascript:alert(1)", wantErr: "unsupported URL scheme"},
+		{name: "reject credentials", checkType: "http", target: "https://user:pass@example.com", wantErr: "credentials"},
+		{name: "reject private literal", checkType: "http", target: "http://10.0.0.1", wantErr: "private or internal address"},
+		{name: "ping host", checkType: "ping", target: "example.com:443", want: "example.com:443"},
+		{name: "reject ping url", checkType: "ping", target: "https://example.com", wantErr: "host[:port]"},
+		{name: "reject ping bad port", checkType: "ping", target: "example.com:99999", wantErr: "invalid target port"},
+		{name: "reject unknown type", checkType: "smtp", target: "example.com", wantErr: "unsupported check type"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ValidateMonitorTarget(tt.checkType, tt.target)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 func TestLinkCheck(t *testing.T) {
@@ -170,6 +208,21 @@ func TestLinkCheck(t *testing.T) {
 
 		assert.Contains(t, status, "Broken links: 1")
 		assert.Contains(t, status, "404 Not Found "+baseURL+"/gone from "+baseURL+"/child")
+	})
+
+	t.Run("blocks redirect to private target", func(t *testing.T) {
+		setDefaultTransport(t, roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			if req.URL.Host == "example.test" {
+				resp := httpResponse(http.StatusFound)
+				resp.Header.Set("Location", "http://127.0.0.1/admin")
+				return resp, nil
+			}
+			return httpResponse(http.StatusOK), nil
+		}))
+
+		status, _ := HttpCheck("https://example.test", defaultConnectionTimeout)
+
+		assert.Contains(t, status, "private or internal address")
 	})
 }
 

@@ -2,6 +2,7 @@
 package checker
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -40,7 +41,7 @@ type brokenReference struct {
 // Check виконує перевірку залежно від типу.
 func Check(checkType, target string, timeoutSeconds int) (status string, latency int64) {
 	timeout := connectionTimeout(timeoutSeconds)
-	switch checkType {
+	switch normalizedCheckType(checkType) {
 	case "ping":
 		return TCPPing(target, timeout)
 	case "links":
@@ -65,13 +66,28 @@ func InspectSSLCertificate(target string, timeout time.Duration) SSLCertificateI
 	if err != nil {
 		return SSLCertificateInfo{Error: err.Error()}
 	}
+	_, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return SSLCertificateInfo{Error: err.Error()}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	addrs, err := resolvePublicHost(ctx, serverName)
+	if err != nil {
+		return SSLCertificateInfo{Error: err.Error()}
+	}
 
-	dialer := &net.Dialer{Timeout: timeout}
-	conn, err := tls.DialWithDialer(dialer, "tcp", address, &tls.Config{
+	dialer := &net.Dialer{}
+	rawConn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(addrs[0].String(), port))
+	if err != nil {
+		return SSLCertificateInfo{Error: err.Error()}
+	}
+	conn := tls.Client(rawConn, &tls.Config{
 		ServerName:         serverName,
 		InsecureSkipVerify: true, // We verify manually so we can still inspect invalid/self-signed certs.
 	})
-	if err != nil {
+	if err := conn.HandshakeContext(ctx); err != nil {
+		rawConn.Close()
 		return SSLCertificateInfo{Error: err.Error()}
 	}
 	defer conn.Close()
@@ -144,9 +160,7 @@ func parseTLSTarget(target string) (address string, serverName string, err error
 func HttpCheck(url string, timeout time.Duration) (status string, latency int64) {
 	start := time.Now()
 
-	client := http.Client{
-		Timeout: timeout,
-	}
+	client := newMonitorHTTPClient(timeout)
 
 	req, err := newMonitorRequest(http.MethodGet, url)
 	if err != nil {
@@ -173,7 +187,7 @@ func LinkCheck(rawURL string, timeout time.Duration) (status string, latency int
 		return err.Error(), time.Since(start).Milliseconds()
 	}
 
-	client := http.Client{Timeout: timeout}
+	client := newMonitorHTTPClient(timeout)
 	visitedPages := map[string]bool{}
 	queuedPages := map[string]bool{baseURL.String(): true}
 	queue := []*url.URL{baseURL}
@@ -381,12 +395,51 @@ func checkReference(client *http.Client, target string) string {
 }
 
 func newMonitorRequest(method, target string) (*http.Request, error) {
+	if _, err := validateHTTPMonitorTarget(target); err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequest(method, target, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", monitorUserAgent)
 	return req, nil
+}
+
+func newMonitorHTTPClient(timeout time.Duration) http.Client {
+	client := http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if _, err := validateHTTPMonitorTarget(req.URL.String()); err != nil {
+				return err
+			}
+			req.Header.Set("User-Agent", monitorUserAgent)
+			return nil
+		},
+	}
+
+	if transport, ok := http.DefaultTransport.(*http.Transport); ok {
+		safeTransport := transport.Clone()
+		safeTransport.Proxy = nil
+		safeTransport.DialContext = safeDialContext
+		client.Transport = safeTransport
+	}
+
+	return client
+}
+
+func safeDialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	addrs, err := resolvePublicHost(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+
+	dialer := net.Dialer{}
+	return dialer.DialContext(ctx, network, net.JoinHostPort(addrs[0].String(), port))
 }
 
 func sameHost(a, b *url.URL) bool {
@@ -422,7 +475,13 @@ func TCPPing(target string, timeout time.Duration) (status string, latency int64
 		target = target + ":80"
 	}
 
-	conn, err := net.DialTimeout("tcp", target, timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := validateOutboundPingTarget(ctx, target); err != nil {
+		return fmt.Sprintf("TCP Connection Error: %v", err), time.Since(start).Milliseconds()
+	}
+
+	conn, err := safeDialContext(ctx, "tcp", target)
 	elapsed := time.Since(start).Milliseconds()
 
 	if err != nil {
