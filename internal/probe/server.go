@@ -65,6 +65,14 @@ func (s *Server) handleCheck(c fiber.Ctx) error {
 	if req.CheckType == "" {
 		req.CheckType = "http"
 	}
+	target, err := checker.ValidateMonitorTarget(req.CheckType, req.URL)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(CheckResponse{
+			Region: s.region,
+			Error:  err.Error(),
+		})
+	}
+	req.URL = target
 
 	start := time.Now()
 	status, latency := checker.Check(req.CheckType, req.URL, req.Timeout)
