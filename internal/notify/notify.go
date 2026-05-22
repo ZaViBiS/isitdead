@@ -13,6 +13,7 @@ type Store interface {
 	GetEnabledNotificationPreferences(serverID uint, event string) ([]model.NotificationPreference, error)
 	GetUserByID(userID uint) (*model.User, error)
 	GetTelegramAccountByUserID(userID uint) (*model.TelegramAccount, error)
+	GetDiscordAccountByUserID(userID uint) (*model.DiscordAccount, error)
 }
 
 type Sender interface {

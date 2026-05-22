@@ -29,6 +29,11 @@ func DefaultNotificationPreferences(userID, serverID uint) []model.NotificationP
 		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelTelegram, Event: model.NotificationEventSSL30d, Enabled: false},
 		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelTelegram, Event: model.NotificationEventSSL14d, Enabled: false},
 		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelTelegram, Event: model.NotificationEventSSL7d, Enabled: false},
+		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelDiscord, Event: model.NotificationEventDown, Enabled: false},
+		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelDiscord, Event: model.NotificationEventUp, Enabled: false},
+		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelDiscord, Event: model.NotificationEventSSL30d, Enabled: false},
+		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelDiscord, Event: model.NotificationEventSSL14d, Enabled: false},
+		{UserID: userID, ServerID: serverID, Channel: model.NotificationChannelDiscord, Event: model.NotificationEventSSL7d, Enabled: false},
 	}
 }
 

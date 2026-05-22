@@ -32,6 +32,10 @@ func (s *fakeStore) GetTelegramAccountByUserID(userID uint) (*model.TelegramAcco
 	return &model.TelegramAccount{UserID: userID, ChatID: 12345}, nil
 }
 
+func (s *fakeStore) GetDiscordAccountByUserID(userID uint) (*model.DiscordAccount, error) {
+	return &model.DiscordAccount{UserID: userID, WebhookURL: "https://discord.com/api/webhooks/test"}, nil
+}
+
 type fakeSender struct {
 	channel  string
 	messages []Message
