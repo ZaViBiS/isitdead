@@ -196,6 +196,22 @@ func TestAPI(t *testing.T) {
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
+		oversizedTimeoutPayload := map[string]interface{}{
+			"name":           "Oversized Timeout",
+			"url":            "http://example.com",
+			"check_interval": 300,
+			"check_type":     "http",
+			"timeout":        999999,
+			"slow_threshold": 300,
+		}
+		body, _ = json.Marshal(oversizedTimeoutPayload)
+		req = httptest.NewRequest("POST", "/api/servers", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
 		// Add Server
 		srvPayload := map[string]interface{}{
 			"name":           "Test Server",
@@ -317,6 +333,16 @@ func TestAPI(t *testing.T) {
 		assert.True(t, telegramStatus.Linked)
 
 		req = httptest.NewRequest("GET", "/api/servers/not-a-number/results?limit=1", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+		req = httptest.NewRequest("GET", "/api/servers/"+serverIDStr+"/results?limit=1000000", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, _ = server.App.Test(req)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+		req = httptest.NewRequest("GET", "/api/servers/"+serverIDStr+"/results?hours=1000000", nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)

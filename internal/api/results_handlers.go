@@ -1,11 +1,18 @@
 package api
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
 	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
+)
+
+const (
+	defaultResultsLimit = 100
+	maxResultsLimit     = 1000
+	maxResultsHours     = 24 * 31
 )
 
 type resultsRequest struct {
@@ -43,7 +50,7 @@ func (s *Server) respondWithServerResults(c fiber.Ctx, req resultsRequest) error
 	} else {
 		limit := req.Limit
 		if limit <= 0 {
-			limit = 100
+			limit = defaultResultsLimit
 		}
 		results, err = s.DB.GetRecentHistoryForRegion(req.ServerID, req.Region, limit)
 	}
@@ -71,6 +78,9 @@ func parseResultsQuery(c fiber.Ctx) (resultsRequest, error) {
 		if err != nil {
 			return resultsRequest{}, err
 		}
+		if res.Limit < 0 || res.Limit > maxResultsLimit {
+			return resultsRequest{}, errors.New("limit out of range")
+		}
 	}
 
 	hoursStr := c.Query("hours")
@@ -78,6 +88,9 @@ func parseResultsQuery(c fiber.Ctx) (resultsRequest, error) {
 		res.Hours, err = strconv.Atoi(hoursStr)
 		if err != nil {
 			return resultsRequest{}, err
+		}
+		if res.Hours < 0 || res.Hours > maxResultsHours {
+			return resultsRequest{}, errors.New("hours out of range")
 		}
 	}
 
