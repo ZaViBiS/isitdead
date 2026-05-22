@@ -76,7 +76,7 @@ func (s *Server) handleUpdateNotificationPreferences(c fiber.Ctx) error {
 }
 
 func isAllowedNotificationPreference(channel, event string) bool {
-	if channel != model.NotificationChannelEmail && channel != model.NotificationChannelTelegram {
+	if channel != model.NotificationChannelEmail && channel != model.NotificationChannelTelegram && channel != model.NotificationChannelDiscord {
 		return false
 	}
 	return event == model.NotificationEventDown ||

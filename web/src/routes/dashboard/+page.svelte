@@ -53,6 +53,8 @@
 	let newNotifyEmailRecovered = $state(true);
 	let newNotifyTelegramDown = $state(false);
 	let newNotifyTelegramRecovered = $state(false);
+	let newNotifyDiscordDown = $state(false);
+	let newNotifyDiscordRecovered = $state(false);
 	let telegramLinkUrl = $state('');
 	let isCreatingTelegramLink = $state(false);
 	let telegramStatus = $state<TelegramStatus>({ linked: false, link_available: false });
@@ -72,6 +74,8 @@
 	let editNotifyEmailRecovered = $state(true);
 	let editNotifyTelegramDown = $state(false);
 	let editNotifyTelegramRecovered = $state(false);
+	let editNotifyDiscordDown = $state(false);
+	let editNotifyDiscordRecovered = $state(false);
 
 	const checkTypeOptions = [
 		{
@@ -157,13 +161,17 @@
 		emailDown: boolean,
 		emailRecovered: boolean,
 		telegramDown: boolean,
-		telegramRecovered: boolean
+		telegramRecovered: boolean,
+		discordDown: boolean,
+		discordRecovered: boolean
 	): NotificationPreference[] {
 		return [
 			{ channel: 'email', event: 'down', enabled: emailDown },
 			{ channel: 'email', event: 'recovered', enabled: emailRecovered },
 			{ channel: 'telegram', event: 'down', enabled: telegramDown },
-			{ channel: 'telegram', event: 'recovered', enabled: telegramRecovered }
+			{ channel: 'telegram', event: 'recovered', enabled: telegramRecovered },
+			{ channel: 'discord', event: 'down', enabled: discordDown },
+			{ channel: 'discord', event: 'recovered', enabled: discordRecovered }
 		];
 	}
 
@@ -190,14 +198,16 @@
 		emailDown: boolean,
 		emailRecovered: boolean,
 		telegramDown: boolean,
-		telegramRecovered: boolean
+		telegramRecovered: boolean,
+		discordDown: boolean,
+		discordRecovered: boolean
 	) {
 		const token = localStorage.getItem('token');
 		const res = await fetch(`/api/servers/${serverID}/notifications`, {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
 			body: JSON.stringify(
-				notificationPayload(emailDown, emailRecovered, telegramDown, telegramRecovered)
+				notificationPayload(emailDown, emailRecovered, telegramDown, telegramRecovered, discordDown, discordRecovered)
 			)
 		});
 		if (!res.ok) throw new Error('Failed to save notification preferences');
@@ -369,7 +379,9 @@
 					newNotifyEmailDown,
 					newNotifyEmailRecovered,
 					newNotifyTelegramDown,
-					newNotifyTelegramRecovered
+					newNotifyTelegramRecovered,
+					newNotifyDiscordDown,
+					newNotifyDiscordRecovered
 				);
 				isAdding = false;
 				newName = '';
@@ -383,6 +395,8 @@
 				newNotifyEmailRecovered = true;
 				newNotifyTelegramDown = false;
 				newNotifyTelegramRecovered = false;
+				newNotifyDiscordDown = false;
+				newNotifyDiscordRecovered = false;
 				await fetchServers();
 			}
 		} catch {
@@ -412,6 +426,8 @@
 			editNotifyEmailRecovered = preferenceEnabled(prefs, 'email', 'recovered', true);
 			editNotifyTelegramDown = preferenceEnabled(prefs, 'telegram', 'down', false);
 			editNotifyTelegramRecovered = preferenceEnabled(prefs, 'telegram', 'recovered', false);
+			editNotifyDiscordDown = preferenceEnabled(prefs, 'discord', 'down', false);
+			editNotifyDiscordRecovered = preferenceEnabled(prefs, 'discord', 'recovered', false);
 		} catch {
 			error = 'Failed to load notification preferences';
 		}
@@ -453,7 +469,9 @@
 					editNotifyEmailDown,
 					editNotifyEmailRecovered,
 					editNotifyTelegramDown,
-					editNotifyTelegramRecovered
+					editNotifyTelegramRecovered,
+					editNotifyDiscordDown,
+					editNotifyDiscordRecovered
 				);
 				isEditing = false;
 				editingServer = null;

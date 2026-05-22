@@ -323,3 +323,10 @@ cd web && npm run check
 - Frontend dev proxy працює тільки у Vite dev server, production йде через один Go server.
 - `.env` не читається автоматично Go кодом.
 - Gmail дуже строго перевіряє email headers, особливо `From`, `To`, `Subject`, `Date`, MIME headers.
+
+## Discord integration
+
+- Generate link token: `POST /api/discord/link-token` (auth required).
+- Link Discord webhook: `GET /api/discord/token/:token?webhook_url=<discord_webhook_url>`.
+- Check link status: `GET /api/discord/status` (auth required).
+- Supported notification channel: `discord`.
