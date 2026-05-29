@@ -39,6 +39,14 @@
 		return user?.plan || 'free';
 	}
 
+	function planRank(planID: string) {
+		return { free: 0, pro: 1, business: 2 }[planID] ?? 0;
+	}
+
+	function isLowerPlan(plan: BillingPlan) {
+		return planRank(plan.id) < planRank(currentPlanID());
+	}
+
 	function planFeatures(plan: BillingPlan) {
 		return [
 			`${plan.monitor_limit} monitors`,
@@ -151,6 +159,7 @@
 			<div class="grid gap-4 lg:grid-cols-3">
 				{#each plans as plan (plan.id)}
 					{@const selected = currentPlanID() === plan.id}
+					{@const lowerPlan = isLowerPlan(plan)}
 					<article
 						class="glass-panel flex min-h-[34rem] flex-col rounded-[2rem] p-6 transition {plan.id ===
 						'pro'
@@ -208,13 +217,15 @@
 							{:else}
 								<button
 									onclick={() => startCheckout(plan)}
-									disabled={selected || !plan.stripe_available || busyPlan !== ''}
+									disabled={selected || lowerPlan || !plan.stripe_available || busyPlan !== ''}
 									class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-4 font-black text-brand-dark transition hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-45"
 								>
 									{#if !plan.stripe_available}
 										Unavailable
 									{:else if selected}
 										Current plan
+									{:else if lowerPlan}
+										Included in your plan
 									{:else if busyPlan === plan.id}
 										Opening checkout...
 									{:else}
