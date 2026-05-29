@@ -46,10 +46,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const state = context.payload.job ? 'success' : 'failure';
+            const jobStatus = '${{ job.status }}';
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               deployment_id: ${{ steps.deployment.outputs.result }},
-              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              state: jobStatus === 'success' ? 'success' : 'failure',
               description: 'Deployed to VPS'
             });
