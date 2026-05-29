@@ -57,9 +57,11 @@
 		];
 	}
 
-	function redirectToStripe(url: string) {
-		const target = new URL(url);
-		if (target.protocol !== 'https:' || !target.hostname.endsWith('.stripe.com')) {
+	function redirectToBillingURL(url: string) {
+		const target = new URL(url, window.location.origin);
+		const isStripeURL = target.protocol === 'https:' && target.hostname.endsWith('.stripe.com');
+		const isAppURL = target.origin === window.location.origin;
+		if (!isStripeURL && !isAppURL) {
 			throw new Error('Invalid billing redirect URL');
 		}
 		window.location.href = target.toString();
@@ -83,7 +85,7 @@
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? 'Could not start checkout');
-			redirectToStripe(data.url);
+			redirectToBillingURL(data.url);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not start checkout';
 		} finally {
@@ -104,7 +106,7 @@
 			});
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error ?? 'Could not open billing portal');
-			redirectToStripe(data.url);
+			redirectToBillingURL(data.url);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not open billing portal';
 		} finally {

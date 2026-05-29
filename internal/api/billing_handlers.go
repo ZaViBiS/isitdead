@@ -13,6 +13,7 @@ import (
 	"github.com/stripe/stripe-go/v83"
 	billingportal_session "github.com/stripe/stripe-go/v83/billingportal/session"
 	checkout_session "github.com/stripe/stripe-go/v83/checkout/session"
+	"github.com/stripe/stripe-go/v83/subscription"
 	"github.com/stripe/stripe-go/v83/webhook"
 )
 
@@ -55,6 +56,18 @@ func (s *Server) handleCreateCheckoutSession(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "This plan cannot be purchased"})
 	}
 
+	stripe.Key = s.Config.StripeSecretKey
+	if user.StripeSubscriptionID != "" {
+		if user.StripePriceID == plan.StripePriceID {
+			return c.JSON(checkoutResponse{URL: "/pricing"})
+		}
+		if err := s.updateStripeSubscriptionPlan(user.ID, user.StripeSubscriptionID, plan.ID, plan.StripePriceID); err != nil {
+			log.Error().Err(err).Uint("user_id", user.ID).Str("plan", plan.ID).Msg("failed to update Stripe subscription")
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "Could not update subscription"})
+		}
+		return c.JSON(checkoutResponse{URL: "/pricing?checkout=success"})
+	}
+
 	params := &stripe.CheckoutSessionParams{
 		SuccessURL:        stripe.String(s.appBaseURL() + "/pricing?checkout=success"),
 		CancelURL:         stripe.String(s.appBaseURL() + "/pricing?checkout=cancelled"),
@@ -83,7 +96,6 @@ func (s *Server) handleCreateCheckoutSession(c fiber.Ctx) error {
 		params.CustomerEmail = nil
 	}
 
-	stripe.Key = s.Config.StripeSecretKey
 	session, err := checkout_session.New(params)
 	if err != nil {
 		log.Error().Err(err).Uint("user_id", user.ID).Str("plan", plan.ID).Msg("failed to create Stripe checkout session")
@@ -91,6 +103,48 @@ func (s *Server) handleCreateCheckoutSession(c fiber.Ctx) error {
 	}
 
 	return c.JSON(checkoutResponse{URL: session.URL})
+}
+
+func (s *Server) updateStripeSubscriptionPlan(userID uint, subscriptionID, planID, priceID string) error {
+	current, err := subscription.Get(subscriptionID, nil)
+	if err != nil {
+		return err
+	}
+	if current.Items == nil || len(current.Items.Data) == 0 || current.Items.Data[0] == nil {
+		return fmt.Errorf("Stripe subscription %s has no subscription items", subscriptionID)
+	}
+
+	updated, err := subscription.Update(subscriptionID, &stripe.SubscriptionParams{
+		Items: []*stripe.SubscriptionItemsParams{
+			{
+				ID:       stripe.String(current.Items.Data[0].ID),
+				Price:    stripe.String(priceID),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		Metadata: map[string]string{
+			"user_id": strconv.FormatUint(uint64(userID), 10),
+			"plan":    planID,
+		},
+		ProrationBehavior: stripe.String("create_prorations"),
+	})
+	if err != nil {
+		return err
+	}
+
+	customerID := ""
+	if updated.Customer != nil {
+		customerID = updated.Customer.ID
+	}
+	return s.DB.UpdateUserBilling(
+		userID,
+		planID,
+		customerID,
+		updated.ID,
+		string(updated.Status),
+		subscriptionPriceID(*updated),
+		subscriptionPeriodEnd(*updated),
+	)
 }
 
 func (s *Server) handleCreateBillingPortalSession(c fiber.Ctx) error {
@@ -205,6 +259,15 @@ func (s *Server) handleSubscriptionChanged(event stripe.Event) error {
 	}
 	if err != nil {
 		return err
+	}
+	if user.StripeSubscriptionID != "" && user.StripeSubscriptionID != subscription.ID {
+		log.Info().
+			Uint("user_id", user.ID).
+			Str("current_subscription_id", user.StripeSubscriptionID).
+			Str("event_subscription_id", subscription.ID).
+			Str("event_status", string(subscription.Status)).
+			Msg("ignored Stripe event for non-current subscription")
+		return nil
 	}
 
 	priceID := subscriptionPriceID(subscription)
