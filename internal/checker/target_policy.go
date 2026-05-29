@@ -91,14 +91,6 @@ func validatePingTarget(target string) (string, error) {
 	return host, nil
 }
 
-func validateOutboundHTTPURL(ctx context.Context, target string) error {
-	parsed, err := parseHTTPURL(target)
-	if err != nil {
-		return err
-	}
-	return validateOutboundHost(ctx, parsed.Hostname())
-}
-
 func validateOutboundPingTarget(ctx context.Context, target string) error {
 	host := target
 	if h, _, err := net.SplitHostPort(target); err == nil {

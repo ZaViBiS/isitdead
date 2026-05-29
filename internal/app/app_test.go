@@ -5,8 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ZaViBiS/isitdead/internal/config"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ZaViBiS/isitdead/internal/config"
 )
 
 func TestAppNew(t *testing.T) {

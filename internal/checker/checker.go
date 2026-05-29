@@ -87,10 +87,12 @@ func InspectSSLCertificate(target string, timeout time.Duration) SSLCertificateI
 		InsecureSkipVerify: true, // We verify manually so we can still inspect invalid/self-signed certs.
 	})
 	if err := conn.HandshakeContext(ctx); err != nil {
-		rawConn.Close()
+		_ = rawConn.Close()
 		return SSLCertificateInfo{Error: err.Error()}
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	state := conn.ConnectionState()
 	if len(state.PeerCertificates) == 0 {
@@ -173,7 +175,9 @@ func HttpCheck(url string, timeout time.Duration) (status string, latency int64)
 	if err != nil {
 		return err.Error(), elapsed
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	return resp.Status, elapsed
 }
@@ -218,17 +222,17 @@ func LinkCheck(rawURL string, timeout time.Duration) (status string, latency int
 
 		if resp.StatusCode >= http.StatusBadRequest {
 			broken = append(broken, brokenReference{target: pageKey, source: "crawl", status: resp.Status})
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			continue
 		}
 
 		if !strings.Contains(resp.Header.Get("Content-Type"), "text/html") {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			continue
 		}
 
 		refs, err := extractLinkReferences(resp.Body, pageURL)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			broken = append(broken, brokenReference{target: pageKey, source: "crawl", status: err.Error()})
 			continue
@@ -372,7 +376,7 @@ func checkReference(client *http.Client, target string) string {
 	resp, err := client.Do(req)
 	if err == nil {
 		statusCode := resp.StatusCode
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if statusCode < http.StatusBadRequest {
 			return ""
 		}
@@ -387,7 +391,9 @@ func checkReference(client *http.Client, target string) string {
 	if err != nil {
 		return err.Error()
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode >= http.StatusBadRequest {
 		return resp.Status
 	}
@@ -487,7 +493,9 @@ func TCPPing(target string, timeout time.Duration) (status string, latency int64
 	if err != nil {
 		return fmt.Sprintf("TCP Connection Error: %v", err), elapsed
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	return "Connected", elapsed
 }

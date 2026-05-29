@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 func TestServerCRUD(t *testing.T) {

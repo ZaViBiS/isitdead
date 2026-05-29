@@ -12,10 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/ZaViBiS/isitdead/internal/checker"
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/ZaViBiS/isitdead/internal/model"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildHourlyBucketsUsesMonitorSlowThreshold(t *testing.T) {

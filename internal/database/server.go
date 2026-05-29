@@ -3,8 +3,9 @@ package database
 import (
 	"errors"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 var ErrServerNotFound = errors.New("server not found")

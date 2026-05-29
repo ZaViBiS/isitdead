@@ -1,8 +1,9 @@
 package database
 
 import (
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 func (s *Storage) UpsertSSLCertificateStatus(status model.SSLCertificateStatus) error {

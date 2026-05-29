@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 const (

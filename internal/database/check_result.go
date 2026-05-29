@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 type HistorySummary struct {

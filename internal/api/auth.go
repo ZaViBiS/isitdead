@@ -48,24 +48,6 @@ func (s *Server) userIDFromJWT(tokenString string) (uint, error) {
 	return uint(userID), nil
 }
 
-func (s *Server) adminMiddleware(c fiber.Ctx) error {
-	userID, ok := c.Locals("user_id").(uint)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing user context"})
-	}
-
-	user, err := s.DB.GetUserByID(userID)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid user"})
-	}
-
-	if s.isAdminEmail(user.Email) {
-		return c.Next()
-	}
-
-	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Admin access required"})
-}
-
 func (s *Server) isAdminEmail(userEmail string) bool {
 	for _, email := range strings.Split(s.Config.AdminEmails, ",") {
 		if strings.EqualFold(strings.TrimSpace(email), userEmail) && strings.TrimSpace(email) != "" {

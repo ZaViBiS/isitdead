@@ -44,7 +44,9 @@ func (s *DiscordSender) Send(ctx context.Context, message Message) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("discord webhook returned %s", resp.Status)
 	}

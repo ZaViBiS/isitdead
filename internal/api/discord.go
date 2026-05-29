@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/database"
 )
 
 const discordLinkTTL = 15 * time.Minute

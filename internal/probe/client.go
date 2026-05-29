@@ -87,7 +87,9 @@ func (c *Client) checkRegion(ctx context.Context, probeTarget Target, checkType,
 	if err != nil {
 		return probeError(probeTarget.Region, start, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))

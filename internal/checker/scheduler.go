@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/ZaViBiS/isitdead/internal/model"
-	"github.com/rs/zerolog/log"
 )
 
 // Scheduler керує циклічними перевірками серверів

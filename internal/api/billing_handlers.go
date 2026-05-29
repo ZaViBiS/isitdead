@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/billing"
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/stripe/stripe-go/v83"
@@ -15,6 +14,8 @@ import (
 	checkout_session "github.com/stripe/stripe-go/v83/checkout/session"
 	"github.com/stripe/stripe-go/v83/subscription"
 	"github.com/stripe/stripe-go/v83/webhook"
+
+	"github.com/ZaViBiS/isitdead/internal/billing"
 )
 
 func (s *Server) billingPriceIDs() billing.PriceIDs {
@@ -111,7 +112,7 @@ func (s *Server) updateStripeSubscriptionPlan(userID uint, subscriptionID, planI
 		return err
 	}
 	if current.Items == nil || len(current.Items.Data) == 0 || current.Items.Data[0] == nil {
-		return fmt.Errorf("Stripe subscription %s has no subscription items", subscriptionID)
+		return fmt.Errorf("stripe subscription %s has no subscription items", subscriptionID)
 	}
 
 	updated, err := subscription.Update(subscriptionID, &stripe.SubscriptionParams{

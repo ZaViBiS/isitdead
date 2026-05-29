@@ -1,8 +1,9 @@
 package api
 
 import (
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/gofiber/fiber/v3"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 func (s *Server) handleGetNotificationPreferences(c fiber.Ctx) error {

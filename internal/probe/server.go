@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/checker"
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ZaViBiS/isitdead/internal/checker"
 )
 
 type Server struct {

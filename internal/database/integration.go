@@ -4,8 +4,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 var (

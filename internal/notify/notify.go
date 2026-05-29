@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 type Store interface {

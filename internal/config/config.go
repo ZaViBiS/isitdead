@@ -49,14 +49,14 @@ func Load() *Config {
 	region := strings.TrimSpace(getEnv("REGION", DefaultLocalRegion))
 
 	return &Config{
-		Env:                   getEnv("ENV", "dev"),
-		Port:                  getEnv("PORT", "8080"),
-		Domain:                getEnv("DOMAIN", "localhost"),
-		DBPath:                getEnv("DB_PATH", "/tmp/isitdead.db"),
-		ResendAPIKey:          getEnv("RESEND_API_KEY", ""),
-		ResendFrom:            getEnv("RESEND_FROM", "no-reply@localhost"),
-		ClientID:              getEnv("CLIENT_ID", ""),
-		ClientSecret:          getEnv("CLIENT_SECRET", ""),
+		Env:          getEnv("ENV", "dev"),
+		Port:         getEnv("PORT", "8080"),
+		Domain:       getEnv("DOMAIN", "localhost"),
+		DBPath:       getEnv("DB_PATH", "/tmp/isitdead.db"),
+		ResendAPIKey: getEnv("RESEND_API_KEY", ""),
+		ResendFrom:   getEnv("RESEND_FROM", "no-reply@localhost"),
+		ClientID:     getEnv("CLIENT_ID", ""),
+		ClientSecret: getEnv("CLIENT_SECRET", ""),
 
 		JWTSecret:             getEnv("JWT_SECRET", DefaultJWTSecret),
 		AdminEmails:           getEnv("ADMIN_EMAILS", ""),
@@ -72,7 +72,6 @@ func Load() *Config {
 		Region:                region,
 		ProbeSecret:           getEnv("PROBE_SECRET", ""),
 		ProbeRegions:          parseProbeRegions(getEnv("PROBE_REGIONS", "")),
-
 	}
 }
 

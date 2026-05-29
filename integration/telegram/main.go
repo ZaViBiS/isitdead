@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/ZaViBiS/isitdead/integration/telegram/api"
 	"github.com/ZaViBiS/isitdead/integration/telegram/bot"
-	"github.com/rs/zerolog/log"
 )
 
 func main() {

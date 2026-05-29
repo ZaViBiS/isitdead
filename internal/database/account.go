@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/billing"
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/billing"
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 // GenerateToken створює випадковий токен

@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/checker"
-	"github.com/ZaViBiS/isitdead/internal/config"
-	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ZaViBiS/isitdead/internal/checker"
+	"github.com/ZaViBiS/isitdead/internal/config"
+	"github.com/ZaViBiS/isitdead/internal/database"
 )
 
 type VerificationMailer interface {
@@ -116,7 +117,9 @@ func NewWithConfig(db *database.Storage, sched *checker.Scheduler, mailer Verifi
 		if err != nil {
 			return c.Next()
 		}
-		defer index.Close()
+		defer func() {
+			_ = index.Close()
+		}()
 
 		content, _ := io.ReadAll(index)
 		c.Set("Content-Type", "text/html")

@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 func TestGetIncidents(t *testing.T) {

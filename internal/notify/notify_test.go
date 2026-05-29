@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 type fakeStore struct {

@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
+
 	"github.com/ZaViBiS/isitdead/internal/billing"
 	"github.com/ZaViBiS/isitdead/internal/checker"
 	"github.com/ZaViBiS/isitdead/internal/database"
 	"github.com/ZaViBiS/isitdead/internal/model"
-	"github.com/gofiber/fiber/v3"
-	"gorm.io/gorm"
 )
 
 const (
@@ -149,7 +150,7 @@ func buildHourlyBuckets(history []model.CheckResult, now time.Time, checkType st
 }
 
 func bucketStatus(result model.CheckResult, checkType string, slowThreshold int) string {
-	if !(strings.HasPrefix(result.Status, "2") || result.Status == "Connected") {
+	if !strings.HasPrefix(result.Status, "2") && result.Status != "Connected" {
 		return "error"
 	}
 	if result.Latency > int64(slowThreshold) {
@@ -275,16 +276,16 @@ func supportsSSLMonitoring(checkType string) bool {
 
 func validateMonitorTiming(timeout, slowThreshold int) error {
 	if timeout <= 0 {
-		return errors.New("Timeout is required")
+		return errors.New("timeout is required")
 	}
 	if timeout > maxMonitorTimeoutSeconds {
-		return errors.New("Timeout is too large")
+		return errors.New("timeout is too large")
 	}
 	if slowThreshold <= 0 {
-		return errors.New("Slow threshold is required")
+		return errors.New("slow threshold is required")
 	}
 	if slowThreshold > maxSlowThresholdMS {
-		return errors.New("Slow threshold is too large")
+		return errors.New("slow threshold is too large")
 	}
 	return nil
 }

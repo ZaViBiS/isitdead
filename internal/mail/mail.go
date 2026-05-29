@@ -76,7 +76,9 @@ func (m *Mailer) SendHTML(to, subject, body string) error {
 	if err != nil {
 		return fmt.Errorf("send email via resend: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))

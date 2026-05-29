@@ -8,6 +8,9 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/acme/autocert"
+
 	"github.com/ZaViBiS/isitdead/internal/api"
 	"github.com/ZaViBiS/isitdead/internal/checker"
 	"github.com/ZaViBiS/isitdead/internal/config"
@@ -15,7 +18,6 @@ import (
 	"github.com/ZaViBiS/isitdead/internal/mail"
 	"github.com/ZaViBiS/isitdead/internal/notify"
 	"github.com/ZaViBiS/isitdead/internal/probe"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 type runnableServer interface {
@@ -134,7 +136,11 @@ func (a *App) Run() error {
 	}
 
 	// Редирект HTTP → HTTPS
-	go http.ListenAndServe(":80", m.HTTPHandler(nil))
+	go func() {
+		if err := http.ListenAndServe(":80", m.HTTPHandler(nil)); err != nil {
+			log.Error().Err(err).Msg("http challenge server stopped")
+		}
+	}()
 
 	return server.Listener(ln)
 }

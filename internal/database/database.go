@@ -2,10 +2,11 @@
 package database
 
 import (
-	"github.com/ZaViBiS/isitdead/internal/model"
 	"github.com/rs/zerolog/log"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"github.com/ZaViBiS/isitdead/internal/model"
 )
 
 // NOTE: можливо є сенс змінити назву усього пакету на storage, або змінити назву структури на database
