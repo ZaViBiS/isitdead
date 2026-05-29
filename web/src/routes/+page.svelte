@@ -120,10 +120,10 @@
 <div class="relative isolate overflow-hidden">
 	<div class="pointer-events-none absolute inset-0 -z-10">
 		<div
-			class="ambient-glow absolute top-[-10rem] left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand-primary/24 blur-[150px]"
+			class="ambient-glow absolute top-[-10rem] left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-brand-primary/14 blur-[150px]"
 		></div>
 		<div
-			class="ambient-glow absolute top-[28rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-brand-soft/14 blur-[120px]"
+			class="ambient-glow absolute top-[28rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-brand-soft/8 blur-[120px]"
 		></div>
 	</div>
 
@@ -156,14 +156,14 @@
 				<div class="mt-10 flex flex-col gap-4 sm:flex-row">
 					<a
 						href={isLoggedIn ? resolve('/dashboard') : resolve('/register')}
-						class="group inline-flex items-center justify-center rounded-2xl bg-brand-primary px-8 py-4 text-base font-black text-brand-dark shadow-2xl shadow-brand-primary/20 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0"
+						class="group inline-flex items-center justify-center rounded-xl bg-brand-primary px-8 py-4 text-base font-black text-brand-ink shadow-2xl shadow-brand-primary/10 transition hover:-translate-y-0.5 hover:bg-brand-primary/90 active:translate-y-0"
 					>
 						{isLoggedIn ? 'Open dashboard' : 'Create monitor'}
 						<ArrowRight class="ml-2 h-5 w-5 transition group-hover:translate-x-1" />
 					</a>
 					<a
 						href={resolve('/#features')}
-						class="inline-flex items-center justify-center rounded-2xl border border-brand-light/10 bg-brand-light/[0.03] px-8 py-4 text-base font-black text-brand-light/75 backdrop-blur transition hover:border-brand-primary/30 hover:text-brand-light"
+						class="inline-flex items-center justify-center rounded-xl border border-brand-light/10 bg-brand-ink/45 px-8 py-4 text-base font-black text-brand-light/75 backdrop-blur transition hover:border-brand-primary/30 hover:text-brand-light"
 					>
 						Explore features
 					</a>
@@ -189,8 +189,8 @@
 				<div
 					class="ambient-glow absolute -inset-4 rounded-[3.25rem] bg-gradient-to-br from-brand-primary/20 via-brand-soft/10 to-transparent blur-2xl"
 				></div>
-				<div class="glass-panel relative overflow-hidden rounded-[2.75rem] p-3">
-					<div class="rounded-[2.25rem] border border-brand-light/10 bg-brand-dark/80">
+				<div class="glass-panel relative overflow-hidden rounded-3xl p-3">
+					<div class="rounded-2xl border border-brand-light/10 bg-brand-ink/72">
 						<div class="flex items-center justify-between border-b border-brand-light/10 px-5 py-4">
 							<div class="flex items-center gap-2">
 								<span class="h-3 w-3 rounded-full bg-brand-accent"></span>
