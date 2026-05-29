@@ -125,9 +125,14 @@ func (s *Server) handleStripeWebhook(c fiber.Ctx) error {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Stripe webhook is not configured"})
 	}
 
-	event, err := webhook.ConstructEvent(c.Body(), c.Get("Stripe-Signature"), s.Config.StripeWebhookSecret)
+	event, err := webhook.ConstructEventWithOptions(
+		c.Body(),
+		c.Get("Stripe-Signature"),
+		s.Config.StripeWebhookSecret,
+		webhook.ConstructEventOptions{IgnoreAPIVersionMismatch: true},
+	)
 	if err != nil {
-		log.Warn().Err(err).Msg("invalid Stripe webhook signature")
+		log.Warn().Err(err).Msg("invalid Stripe webhook")
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 
