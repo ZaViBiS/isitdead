@@ -1571,7 +1571,7 @@
 											{@const color = getDashboardBucketColor(bucket)}
 											<div
 												class="group/item relative flex-1 cursor-help rounded-sm opacity-70 transition hover:opacity-100"
-												style="background-color: {color}; height: {color === '#1f332f'
+												style="background-color: {color}; height: {color === '#39414D'
 													? '38%'
 													: '100%'}"
 											>
@@ -1712,7 +1712,7 @@
 											</div>
 										</div>
 										<div>
-											<div class="text-sm font-black text-[#E5B181]">
+											<div class="text-sm font-black text-[#F0AD4E]">
 												{currentLatency || avgLatency}ms
 											</div>
 											<div

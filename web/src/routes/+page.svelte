@@ -135,9 +135,9 @@
 				<div class="signal-pill mb-8 gap-3">
 					<span class="relative flex h-2.5 w-2.5">
 						<span
-							class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-primary opacity-40"
+							class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#50FA7B] opacity-40"
 						></span>
-						<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-primary"></span>
+						<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#50FA7B]"></span>
 					</span>
 					Uptime monitoring service
 				</div>
@@ -183,6 +183,23 @@
 						<div class="micro-label mt-1">history</div>
 					</div>
 				</div>
+
+				<div class="terminal-panel mt-8 max-w-xl text-left">
+					<div class="terminal-bar">
+						<span>user@isitdead: ~ -- probe</span>
+						<div class="flex gap-1">
+							<span class="terminal-dot"></span>
+							<span class="terminal-dot bg-brand-gold"></span>
+							<span class="terminal-dot bg-[#50FA7B]"></span>
+						</div>
+					</div>
+					<pre class="m-0 p-4 text-sm leading-7 whitespace-pre-wrap text-brand-light/80"><span
+							class="text-[#50FA7B]">$</span
+						> curl -I https://critical-service.app
+HTTP/2 200
+latency: 42ms
+status: operational<span class="animate-pulse text-brand-light">_</span></pre>
+				</div>
 			</div>
 
 			<div id="demo" class="animate-rise animate-rise-delay relative">
@@ -194,8 +211,8 @@
 						<div class="flex items-center justify-between border-b border-brand-light/10 px-5 py-4">
 							<div class="flex items-center gap-2">
 								<span class="h-3 w-3 rounded-full bg-brand-accent"></span>
-								<span class="h-3 w-3 rounded-full bg-[#E5B181]"></span>
-								<span class="h-3 w-3 rounded-full bg-brand-primary"></span>
+								<span class="h-3 w-3 rounded-full bg-[#F0AD4E]"></span>
+								<span class="h-3 w-3 rounded-full bg-[#50FA7B]"></span>
 							</div>
 							<div
 								class="rounded-full bg-brand-primary/10 px-3 py-1 text-[10px] font-black tracking-widest text-brand-primary uppercase"
@@ -224,8 +241,8 @@
 											<div
 												class="flex-1 rounded-t-md transition hover:opacity-100"
 												class:bg-brand-accent={index === 12}
-												class:bg-[#E5B181]={index === 26}
-												class:bg-brand-primary={index !== 12 && index !== 26}
+												class:bg-[#F0AD4E]={index === 26}
+												class:bg-[#50FA7B]={index !== 12 && index !== 26}
 												style={`height: ${height}%; opacity: ${index === 12 ? 0.85 : 0.28 + index / 62}`}
 											></div>
 										{/each}
@@ -233,16 +250,14 @@
 								</div>
 
 								<div class="grid gap-4">
-									<div
-										class="rounded-[2rem] border border-brand-primary/20 bg-brand-primary/10 p-5"
-									>
+									<div class="rounded-[2rem] border border-[#50FA7B]/20 bg-[#50FA7B]/10 p-5">
 										<div
-											class="flex items-center gap-2 text-xs font-black tracking-widest text-brand-primary uppercase"
+											class="flex items-center gap-2 text-xs font-black tracking-widest text-[#50FA7B] uppercase"
 										>
 											<CheckCircle2 class="h-4 w-4" />
 											Uptime
 										</div>
-										<div class="mt-3 text-4xl font-black text-brand-primary">99.98%</div>
+										<div class="mt-3 text-4xl font-black text-[#50FA7B]">99.98%</div>
 									</div>
 									<div class="soft-panel rounded-[2rem] p-5">
 										<div
@@ -304,7 +319,7 @@
 													</div>
 												</div>
 												<div>
-													<div class="text-sm font-black text-[#E5B181]">{monitor.latency}</div>
+													<div class="text-sm font-black text-[#F0AD4E]">{monitor.latency}</div>
 													<div
 														class="text-[10px] font-bold tracking-widest text-brand-light/25 uppercase"
 													>
@@ -407,7 +422,7 @@
 	<section id="how-it-works" class="px-4 pb-16 sm:px-6 sm:pb-24">
 		<div class="container mx-auto max-w-7xl">
 			<div
-				class="overflow-hidden rounded-[3rem] border border-brand-primary/20 bg-[linear-gradient(135deg,#73e2a7_0%,#b8f0bf_55%,#def4c6_100%)] text-brand-dark shadow-2xl shadow-brand-primary/10"
+				class="overflow-hidden rounded-[3rem] border border-brand-light/30 bg-[linear-gradient(135deg,#e06c75_0%,#f0989e_42%,#9cdef2_100%)] text-brand-ink shadow-2xl shadow-brand-primary/10"
 			>
 				<div class="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
 					<div class="p-8 sm:p-12 lg:p-14">

@@ -71,7 +71,7 @@
 					<div class="mb-8 flex items-center justify-between">
 						<div class="flex items-center gap-2">
 							<span class="h-3 w-3 rounded-full bg-brand-accent"></span>
-							<span class="h-3 w-3 rounded-full bg-[#E5B181]"></span>
+							<span class="h-3 w-3 rounded-full bg-[#F0AD4E]"></span>
 							<span class="h-3 w-3 rounded-full bg-brand-primary"></span>
 						</div>
 						<span

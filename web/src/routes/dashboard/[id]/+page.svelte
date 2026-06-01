@@ -552,12 +552,12 @@
 							>
 								<span class="flex items-center gap-1.5"
 									><span
-										class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"
+										class="h-2 w-2 rounded-full bg-[#50FA7B] shadow-[0_0_8px_rgba(80,250,123,0.5)]"
 									></span> Healthy</span
 								>
 								{#if supportsSlowThreshold(server.check_type)}
 									<span class="flex items-center gap-1.5"
-										><span class="h-2 w-2 rounded-full bg-[#E5B181]"></span> Slow &gt;
+										><span class="h-2 w-2 rounded-full bg-[#F0AD4E]"></span> Slow &gt;
 										{server.slow_threshold}ms</span
 									>
 								{/if}

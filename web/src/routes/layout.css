@@ -1,22 +1,28 @@
 @import 'tailwindcss';
 
 @theme {
-	--color-brand-dark: #07100e;
-	--color-brand-ink: #030706;
-	--color-brand-panel: #0b1512;
-	--color-brand-panel-soft: #10201b;
-	--color-brand-primary: #64d993;
-	--color-brand-light: #e7f5df;
-	--color-brand-accent: #ff4965;
-	--color-brand-soft: #8f7cff;
-	--color-brand-gold: #f0bf6a;
+	--color-brand-dark: #282c34;
+	--color-brand-ink: #111111;
+	--color-brand-panel: #1e2228;
+	--color-brand-panel-soft: #20242c;
+	--color-brand-primary: #e06c75;
+	--color-brand-light: #9cdef2;
+	--color-brand-accent: #ff5a5a;
+	--color-brand-soft: #355a66;
+	--color-brand-gold: #f0ad4e;
 }
 
 @layer base {
 	:root {
-		--font-body: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
-		--font-display: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
-		--font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+		--font-body:
+			'Fira Code', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+			monospace;
+		--font-display:
+			'Fira Code', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+			monospace;
+		--font-mono:
+			'Fira Code', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas,
+			monospace;
 	}
 
 	html {
@@ -26,11 +32,10 @@
 	body {
 		@apply min-w-0 bg-brand-dark text-brand-light antialiased;
 		font-family: var(--font-body);
-		background-image:
-			radial-gradient(circle at 12% -12%, rgba(100, 217, 147, 0.11), transparent 34rem),
-			radial-gradient(circle at 92% 4%, rgba(143, 124, 255, 0.09), transparent 30rem),
-			linear-gradient(180deg, rgba(231, 245, 223, 0.018), transparent 20rem),
-			linear-gradient(180deg, #07100e 0%, #030706 72%);
+		background:
+			radial-gradient(1100px 520px at 82% -10%, rgba(224, 108, 117, 0.12), transparent 60%),
+			radial-gradient(900px 520px at 0% 0%, rgba(53, 90, 102, 0.3), transparent 55%),
+			linear-gradient(180deg, rgba(17, 17, 17, 0), rgba(17, 17, 17, 0.38) 72%), #282c34;
 		background-attachment: fixed;
 	}
 
@@ -46,8 +51,8 @@
 	}
 
 	::selection {
-		background: rgba(115, 226, 167, 0.28);
-		color: #def4c6;
+		background: rgba(224, 108, 117, 0.32);
+		color: #f8fafc;
 	}
 }
 
@@ -62,28 +67,27 @@
 		z-index: -2;
 		pointer-events: none;
 		content: '';
-		background-image:
-			linear-gradient(to right, rgba(231, 245, 223, 0.026) 1px, transparent 1px),
-			linear-gradient(to bottom, rgba(231, 245, 223, 0.026) 1px, transparent 1px);
-		background-size: 64px 64px;
-		mask-image: linear-gradient(to bottom, black, transparent 78%);
+		background-image: radial-gradient(circle, rgba(156, 222, 242, 0.07) 1px, transparent 1.4px);
+		background-size: 24px 24px;
+		mask-image: linear-gradient(to bottom, black, transparent 82%);
 	}
 
 	.glass-panel {
-		@apply border border-brand-light/10 bg-brand-panel/90 shadow-2xl shadow-black/35 backdrop-blur-xl;
+		@apply border border-brand-soft/80 bg-brand-ink/90 shadow-2xl shadow-black/40 backdrop-blur-xl;
+		box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
 	}
 
 	.soft-panel {
-		@apply border border-brand-light/10 bg-brand-ink/45;
+		@apply border border-brand-soft/60 bg-brand-panel/70;
 	}
 
 	.signal-pill {
-		@apply inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-4 py-2 text-[11px] font-black tracking-[0.28em] text-brand-primary uppercase shadow-2xl shadow-brand-primary/10;
+		@apply inline-flex items-center gap-2 rounded-full border border-brand-soft/90 bg-brand-ink px-4 py-2 text-[11px] font-black tracking-[0.22em] text-brand-light/75 uppercase shadow-2xl shadow-black/30;
 		font-family: var(--font-mono);
 	}
 
 	.signal-kicker {
-		@apply text-[11px] font-black tracking-[0.32em] text-brand-primary uppercase;
+		@apply text-[11px] font-black tracking-[0.18em] text-brand-primary uppercase;
 		font-family: var(--font-mono);
 	}
 
@@ -93,18 +97,33 @@
 	}
 
 	.display-gradient {
-		background: linear-gradient(135deg, #ffffff 0%, #dff4db 42%, #64d993 100%);
+		background: linear-gradient(120deg, #9cdef2 0%, #b9e6f4 44%, #e06c75 100%);
 		background-clip: text;
 		-webkit-background-clip: text;
 		color: transparent;
 	}
 
 	.section-rule {
-		@apply border-y border-brand-light/10 bg-brand-ink/35;
+		@apply border-y border-brand-light/30 bg-brand-ink;
+		background-image: radial-gradient(circle, rgba(156, 222, 242, 0.075) 1px, transparent 1.4px);
+		background-size: 24px 24px;
 	}
 
 	.ambient-glow {
 		will-change: auto;
+	}
+
+	.terminal-panel {
+		@apply overflow-hidden rounded-lg border border-brand-soft bg-brand-panel shadow-2xl shadow-black/40;
+	}
+
+	.terminal-bar {
+		@apply flex items-center justify-between border-b border-brand-soft bg-brand-panel-soft px-4 py-2 text-xs text-brand-light/55;
+		font-family: var(--font-mono);
+	}
+
+	.terminal-dot {
+		@apply h-2.5 w-2.5 rounded-full bg-brand-soft;
 	}
 }
 

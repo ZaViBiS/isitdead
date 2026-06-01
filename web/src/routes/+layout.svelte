@@ -38,10 +38,10 @@
 
 <div class="app-shell flex min-h-screen flex-col text-brand-light transition-colors">
 	<!-- Navbar -->
-	<header class="sticky top-0 z-50 border-b border-brand-light/10 bg-brand-ink/75 px-3 py-3 backdrop-blur-xl sm:px-4">
-		<nav
-			class="container mx-auto flex h-14 items-center justify-between gap-3 rounded-2xl border border-brand-light/10 bg-brand-panel/90 px-4 shadow-2xl shadow-black/30 sm:px-6"
-		>
+	<header
+		class="sticky top-0 z-50 border-b border-brand-light/80 bg-brand-ink/90 px-3 backdrop-blur-xl sm:px-4"
+	>
+		<nav class="container mx-auto flex h-[60px] items-center justify-between gap-3 px-1 sm:px-2">
 			<a href={resolve('/')} class="flex items-center gap-2 text-xl font-bold tracking-tight">
 				<LogoMark class="h-8 w-8" title="isitdead home" />
 				<span class="hidden min-[360px]:inline">isitdead</span>
@@ -97,7 +97,7 @@
 					</a>
 					<a
 						href={resolve('/register')}
-						class="inline-flex h-9 items-center justify-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-black text-brand-ink shadow-lg shadow-brand-primary/10 transition-colors hover:bg-brand-primary/90"
+						class="inline-flex h-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-[#f0989e] px-4 py-2 text-sm font-black text-white shadow-lg shadow-brand-primary/20 transition hover:-translate-y-0.5 hover:brightness-110"
 					>
 						Sign up
 					</a>
@@ -112,10 +112,10 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="mt-8 border-t border-brand-light/10 bg-brand-ink/45 py-10 sm:py-12">
+	<footer class="mt-8 border-t border-brand-light/40 bg-brand-ink py-10 sm:py-12">
 		<div class="container mx-auto px-4 sm:px-6">
 			<div
-				class="flex flex-col items-center justify-between gap-6 rounded-2xl border border-brand-light/10 bg-brand-panel/70 px-5 py-6 shadow-2xl shadow-black/20 md:flex-row md:px-7"
+				class="terminal-panel flex flex-col items-center justify-between gap-6 px-5 py-6 md:flex-row md:px-7"
 			>
 				<div class="flex items-center gap-2">
 					<LogoMark class="h-7 w-7" title="isitdead" />

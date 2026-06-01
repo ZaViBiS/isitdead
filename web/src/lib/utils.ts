@@ -74,11 +74,18 @@ export interface NotificationPreference {
 	destination?: string;
 }
 
+export const STATUS_COLORS = {
+	ok: '#50FA7B',
+	slow: '#F0AD4E',
+	error: '#E06C75',
+	empty: '#39414D'
+} as const;
+
 export function getStatusColor(status: string, latency: number, slowThreshold = 300): string {
-	if (!status) return '#D62246';
-	if (!(status.startsWith('2') || status === 'Connected')) return '#D62246';
-	if (latency > slowThreshold) return '#E5B181';
-	return '#73E2A7';
+	if (!status) return STATUS_COLORS.error;
+	if (!(status.startsWith('2') || status === 'Connected')) return STATUS_COLORS.error;
+	if (latency > slowThreshold) return STATUS_COLORS.slow;
+	return STATUS_COLORS.ok;
 }
 
 export function supportsSlowThreshold(checkType: string) {
@@ -157,10 +164,10 @@ export function getCurrentCheck(server: Server): CheckResult | null {
 }
 
 export function getDashboardBucketColor(bucket: DashboardBucket): string {
-	if (bucket === 'ok') return '#73E2A7';
-	if (bucket === 'slow') return '#E5B181';
-	if (bucket === 'error') return '#D62246';
-	return '#1f332f';
+	if (bucket === 'ok') return STATUS_COLORS.ok;
+	if (bucket === 'slow') return STATUS_COLORS.slow;
+	if (bucket === 'error') return STATUS_COLORS.error;
+	return STATUS_COLORS.empty;
 }
 
 export function getRecentHistory(history: CheckResult[], hours: number): CheckResult[] {
@@ -230,7 +237,7 @@ export function getHourlyBuckets(
 	nowMs = Date.now(),
 	slowThreshold = 300
 ): string[] {
-	const buckets: string[] = Array(24).fill('#1f332f');
+	const buckets: string[] = Array(24).fill(STATUS_COLORS.empty);
 	const windowStart = nowMs - 24 * 60 * 60 * 1000;
 	const hourMs = 60 * 60 * 1000;
 
@@ -242,12 +249,12 @@ export function getHourlyBuckets(
 		const color = getStatusColor(result.status, result.latency, slowThreshold);
 		const current = buckets[bucketIndex];
 
-		if (current === '#D62246') continue;
-		if (color === '#D62246' || current === '#1f332f') {
+		if (current === STATUS_COLORS.error) continue;
+		if (color === STATUS_COLORS.error || current === STATUS_COLORS.empty) {
 			buckets[bucketIndex] = color;
 			continue;
 		}
-		if (color === '#E5B181') {
+		if (color === STATUS_COLORS.slow) {
 			buckets[bucketIndex] = color;
 		}
 	}

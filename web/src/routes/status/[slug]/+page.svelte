@@ -104,7 +104,7 @@
 	}
 
 	function publicStatusColor(status: string, latency: number) {
-		if (isUnknownStatus(status)) return '#1f332f';
+		if (isUnknownStatus(status)) return '#39414D';
 		return getStatusColor(
 			status,
 			latency,
@@ -288,7 +288,7 @@
 									<img
 										src={getFaviconUrl(monitor.url)}
 										alt=""
-										class="absolute h-10 w-10 rounded-lg bg-[#111f1c] object-contain"
+										class="absolute h-10 w-10 rounded-lg bg-[#111111] object-contain"
 										onerror={(event) => {
 											const target = event.currentTarget as HTMLImageElement;
 											target.style.display = 'none';
@@ -354,10 +354,10 @@
 								<div
 									class="mt-2 text-3xl leading-none font-black"
 									style="color: {healthy
-										? '#73E2A7'
+										? '#50FA7B'
 										: unknown
-											? 'rgba(222,244,198,.72)'
-											: '#D62246'}"
+											? 'rgba(156,222,242,.72)'
+											: '#E06C75'}"
 								>
 									{statusLabel}
 								</div>
@@ -492,13 +492,13 @@
 							>
 								<span class="flex items-center gap-1.5">
 									<span
-										class="h-2 w-2 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(115,226,167,0.5)]"
+										class="h-2 w-2 rounded-full bg-[#50FA7B] shadow-[0_0_8px_rgba(80,250,123,0.5)]"
 									></span>
 									Healthy
 								</span>
 								{#if supportsSlowThreshold(monitor.check_type)}
 									<span class="flex items-center gap-1.5">
-										<span class="h-2 w-2 rounded-full bg-[#E5B181]"></span>
+										<span class="h-2 w-2 rounded-full bg-[#F0AD4E]"></span>
 										Slow &gt; {monitor.slow_threshold}ms
 									</span>
 								{/if}
@@ -543,7 +543,7 @@
 							{#each getHourlyBuckets(history24h, Date.now(), effectiveSlowThreshold) as bucketColor, index (index)}
 								<div
 									class="group relative flex-1 cursor-help rounded-sm opacity-80 transition hover:opacity-100"
-									style="background-color: {bucketColor}; height: {bucketColor === '#1f332f'
+									style="background-color: {bucketColor}; height: {bucketColor === '#39414D'
 										? '38%'
 										: '100%'}"
 								>
@@ -554,16 +554,16 @@
 											class="rounded-xl border border-brand-light/10 bg-brand-dark/95 px-3 py-2 text-[11px] whitespace-nowrap shadow-2xl ring-1 ring-white/5 backdrop-blur-xl"
 										>
 											<div class="mb-1 font-black text-brand-light/40">{23 - index}h ago</div>
-											{#if bucketColor !== '#1f332f'}
+											{#if bucketColor !== '#39414D'}
 												<div class="flex items-center gap-2">
 													<div
 														class="h-2 w-2 rounded-full"
 														style="background-color: {bucketColor}"
 													></div>
 													<span class="font-bold">
-														{bucketColor === '#73E2A7'
+														{bucketColor === '#50FA7B'
 															? 'Healthy'
-															: bucketColor === '#E5B181'
+															: bucketColor === '#F0AD4E'
 																? 'Slow response'
 																: 'Down'}
 													</span>

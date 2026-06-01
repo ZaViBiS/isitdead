@@ -14,18 +14,23 @@
 	aria-label={title}
 >
 	<title>{title}</title>
-	<rect width="64" height="64" rx="17" fill="#12211D" />
-	<rect x="13" y="22" width="38" height="20" rx="10" fill="#DEF4C6" fill-opacity="0.14" />
 	<rect
-		x="13"
-		y="22"
-		width="38"
-		height="20"
-		rx="10"
-		stroke="#DEF4C6"
-		stroke-opacity="0.22"
-		stroke-width="4"
+		x="2"
+		y="2"
+		width="60"
+		height="60"
+		rx="14"
+		fill="#111111"
+		stroke="#355A66"
+		stroke-width="3"
 	/>
-	<circle cx="40" cy="32" r="9" fill="#73E2A7" />
-	<path d="M20 32H27" stroke="#D62246" stroke-width="5" stroke-linecap="round" />
+	<path d="M31 14V41H15L31 14Z" fill="#E06C75" />
+	<path d="M35 19V41H50L35 19Z" fill="#E06C75" opacity="0.58" />
+	<path
+		d="M12 47C18.5 42.5 25.5 42.5 32 47C38.5 51.5 45.5 51.5 52 47"
+		stroke="#9CDEF2"
+		stroke-width="4"
+		stroke-linecap="round"
+	/>
+	<circle cx="48" cy="16" r="4" fill="#50FA7B" />
 </svg>

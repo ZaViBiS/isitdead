@@ -59,8 +59,8 @@
 		<svg class="h-full w-full" preserveAspectRatio="none" viewBox="0 0 1000 300">
 			<defs>
 				<linearGradient id="grad-large" x1="0%" y1="0%" x2="0%" y2="100%">
-					<stop offset="0%" stop-color="#73E2A7" stop-opacity="0.15" />
-					<stop offset="100%" stop-color="#73E2A7" stop-opacity="0" />
+					<stop offset="0%" stop-color="#50FA7B" stop-opacity="0.15" />
+					<stop offset="100%" stop-color="#50FA7B" stop-opacity="0" />
 				</linearGradient>
 				<linearGradient id="line-grad-large" x1="0%" y1="0%" x2="100%" y2="0%">
 					{#each points as p, i (p.result.id)}
@@ -116,7 +116,7 @@
 					y1="0"
 					x2={hX}
 					y2="300"
-					stroke="#DEF4C6"
+					stroke="#9CDEF2"
 					stroke-width="1"
 					stroke-dasharray="4,4"
 					opacity="0.2"
@@ -135,7 +135,7 @@
 			{@const hY_p = (1 - hoveredResult.latency / maxLatency) * 100}
 
 			<div
-				class="pointer-events-none absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-dark shadow-[0_0_15px_rgba(115,226,167,0.5)] transition-all duration-75"
+				class="pointer-events-none absolute z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-dark shadow-[0_0_15px_rgba(80,250,123,0.5)] transition-all duration-75"
 				style="left: {hX_p}%; top: {hY_p}%; background-color: {getStatusColor(
 					hoveredResult.status,
 					hoveredResult.latency,
