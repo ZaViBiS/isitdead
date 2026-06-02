@@ -45,15 +45,8 @@ func (m *stubMailer) SendVerificationEmail(to, token string) error {
 }
 
 func TestAPI(t *testing.T) {
-	dbPath := "test_api.db"
-	storage, err := database.Init(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to init database: %v", err)
-	}
-	defer func() {
-		storage.Close()
-		os.Remove(dbPath)
-	}()
+	storage := newTestStorage(t)
+	defer storage.Close()
 
 	sched := checker.NewScheduler(storage)
 	defer sched.Stop()
@@ -417,4 +410,46 @@ func TestAPI(t *testing.T) {
 		resp, _ = server.App.Test(req)
 		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
+}
+
+func newTestStorage(t *testing.T) *database.Storage {
+	t.Helper()
+
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("set TEST_DATABASE_URL to run PostgreSQL API tests")
+	}
+
+	storage, err := database.Init(databaseURL)
+	if err != nil {
+		t.Fatalf("Failed to init database: %v", err)
+	}
+
+	resetTestDatabase(t, storage)
+	t.Cleanup(func() {
+		resetTestDatabase(t, storage)
+	})
+
+	return storage
+}
+
+func resetTestDatabase(t *testing.T, storage *database.Storage) {
+	t.Helper()
+
+	if err := storage.DB.Exec(`
+		TRUNCATE TABLE
+			notification_preferences,
+			ssl_certificate_statuses,
+			check_results,
+			servers,
+			email_verifications,
+			telegram_accounts,
+			telegram_link_tokens,
+			discord_accounts,
+			discord_link_tokens,
+			users
+		RESTART IDENTITY CASCADE
+	`).Error; err != nil {
+		t.Fatalf("reset test database: %v", err)
+	}
 }

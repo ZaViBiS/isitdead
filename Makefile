@@ -21,7 +21,7 @@ RESET  = \033[0m
 
 # ── За замовчуванням ─────────────────────────────
 .DEFAULT_GOAL := help
-.PHONY: build build-telegram run dev dev-front dev-back watch clean test lint tidy help migrate
+.PHONY: build build-telegram run dev dev-front dev-back watch clean test test-postgres docker-up docker-down lint tidy help migrate
 
 # ── Backend ──────────────────────────────────────
 
@@ -75,13 +75,25 @@ build-all: build-front build build-telegram
 
 # ── Тести ────────────────────────────────────────
 
-## Запустити всі тести
+## Запустити всі Go-тести
 test:
-	go test ./... -v
+	go test ./cmd/... ./internal/... ./integration/... -v
+
+## Запустити тести проти PostgreSQL у Docker
+test-postgres:
+	docker compose --profile test run --rm test
+
+## Швидко запустити PostgreSQL + app у Docker
+docker-up:
+	docker compose up --build
+
+## Зупинити Docker-сервіси
+docker-down:
+	docker compose down
 
 ## Тести з покриттям
 coverage:
-	go test ./... -coverprofile=coverage.out
+	go test ./cmd/... ./internal/... ./integration/... -coverprofile=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "$(GREEN)✔ coverage.html готовий$(RESET)"
 

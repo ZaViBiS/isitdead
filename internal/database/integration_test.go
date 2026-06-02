@@ -1,7 +1,6 @@
 package database
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -10,12 +9,7 @@ import (
 )
 
 func TestGetUserIDByToken(t *testing.T) {
-	dbPath := "test_get_userID_by_token.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	require.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	token, err := storage.CreateTelegramLinkToken(1, 15*time.Minute)
 	require.NoError(t, err)
@@ -26,12 +20,7 @@ func TestGetUserIDByToken(t *testing.T) {
 }
 
 func TestCreateTelegramLinkToken(t *testing.T) {
-	dbPath := "test_telegram_link_token.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	user, _, err := storage.AddUser("telegramuser", "telegram@example.com", "password")
 	assert.NoError(t, err)

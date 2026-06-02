@@ -1,9 +1,11 @@
-// Package database забезпечує роботу з базою даних SQLite.
+// Package database забезпечує роботу з базою даних PostgreSQL.
 package database
 
 import (
+	"time"
+
 	"github.com/rs/zerolog/log"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	"github.com/ZaViBiS/isitdead/internal/model"
@@ -22,30 +24,26 @@ type Storage struct {
 	writerChan chan dbTask
 }
 
-// Init ініціалізує підключення до бази даних SQLite, повертає структуру Storage і запускає writeWorker для запису з каналу writerChan
-func Init(dbPath string) (*Storage, error) {
-	log.Info().Str("path", dbPath).Msg("Connecting to database")
+// Init ініціалізує підключення до PostgreSQL, повертає структуру Storage і запускає writeWorker для запису з каналу writerChan
+func Init(databaseURL string) (*Storage, error) {
+	log.Info().Msg("Connecting to database")
 
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to connect to database")
 		return nil, err
 	}
 
-	// автоматично створює/оновлює таблиці
-	if err := db.AutoMigrate(
-		&model.User{},
-		&model.Server{},
-		&model.CheckResult{},
-		&model.SSLCertificateStatus{},
-		&model.EmailVerification{},
-		&model.NotificationPreference{},
-		&model.TelegramAccount{},
-		&model.TelegramLinkToken{},
-		&model.DiscordAccount{},
-		&model.DiscordLinkToken{},
-	); err != nil {
-		panic(err)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
+	if err := migrate(db); err != nil {
+		return nil, err
 	}
 
 	s := &Storage{
@@ -57,6 +55,21 @@ func Init(dbPath string) (*Storage, error) {
 	go s.runWorker()
 
 	return s, nil
+}
+
+func migrate(db *gorm.DB) error {
+	return db.AutoMigrate(
+		&model.User{},
+		&model.Server{},
+		&model.CheckResult{},
+		&model.SSLCertificateStatus{},
+		&model.EmailVerification{},
+		&model.NotificationPreference{},
+		&model.TelegramAccount{},
+		&model.TelegramLinkToken{},
+		&model.DiscordAccount{},
+		&model.DiscordLinkToken{},
+	)
 }
 
 // runWorker послідовно виконує завдання на запис із каналу

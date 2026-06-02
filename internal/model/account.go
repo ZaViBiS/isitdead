@@ -14,7 +14,7 @@ type User struct {
 	VerifiedEmail            bool           `gorm:"not null" json:"-"`
 	PasswordHash             string         `json:"-"`
 	GoogleID                 *string        `gorm:"uniqueIndex" json:"-"`
-	Plan                     string         `gorm:"not null;default:free" json:"plan"`
+	Plan                     string         `gorm:"not null;default:'free'" json:"plan"`
 	StripeCustomerID         string         `gorm:"index" json:"-"`
 	StripeSubscriptionID     string         `gorm:"index" json:"-"`
 	StripeSubscriptionStatus string         `json:"stripe_subscription_status"`

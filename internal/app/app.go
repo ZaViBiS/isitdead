@@ -49,7 +49,7 @@ func New(staticFiles embed.FS) (*App, error) {
 	}
 
 	// БД
-	db, err := database.Init(cfg.DBPath)
+	db, err := database.Init(cfg.DatabaseURL)
 	if err != nil {
 		return nil, err
 	}

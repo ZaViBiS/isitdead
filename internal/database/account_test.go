@@ -1,19 +1,13 @@
 package database
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetUserByEmail_NotFound(t *testing.T) {
-	dbPath := "test_account_notfound.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	// Спроба знайти неіснуючого користувача має повернути помилку
 	foundUser, err := storage.GetUserByEmail("missing@example.com")
@@ -22,15 +16,10 @@ func TestGetUserByEmail_NotFound(t *testing.T) {
 }
 
 func TestAddUser_DuplicateEmail(t *testing.T) {
-	dbPath := "test_account_dup.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	email := "duplicate@example.com"
-	_, _, err = storage.AddUser("user1", email, "password")
+	_, _, err := storage.AddUser("user1", email, "password")
 	assert.NoError(t, err)
 
 	// Спроба додати користувача з таким самим email має повернути помилку
@@ -39,12 +28,7 @@ func TestAddUser_DuplicateEmail(t *testing.T) {
 }
 
 func TestAddGoogleUser_LinksExistingUnverifiedEmail(t *testing.T) {
-	dbPath := "test_account_google_link.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	email := "google-link@example.com"
 	user, token, err := storage.AddUser("googlelink", email, "password")
@@ -64,12 +48,7 @@ func TestAddGoogleUser_LinksExistingUnverifiedEmail(t *testing.T) {
 }
 
 func TestAddGoogleUser_CreatesVerifiedUser(t *testing.T) {
-	dbPath := "test_account_google_create.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	user, err := storage.AddGoogleUser("Google User", "google-user@example.com", "google-456")
 	assert.NoError(t, err)

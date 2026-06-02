@@ -55,15 +55,8 @@ func stubHTTPStatusTransport(t *testing.T, statusCode int) {
 }
 
 func TestScheduler(t *testing.T) {
-	dbPath := "test_scheduler.db"
-	storage, err := database.Init(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to init database: %v", err)
-	}
-	defer func() {
-		storage.Close()
-		os.Remove(dbPath)
-	}()
+	storage := newTestStorage(t)
+	defer storage.Close()
 
 	// Create a user first
 	user, _, err := storage.AddUser("testuser", "test@example.com", "password")
@@ -109,15 +102,8 @@ func TestScheduler(t *testing.T) {
 }
 
 func TestSchedulerMultiRegionCheckStoresAggregateAndRegions(t *testing.T) {
-	dbPath := "test_scheduler_regions.db"
-	storage, err := database.Init(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to init database: %v", err)
-	}
-	defer func() {
-		storage.Close()
-		os.Remove(dbPath)
-	}()
+	storage := newTestStorage(t)
+	defer storage.Close()
 
 	user, _, err := storage.AddUser("regionuser", "region@example.com", "password")
 	assert.NoError(t, err)
@@ -161,6 +147,48 @@ func TestSchedulerMultiRegionCheckStoresAggregateAndRegions(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, remoteHistory, 1)
 	assert.Equal(t, "200 OK", remoteHistory[0].Status)
+}
+
+func newTestStorage(t *testing.T) *database.Storage {
+	t.Helper()
+
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("set TEST_DATABASE_URL to run PostgreSQL checker tests")
+	}
+
+	storage, err := database.Init(databaseURL)
+	if err != nil {
+		t.Fatalf("Failed to init database: %v", err)
+	}
+
+	resetTestDatabase(t, storage)
+	t.Cleanup(func() {
+		resetTestDatabase(t, storage)
+	})
+
+	return storage
+}
+
+func resetTestDatabase(t *testing.T, storage *database.Storage) {
+	t.Helper()
+
+	if err := storage.DB.Exec(`
+		TRUNCATE TABLE
+			notification_preferences,
+			ssl_certificate_statuses,
+			check_results,
+			servers,
+			email_verifications,
+			telegram_accounts,
+			telegram_link_tokens,
+			discord_accounts,
+			discord_link_tokens,
+			users
+		RESTART IDENTITY CASCADE
+	`).Error; err != nil {
+		t.Fatalf("reset test database: %v", err)
+	}
 }
 
 func TestAggregateRegionResults(t *testing.T) {

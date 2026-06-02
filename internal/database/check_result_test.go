@@ -1,7 +1,6 @@
 package database
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -11,12 +10,7 @@ import (
 )
 
 func TestGetIncidents(t *testing.T) {
-	dbPath := "test_incidents.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	serverID := uint(1)
 
@@ -52,12 +46,7 @@ func TestGetIncidents(t *testing.T) {
 }
 
 func TestCheckResultRegionFiltering(t *testing.T) {
-	dbPath := "test_check_result_regions.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	serverID := uint(42)
 	now := time.Now().UTC()

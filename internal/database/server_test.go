@@ -2,7 +2,6 @@ package database
 
 import (
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -13,12 +12,7 @@ import (
 )
 
 func TestServerCRUD(t *testing.T) {
-	dbPath := "test_server.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	// 1. Створюємо тестового користувача
 	user, _, err := storage.AddUser("server_owner", "owner@example.com", "pass123")
@@ -59,12 +53,7 @@ func TestServerCRUD(t *testing.T) {
 }
 
 func TestServerSecurity(t *testing.T) {
-	dbPath := "test_server_security.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	user1, _, _ := storage.AddUser("u1", "u1@ex.com", "p")
 	user2, _, _ := storage.AddUser("u2", "u2@ex.com", "p")
@@ -73,7 +62,7 @@ func TestServerSecurity(t *testing.T) {
 	srv1, _ := storage.AddServer(user1.ID, "S1", "u1.com", "http", 300, 10, 300, false)
 
 	// Тест: User 2 намагається оновити сервер User 1
-	_, err = storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com", "http", 300, 10, 300, false)
+	_, err := storage.UpdateServer(user2.ID, srv1.ID, "Hacked", "hacked.com", "http", 300, 10, 300, false)
 	assert.Error(t, err, "User 2 should not be able to update User 1's server")
 
 	// Тест: User 2 намагається видалити сервер User 1
@@ -85,12 +74,7 @@ func TestServerSecurity(t *testing.T) {
 }
 
 func TestDeleteServerDoesNotDeleteOtherUsersSSLStatus(t *testing.T) {
-	dbPath := "test_server_delete_ssl_security.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	user1, _, err := storage.AddUser("u1", "ssl-owner@example.com", "p")
 	assert.NoError(t, err)

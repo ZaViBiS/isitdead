@@ -1,7 +1,6 @@
 package database
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,13 +8,7 @@ import (
 )
 
 func TestUserFlow(t *testing.T) {
-	// Створюємо тимчасову базу даних для тестів
-	dbPath := "test_database.db"
-	defer os.Remove(dbPath)
-
-	storage, err := Init(dbPath)
-	assert.NoError(t, err)
-	defer storage.Close()
+	storage := newTestStorage(t)
 
 	// Тест: створення користувача
 	username := "testuser"

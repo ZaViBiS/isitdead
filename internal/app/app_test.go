@@ -11,9 +11,13 @@ import (
 )
 
 func TestAppNew(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("set TEST_DATABASE_URL to run PostgreSQL app tests")
+	}
+
 	t.Setenv("INSTANCE_ROLE", "main")
-	// Clean up after test if Init creates a file
-	defer os.Remove("/tmp/isitdead.db")
+	t.Setenv("DATABASE_URL", databaseURL)
 
 	a, err := New(embed.FS{})
 	assert.NoError(t, err)
@@ -26,8 +30,6 @@ func TestAppNewProbeRole(t *testing.T) {
 	t.Setenv("INSTANCE_ROLE", "probe")
 	t.Setenv("REGION", "eu")
 	t.Setenv("PROBE_SECRET", "shared")
-	t.Setenv("DB_PATH", "/tmp/isitdead-probe-test.db")
-	defer os.Remove("/tmp/isitdead-probe-test.db")
 
 	a, err := New(embed.FS{})
 
@@ -36,7 +38,6 @@ func TestAppNewProbeRole(t *testing.T) {
 	assert.Nil(t, a.server)
 	assert.Nil(t, a.scheduler)
 	assert.NotNil(t, a.probeServer)
-	assert.NoFileExists(t, "/tmp/isitdead-probe-test.db")
 }
 
 func TestValidateConfigRejectsDefaultJWTSecretInProduction(t *testing.T) {

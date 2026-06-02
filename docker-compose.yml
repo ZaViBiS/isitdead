@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: isitdead
+      POSTGRES_USER: isitdead
+      POSTGRES_PASSWORD: isitdead
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isitdead -d isitdead"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENV: dev
+      PORT: 8080
+      DATABASE_URL: postgres://isitdead:isitdead@postgres:5432/isitdead?sslmode=disable
+      JWT_SECRET: dev-secret-change-me
+    ports:
+      - "8080:8080"
+
+  test:
+    image: golang:1.26-alpine
+    profiles: ["test"]
+    working_dir: /src
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TEST_DATABASE_URL: postgres://isitdead:isitdead@postgres:5432/isitdead?sslmode=disable
+    volumes:
+      - .:/src
+      - go-cache:/go/pkg/mod
+    command: go test ./cmd/... ./internal/... ./integration/... -v
+
+volumes:
+  postgres-data:
+  go-cache:
