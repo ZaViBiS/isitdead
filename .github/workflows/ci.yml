@@ -7,9 +7,12 @@ on:
     branches: [main, master]
 
 jobs:
-  lint:
-    name: Lint
+  frontend:
+    name: Frontend
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
       - uses: actions/checkout@v4
 
@@ -19,73 +22,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Build frontend assets
-        working-directory: web
-        run: |
-          npm ci
-          npm run build
-          rm -rf node_modules
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Run lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.12.2
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Build frontend assets
-        working-directory: web
-        run: |
-          npm ci
-          npm run build
-          rm -rf node_modules
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - run: go build ./...
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
-      - name: Build frontend assets
-        working-directory: web
-        run: |
-          npm ci
-          npm run build
-          rm -rf node_modules
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - run: go test -race -coverprofile=coverage.out ./...
-
-      - run: go tool cover -func=coverage.out
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run build
