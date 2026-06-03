@@ -16,12 +16,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+COPY --from=web-builder /app/web/dist ./web/dist
 RUN go build -v -o ./bin/isitdead ./cmd/server
 
 FROM alpine:3.19
 
 WORKDIR /app
-COPY --from=builder /app/server .
+COPY --from=builder /app/bin/isitdead ./isitdead
 
-EXPOSE 80 443
-CMD ["./server"]
+EXPOSE 8080
+CMD ["./isitdead"]
