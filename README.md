@@ -11,7 +11,7 @@
 - [x] Health endpoint at `/api/health`
 - [x] PostgreSQL connection setup
 - [x] Database migration entry point
-- [ ] norifications
+- [ ] Notifications
   - [ ] telegram
   - [ ] discord
   - [ ] slack
@@ -29,9 +29,7 @@
 
 ### Frontend
 
-- [x] Landing page
-- [x] Pricing page
-- [x] Register page UI
+- [x] Landing page [x] Pricing page [x] Register page UI
 - [x] Login page UI
 - [x] Dashboard UI
 - [x] Monitor detail page UI
@@ -79,6 +77,7 @@ api
 More details:
 
 - [Architecture](docs/architecture.md)
+- [API](docs/api.md)
 
 ## Configuration
 
