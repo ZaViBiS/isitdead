@@ -8,7 +8,7 @@ import (
 )
 
 func root(w http.ResponseWriter, r *http.Request) {
-	log.Info().Str("ip", r.RemoteAddr).Str("lang", r.Header.Get("Accept-Language")).Msg("request")
+	log.Info().Str("ip", r.Header.Get("X-Real-IP")).Str("lang", r.Header.Get("Accept-Language")).Str("ua", r.UserAgent()).Msg("request")
 
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
