@@ -1,27 +1,24 @@
-// Package main є точкою входу сервера.
 package main
 
 import (
 	"os"
+	"time"
 
-	"github.com/ZaViBiS/isitdead"
-	"github.com/ZaViBiS/isitdead/internal/app"
-	"github.com/ZaViBiS/isitdead/internal/logger"
+	"ZaViBiS/isitdead/internal/config"
+	"ZaViBiS/isitdead/internal/server"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	// Ініціалізуємо логер
-	debug := os.Getenv("DEBUG") == "true"
-	logger.Setup(debug)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).With().Caller().Logger()
 
-	a, err := app.New(isitdead.StaticFiles)
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize application")
+		log.Fatal().Err(err).Msg("error importing env")
 	}
 
-	if err := a.Run(); err != nil {
-		log.Fatal().Err(err).Msg("application error")
-	}
+	server.Run(cfg.ServerPort)
 }

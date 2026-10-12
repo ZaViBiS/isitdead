@@ -1,23 +1,24 @@
-FROM node:24-alpine AS web-build
-WORKDIR /src/web
-COPY web/package*.json ./
-RUN npm ci
-COPY web ./
-RUN npm run build
+# --- build ---
+FROM golang:1.27-alpine AS builder
 
-FROM golang:1.26-alpine AS go-build
-WORKDIR /src
-RUN apk add --no-cache git
+WORKDIR /app
+
 COPY go.mod go.sum ./
 RUN go mod download
-COPY . .
-COPY --from=web-build /src/web/dist ./web/dist
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/isitdead ./cmd/server
 
-FROM alpine:3.22
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -v -ldflags="-s -w" -o /app/server ./cmd/server
+
+# --- runtime ---
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates tzdata \
+    && adduser -D -u 1000 app
+
 WORKDIR /app
-RUN addgroup -S isitdead && adduser -S isitdead -G isitdead
-COPY --from=go-build /out/isitdead /app/isitdead
-USER isitdead
+COPY --from=builder /app/server .
+
+USER app
 EXPOSE 8080
-ENTRYPOINT ["/app/isitdead"]
+
+CMD ["./server"]
